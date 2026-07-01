@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Button } from '../../components/ui/Button'
+import { CollapsibleSection } from '../../components/ui/CollapsibleSection'
 import { SeasonParticipantForm } from './SeasonParticipantForm'
 import { currencyFormatter } from '../../lib/format'
 import type { Player, SeasonParticipant } from '../../types/database'
@@ -46,54 +47,57 @@ export function SeasonParticipantsSection({
   }
 
   return (
-    <div className="mb-6">
-      <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-base font-semibold text-slate-900">Teilnehmer & Einsätze</h2>
-        {canManage && availablePlayers.length > 0 && (
-          <Button onClick={() => setShowAddForm(true)}>+ Spieler</Button>
-        )}
-      </div>
+    <>
+      <CollapsibleSection
+        title="Teilnehmer & Einsätze"
+        count={participants.length}
+        actions={
+          canManage && availablePlayers.length > 0 ? (
+            <Button onClick={() => setShowAddForm(true)}>+ Spieler</Button>
+          ) : undefined
+        }
+      >
+        {error && <p className="mb-2 text-sm text-red-600">{error}</p>}
 
-      {error && <p className="mb-2 text-sm text-red-600">{error}</p>}
-
-      {participants.length === 0 ? (
-        <p className="text-sm text-slate-500">Noch keine Teilnehmer.</p>
-      ) : (
-        <ul className="divide-y divide-slate-200 overflow-hidden rounded-xl border border-slate-200 bg-white">
-          {participants.map((participant) => (
-            <li key={participant.id} className="flex items-center justify-between gap-3 px-4 py-3">
-              <div className="min-w-0 flex-1">
-                <p className="truncate font-medium text-slate-900">
-                  {playersById.get(participant.player_id)?.name ?? 'Unbekannter Spieler'}
-                </p>
-                <p className="truncate text-sm text-slate-500">
-                  Gesamtwertung: {currencyFormatter.format(participant.gesamtsieg_einsatz_betrag)} · Spieltag:{' '}
-                  {matchdayCount} × {currencyFormatter.format(participant.spieltags_einsatz_betrag)} ={' '}
-                  {currencyFormatter.format(matchdayCount * participant.spieltags_einsatz_betrag)}
-                </p>
-              </div>
-              <div className="shrink-0 text-right">
-                <p className="text-xs text-slate-400">Gesamteinsatz</p>
-                <p className="text-sm font-semibold text-slate-900">
-                  {currencyFormatter.format(
-                    participant.gesamtsieg_einsatz_betrag + participant.spieltags_einsatz_betrag * matchdayCount,
-                  )}
-                </p>
-              </div>
-              {canManage && (
-                <div className="flex shrink-0 items-center gap-2">
-                  <Button variant="secondary" onClick={() => setEditingParticipant(participant)}>
-                    Bearbeiten
-                  </Button>
-                  <Button variant="danger" onClick={() => handleRemove(participant)}>
-                    Entfernen
-                  </Button>
+        {participants.length === 0 ? (
+          <p className="text-sm text-slate-500">Noch keine Teilnehmer.</p>
+        ) : (
+          <ul className="divide-y divide-slate-200 overflow-hidden rounded-xl border border-slate-200 bg-white">
+            {participants.map((participant) => (
+              <li key={participant.id} className="flex items-center justify-between gap-3 px-4 py-3">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-medium text-slate-900">
+                    {playersById.get(participant.player_id)?.name ?? 'Unbekannter Spieler'}
+                  </p>
+                  <p className="truncate text-sm text-slate-500">
+                    Gesamtwertung: {currencyFormatter.format(participant.gesamtsieg_einsatz_betrag)} · Spieltag:{' '}
+                    {matchdayCount} × {currencyFormatter.format(participant.spieltags_einsatz_betrag)} ={' '}
+                    {currencyFormatter.format(matchdayCount * participant.spieltags_einsatz_betrag)}
+                  </p>
                 </div>
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
+                <div className="shrink-0 text-right">
+                  <p className="text-xs text-slate-400">Gesamteinsatz</p>
+                  <p className="text-sm font-semibold text-slate-900">
+                    {currencyFormatter.format(
+                      participant.gesamtsieg_einsatz_betrag + participant.spieltags_einsatz_betrag * matchdayCount,
+                    )}
+                  </p>
+                </div>
+                {canManage && (
+                  <div className="flex shrink-0 items-center gap-2">
+                    <Button variant="secondary" onClick={() => setEditingParticipant(participant)}>
+                      Bearbeiten
+                    </Button>
+                    <Button variant="danger" onClick={() => handleRemove(participant)}>
+                      Entfernen
+                    </Button>
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </CollapsibleSection>
 
       {showAddForm && (
         <SeasonParticipantForm
@@ -115,6 +119,6 @@ export function SeasonParticipantsSection({
           }
         />
       )}
-    </div>
+    </>
   )
 }

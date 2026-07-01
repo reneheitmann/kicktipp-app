@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { Badge } from '../../components/ui/Badge'
+import { CollapsibleSection } from '../../components/ui/CollapsibleSection'
 import { currencyFormatter } from '../../lib/format'
 import { useAuth } from '../auth/useAuth'
 import { listPlayers } from '../players/playersApi'
@@ -240,155 +241,158 @@ export function SeasonDetailPage() {
         }}
       />
 
-      <div className="mb-6">
-        <h2 className="mb-3 text-base font-semibold text-slate-900">Gewinnverteilung</h2>
+      <CollapsibleSection title="Gewinnverteilung">
         <div className="grid gap-4 sm:grid-cols-2">
           <PayoutRulesEditor seasonId={season.id} typ="gesamtsieg" title="Gesamtwertung" canManage={canManagePayouts} />
           <PayoutRulesEditor seasonId={season.id} typ="spieltag" title="Spieltag" canManage={canManagePayouts} />
         </div>
-      </div>
+      </CollapsibleSection>
 
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-base font-semibold text-slate-900">Spieltage</h2>
-        <div className="flex flex-wrap items-center gap-2">
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
-            className="rounded-lg border border-slate-300 px-2 py-2 text-sm focus:border-slate-900 focus:outline-none"
-          >
-            <option value="abgerechnet">Nur abgerechnete</option>
-            <option value="offen">Nur offene</option>
-            <option value="alle">Alle</option>
-          </select>
-          <select
-            value={sortOrder}
-            onChange={(e) => setSortOrder(e.target.value as typeof sortOrder)}
-            className="rounded-lg border border-slate-300 px-2 py-2 text-sm focus:border-slate-900 focus:outline-none"
-          >
-            <option value="neueste">Neueste zuerst</option>
-            <option value="aelteste">Älteste zuerst</option>
-          </select>
-          <span className="text-sm text-slate-500">
-            Gesamtgewinn: <span className="font-medium text-emerald-600">{currencyFormatter.format(myGesamtgewinnsumme)}</span>
-          </span>
-          {canManageMatchdays && (
-            <>
-              <Button variant="secondary" onClick={() => setShowImportSpieltageDialog(true)}>
-                Aus dem Internet importieren
-              </Button>
-              <Button
-                onClick={() => {
-                  setEditingMatchday(undefined)
-                  setShowMatchdayForm(true)
-                }}
-              >
-                + Spieltag
-              </Button>
-            </>
-          )}
-        </div>
-      </div>
-
-      {canManageMatchdays && matchdays.length === 0 && participants.some((p) => p.spieltags_einsatz_betrag > 0) && (
-        <p className="mb-3 text-xs text-slate-400">
-          Der Spieltags-Einsatz der Teilnehmer wird automatisch für jeden neuen Spieltag übernommen.
-        </p>
-      )}
-
-      <ul className="divide-y divide-slate-200 overflow-hidden rounded-xl border border-slate-200 bg-white">
-        {showGesamtwertungRow && (
-          <li className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
-            <Link to={`/seasons/${season.id}/gesamtwertung`} className="min-w-0 flex-1 hover:underline">
-              <p className="font-medium text-slate-900">Gesamtwertung</p>
-              <p className="truncate text-sm text-slate-500">Saisonrangliste</p>
-              {myOverallRanking && (
-                <p className="text-sm font-medium text-slate-700 sm:hidden">
-                  Platz {myOverallRanking.rang}
-                  {myOverallPayout && (
-                    <span className="text-emerald-600"> · {currencyFormatter.format(myOverallPayout.betrag)}</span>
-                  )}
-                </p>
-              )}
-            </Link>
-            <div className="flex shrink-0 items-center gap-4">
-              <span className="hidden w-16 text-right text-sm text-slate-700 sm:inline">
-                {myOverallRanking ? `Platz ${myOverallRanking.rang}` : '–'}
-              </span>
-              <span className="hidden w-20 text-right text-sm font-medium text-emerald-600 sm:inline">
-                {myOverallPayout ? currencyFormatter.format(myOverallPayout.betrag) : '–'}
-              </span>
-              <Badge tone={season.gesamtwertung_status === 'abgerechnet' ? 'positive' : 'warning'}>
-                {season.gesamtwertung_status}
-              </Badge>
-              {canManageSeason && (
-                <Button variant="secondary" onClick={handleToggleGesamtwertungStatus}>
-                  {season.gesamtwertung_status === 'offen' ? 'Abrechnen' : 'Öffnen'}
+      <CollapsibleSection
+        title="Spieltage"
+        count={matchdays.length}
+        actions={
+          <>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
+              className="rounded-lg border border-slate-300 px-2 py-2 text-sm focus:border-slate-900 focus:outline-none"
+            >
+              <option value="abgerechnet">Nur abgerechnete</option>
+              <option value="offen">Nur offene</option>
+              <option value="alle">Alle</option>
+            </select>
+            <select
+              value={sortOrder}
+              onChange={(e) => setSortOrder(e.target.value as typeof sortOrder)}
+              className="rounded-lg border border-slate-300 px-2 py-2 text-sm focus:border-slate-900 focus:outline-none"
+            >
+              <option value="neueste">Neueste zuerst</option>
+              <option value="aelteste">Älteste zuerst</option>
+            </select>
+            <span className="text-sm text-slate-500">
+              Gesamtgewinn:{' '}
+              <span className="font-medium text-emerald-600">{currencyFormatter.format(myGesamtgewinnsumme)}</span>
+            </span>
+            {canManageMatchdays && (
+              <>
+                <Button variant="secondary" onClick={() => setShowImportSpieltageDialog(true)}>
+                  Aus dem Internet importieren
                 </Button>
-              )}
-            </div>
-          </li>
+                <Button
+                  onClick={() => {
+                    setEditingMatchday(undefined)
+                    setShowMatchdayForm(true)
+                  }}
+                >
+                  + Spieltag
+                </Button>
+              </>
+            )}
+          </>
+        }
+      >
+        {canManageMatchdays && matchdays.length === 0 && participants.some((p) => p.spieltags_einsatz_betrag > 0) && (
+          <p className="mb-3 text-xs text-slate-400">
+            Der Spieltags-Einsatz der Teilnehmer wird automatisch für jeden neuen Spieltag übernommen.
+          </p>
         )}
-        {matchdays.length === 0 && (
-          <li className="px-4 py-3 text-sm text-slate-500">Noch keine Spieltage angelegt.</li>
-        )}
-        {matchdays.length > 0 && filteredSortedMatchdays.length === 0 && (
-          <li className="px-4 py-3 text-sm text-slate-500">Keine Spieltage für diesen Filter.</li>
-        )}
-        {filteredSortedMatchdays.map((matchday) => {
-          const myRanking = myPlayer
-            ? matchdayRankings.find((r) => r.matchday_id === matchday.id && r.player_id === myPlayer.id)
-            : undefined
-          const myPayout = myPlayer
-            ? seasonTransactions.find(
-                (t) => t.matchday_id === matchday.id && t.typ === 'gewinn_spieltag' && t.player_id === myPlayer.id,
-              )
-            : undefined
-          return (
-            <li key={matchday.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
-              <Link to={`/seasons/${season.id}/matchdays/${matchday.id}`} className="min-w-0 flex-1 hover:underline">
-                <p className="font-medium text-slate-900">Spieltag {matchday.nummer}</p>
-                <p className="truncate text-sm text-slate-500">{matchday.datum ?? 'Kein Datum hinterlegt'}</p>
-                {myRanking && (
+
+        <ul className="divide-y divide-slate-200 overflow-hidden rounded-xl border border-slate-200 bg-white">
+          {showGesamtwertungRow && (
+            <li className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+              <Link to={`/seasons/${season.id}/gesamtwertung`} className="min-w-0 flex-1 hover:underline">
+                <p className="font-medium text-slate-900">Gesamtwertung</p>
+                <p className="truncate text-sm text-slate-500">Saisonrangliste</p>
+                {myOverallRanking && (
                   <p className="text-sm font-medium text-slate-700 sm:hidden">
-                    Platz {myRanking.rang}
-                    {myPayout && (
-                      <span className="text-emerald-600"> · {currencyFormatter.format(myPayout.betrag)}</span>
+                    Platz {myOverallRanking.rang}
+                    {myOverallPayout && (
+                      <span className="text-emerald-600"> · {currencyFormatter.format(myOverallPayout.betrag)}</span>
                     )}
                   </p>
                 )}
               </Link>
               <div className="flex shrink-0 items-center gap-4">
                 <span className="hidden w-16 text-right text-sm text-slate-700 sm:inline">
-                  {myRanking ? `Platz ${myRanking.rang}` : '–'}
+                  {myOverallRanking ? `Platz ${myOverallRanking.rang}` : '–'}
                 </span>
                 <span className="hidden w-20 text-right text-sm font-medium text-emerald-600 sm:inline">
-                  {myPayout ? currencyFormatter.format(myPayout.betrag) : '–'}
+                  {myOverallPayout ? currencyFormatter.format(myOverallPayout.betrag) : '–'}
                 </span>
-                <Badge tone={matchday.status === 'abgerechnet' ? 'positive' : 'warning'}>{matchday.status}</Badge>
-                {canManageMatchdays && (
-                  <>
-                    <Button
-                      variant="secondary"
-                      onClick={() => {
-                        setEditingMatchday(matchday)
-                        setShowMatchdayForm(true)
-                      }}
-                    >
-                      Bearbeiten
-                    </Button>
-                    <Button variant="secondary" onClick={() => handleToggleMatchdayStatus(matchday)}>
-                      {matchday.status === 'offen' ? 'Abrechnen' : 'Öffnen'}
-                    </Button>
-                    <Button variant="danger" onClick={() => handleDeleteMatchday(matchday)}>
-                      Löschen
-                    </Button>
-                  </>
+                <Badge tone={season.gesamtwertung_status === 'abgerechnet' ? 'positive' : 'warning'}>
+                  {season.gesamtwertung_status}
+                </Badge>
+                {canManageSeason && (
+                  <Button variant="secondary" onClick={handleToggleGesamtwertungStatus}>
+                    {season.gesamtwertung_status === 'offen' ? 'Abrechnen' : 'Öffnen'}
+                  </Button>
                 )}
               </div>
             </li>
-          )
-        })}
-      </ul>
+          )}
+          {matchdays.length === 0 && (
+            <li className="px-4 py-3 text-sm text-slate-500">Noch keine Spieltage angelegt.</li>
+          )}
+          {matchdays.length > 0 && filteredSortedMatchdays.length === 0 && (
+            <li className="px-4 py-3 text-sm text-slate-500">Keine Spieltage für diesen Filter.</li>
+          )}
+          {filteredSortedMatchdays.map((matchday) => {
+            const myRanking = myPlayer
+              ? matchdayRankings.find((r) => r.matchday_id === matchday.id && r.player_id === myPlayer.id)
+              : undefined
+            const myPayout = myPlayer
+              ? seasonTransactions.find(
+                  (t) => t.matchday_id === matchday.id && t.typ === 'gewinn_spieltag' && t.player_id === myPlayer.id,
+                )
+              : undefined
+            return (
+              <li key={matchday.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+                <Link to={`/seasons/${season.id}/matchdays/${matchday.id}`} className="min-w-0 flex-1 hover:underline">
+                  <p className="font-medium text-slate-900">Spieltag {matchday.nummer}</p>
+                  <p className="truncate text-sm text-slate-500">{matchday.datum ?? 'Kein Datum hinterlegt'}</p>
+                  {myRanking && (
+                    <p className="text-sm font-medium text-slate-700 sm:hidden">
+                      Platz {myRanking.rang}
+                      {myPayout && (
+                        <span className="text-emerald-600"> · {currencyFormatter.format(myPayout.betrag)}</span>
+                      )}
+                    </p>
+                  )}
+                </Link>
+                <div className="flex shrink-0 items-center gap-4">
+                  <span className="hidden w-16 text-right text-sm text-slate-700 sm:inline">
+                    {myRanking ? `Platz ${myRanking.rang}` : '–'}
+                  </span>
+                  <span className="hidden w-20 text-right text-sm font-medium text-emerald-600 sm:inline">
+                    {myPayout ? currencyFormatter.format(myPayout.betrag) : '–'}
+                  </span>
+                  <Badge tone={matchday.status === 'abgerechnet' ? 'positive' : 'warning'}>{matchday.status}</Badge>
+                  {canManageMatchdays && (
+                    <>
+                      <Button
+                        variant="secondary"
+                        onClick={() => {
+                          setEditingMatchday(matchday)
+                          setShowMatchdayForm(true)
+                        }}
+                      >
+                        Bearbeiten
+                      </Button>
+                      <Button variant="secondary" onClick={() => handleToggleMatchdayStatus(matchday)}>
+                        {matchday.status === 'offen' ? 'Abrechnen' : 'Öffnen'}
+                      </Button>
+                      <Button variant="danger" onClick={() => handleDeleteMatchday(matchday)}>
+                        Löschen
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </li>
+            )
+          })}
+        </ul>
+      </CollapsibleSection>
 
       {showSeasonForm && (
         <SeasonForm
