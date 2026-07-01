@@ -5,6 +5,13 @@ import type { Season } from '../../types/database'
 
 interface CopySeasonDialogProps {
   season: Season
+  // copy_season läuft in einer einzigen Transaktion: fehlt eines dieser
+  // Rechte, würde ein aktiviertes Mitkopieren-Häkchen die komplette Kopie
+  // (inkl. der neuen Saison selbst) mit einem rohen RLS-Fehler abbrechen.
+  // Daher werden die Optionen ohne das jeweilige Recht vorab deaktiviert.
+  canCopyPayoutRules: boolean
+  canCopyPlayers: boolean
+  canCopyMatchdays: boolean
   onClose: () => void
   onSubmit: (input: {
     name: string
@@ -22,13 +29,20 @@ function addOneYear(dateStr: string): string {
   return d.toISOString().slice(0, 10)
 }
 
-export function CopySeasonDialog({ season, onClose, onSubmit }: CopySeasonDialogProps) {
+export function CopySeasonDialog({
+  season,
+  canCopyPayoutRules,
+  canCopyPlayers,
+  canCopyMatchdays,
+  onClose,
+  onSubmit,
+}: CopySeasonDialogProps) {
   const [name, setName] = useState(`${season.name} (Kopie)`)
   const [startDate, setStartDate] = useState(addOneYear(season.start_date))
   const [endDate, setEndDate] = useState(addOneYear(season.end_date))
-  const [copyPayoutRules, setCopyPayoutRules] = useState(true)
-  const [copyPlayers, setCopyPlayers] = useState(true)
-  const [copyMatchdays, setCopyMatchdays] = useState(true)
+  const [copyPayoutRules, setCopyPayoutRules] = useState(canCopyPayoutRules)
+  const [copyPlayers, setCopyPlayers] = useState(canCopyPlayers)
+  const [copyMatchdays, setCopyMatchdays] = useState(canCopyMatchdays)
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
@@ -106,6 +120,7 @@ export function CopySeasonDialog({ season, onClose, onSubmit }: CopySeasonDialog
               <input
                 type="checkbox"
                 checked={copyPayoutRules}
+                disabled={!canCopyPayoutRules}
                 onChange={(e) => setCopyPayoutRules(e.target.checked)}
                 className="h-5 w-5"
               />
@@ -115,6 +130,7 @@ export function CopySeasonDialog({ season, onClose, onSubmit }: CopySeasonDialog
               <input
                 type="checkbox"
                 checked={copyPlayers}
+                disabled={!canCopyPlayers}
                 onChange={(e) => setCopyPlayers(e.target.checked)}
                 className="h-5 w-5"
               />
@@ -124,6 +140,7 @@ export function CopySeasonDialog({ season, onClose, onSubmit }: CopySeasonDialog
               <input
                 type="checkbox"
                 checked={copyMatchdays}
+                disabled={!canCopyMatchdays}
                 onChange={(e) => setCopyMatchdays(e.target.checked)}
                 className="h-5 w-5"
               />

@@ -76,7 +76,7 @@ export function guessEmailColumn(headers: string[]): number {
  * "Spieltagsplatzierung"-Spalte (tatsächliche Platzierung an genau diesem
  * Spieltag) – für einen Spieltags-Import ist ausschließlich Letztere korrekt,
  * sonst würden Gewinne anhand der Gesamtsaison-Platzierung statt der
- * Tagesplatzierung verbucht. Für einen Gesamtsieg-Import ist "Rang" dagegen
+ * Tagesplatzierung verbucht. Für einen Gesamtwertung-Import ist "Rang" dagegen
  * richtig.
  */
 export function guessRangColumn(headers: string[], target: 'spieltag' | 'gesamtsieg' = 'gesamtsieg'): number {

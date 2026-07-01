@@ -38,3 +38,9 @@ export async function calculateSeasonPayout(seasonId: string): Promise<Transacti
   if (error) throw error
   return data
 }
+
+/** Löscht die Gesamtwertung-Gewinnverteilung (Prozentsätze) inkl. bereits verbuchter Gewinne. */
+export async function deleteSeasonPayoutDistribution(seasonId: string): Promise<void> {
+  const { error } = await supabase.rpc('delete_season_payout_distribution', { p_season_id: seasonId })
+  if (error) throw error
+}

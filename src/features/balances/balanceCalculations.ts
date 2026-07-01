@@ -25,7 +25,7 @@ interface Accumulator {
 /**
  * Aggregiert Transaktionen zu einem Saldo je Spieler, getrennt nach
  * Einsatzart. Korrektur-Buchungen werden anhand von matchday_id (gesetzt =
- * Spieltags-Topf, null = Gesamtsieg-Topf) der jeweiligen Einsatzart
+ * Spieltags-Topf, null = Gesamtwertung-Topf) der jeweiligen Einsatzart
  * zugerechnet, da der Transaktionstyp selbst das nicht weiter unterscheidet.
  *
  * Der Spieltags-Einsatz wird – sofern `participants` und `matchdayCount`

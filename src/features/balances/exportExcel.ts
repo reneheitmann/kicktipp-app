@@ -3,9 +3,9 @@ import type { Matchday, Player, Season, Transaction } from '../../types/database
 import type { PlayerBalance } from './balanceCalculations'
 
 const typLabels: Record<Transaction['typ'], string> = {
-  einsatz_gesamt: 'Einsatz Gesamtsieg',
+  einsatz_gesamt: 'Einsatz Gesamtwertung',
   einsatz_spieltag: 'Einsatz Spieltag',
-  gewinn_gesamt: 'Gewinn Gesamtsieg',
+  gewinn_gesamt: 'Gewinn Gesamtwertung',
   gewinn_spieltag: 'Gewinn Spieltag',
   korrektur: 'Korrektur',
 }
@@ -24,9 +24,9 @@ export async function exportSeasonExcel(
   const balanceSheet = workbook.addWorksheet('Guthabenübersicht')
   balanceSheet.columns = [
     { header: 'Spieler', key: 'name', width: 24 },
-    { header: 'Gesamtsieg-Einsatz', key: 'gesamtsieg_einsatz', width: 18 },
-    { header: 'Gesamtsieg-Gewinn', key: 'gesamtsieg_gewinn', width: 18 },
-    { header: 'Gesamtsieg-Saldo', key: 'gesamtsieg_saldo', width: 18 },
+    { header: 'Gesamtwertung-Einsatz', key: 'gesamtsieg_einsatz', width: 18 },
+    { header: 'Gesamtwertung-Gewinn', key: 'gesamtsieg_gewinn', width: 18 },
+    { header: 'Gesamtwertung-Saldo', key: 'gesamtsieg_saldo', width: 18 },
     { header: 'Spieltag-Einsatz', key: 'spieltag_einsatz', width: 18 },
     { header: 'Spieltag-Gewinn', key: 'spieltag_gewinn', width: 18 },
     { header: 'Spieltag-Saldo', key: 'spieltag_saldo', width: 18 },

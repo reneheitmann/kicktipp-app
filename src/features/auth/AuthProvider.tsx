@@ -1,8 +1,10 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from '../../lib/supabaseClient'
-import type { Profile } from '../../types/database'
+import type { PermissionKey, Profile, UserRole } from '../../types/database'
 import { AuthContext } from './AuthContext'
+
+const VIEW_AS_USER_STORAGE_KEY = 'kicktipp_view_as_user'
 
 async function fetchProfile(userId: string): Promise<Profile | null> {
   const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single()
@@ -13,10 +15,27 @@ async function fetchProfile(userId: string): Promise<Profile | null> {
   return data
 }
 
+async function fetchPermissions(role: UserRole): Promise<Set<PermissionKey>> {
+  const { data, error } = await supabase
+    .from('role_permissions')
+    .select('permission_key')
+    .eq('role', role)
+    .eq('granted', true)
+  if (error) {
+    console.error('Berechtigungen konnten nicht geladen werden', error)
+    return new Set()
+  }
+  return new Set(data.map((row) => row.permission_key))
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
+  const [permissions, setPermissions] = useState<Set<PermissionKey>>(new Set())
   const [loading, setLoading] = useState(true)
+  const [viewAsUser, setViewAsUserState] = useState(
+    () => sessionStorage.getItem(VIEW_AS_USER_STORAGE_KEY) === 'true',
+  )
 
   useEffect(() => {
     let isMounted = true
@@ -25,7 +44,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!isMounted) return
       setSession(data.session)
       if (data.session) {
-        setProfile(await fetchProfile(data.session.user.id))
+        const loadedProfile = await fetchProfile(data.session.user.id)
+        setProfile(loadedProfile)
+        if (loadedProfile) setPermissions(await fetchPermissions(loadedProfile.role))
       }
       setLoading(false)
     })
@@ -33,9 +54,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: subscription } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
       setSession(newSession)
       if (newSession) {
-        setProfile(await fetchProfile(newSession.user.id))
+        const loadedProfile = await fetchProfile(newSession.user.id)
+        setProfile(loadedProfile)
+        setPermissions(loadedProfile ? await fetchPermissions(loadedProfile.role) : new Set())
       } else {
         setProfile(null)
+        setPermissions(new Set())
       }
       setLoading(false)
     })
@@ -57,12 +81,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function refreshProfile() {
     if (session) {
-      setProfile(await fetchProfile(session.user.id))
+      const loadedProfile = await fetchProfile(session.user.id)
+      setProfile(loadedProfile)
+      if (loadedProfile) setPermissions(await fetchPermissions(loadedProfile.role))
     }
   }
 
+  async function refreshPermissions() {
+    if (profile) {
+      setPermissions(await fetchPermissions(profile.role))
+    }
+  }
+
+  function setViewAsUser(value: boolean) {
+    sessionStorage.setItem(VIEW_AS_USER_STORAGE_KEY, String(value))
+    setViewAsUserState(value)
+  }
+
+  function can(key: PermissionKey): boolean {
+    return !viewAsUser && permissions.has(key)
+  }
+
   return (
-    <AuthContext.Provider value={{ session, profile, loading, signIn, signOut, refreshProfile }}>
+    <AuthContext.Provider
+      value={{
+        session,
+        profile,
+        loading,
+        permissions,
+        viewAsUser,
+        setViewAsUser,
+        can,
+        signIn,
+        signOut,
+        refreshProfile,
+        refreshPermissions,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   )

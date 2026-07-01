@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Button } from '../../components/ui/Button'
-import { hasPayouts, listPayoutRules, setPayoutRules } from './payoutRulesApi'
+import { currencyFormatter } from '../../lib/format'
+import { getPayoutPool, hasPayouts, listPayoutRules, setPayoutRules } from './payoutRulesApi'
 import type { PayoutTyp } from '../../types/database'
 
 interface PayoutRulesEditorProps {
@@ -16,10 +17,32 @@ function parsePercent(value: string): number {
   return Number(value.replace(',', '.'))
 }
 
+function roundCents(value: number): number {
+  return Math.round((value + Number.EPSILON) * 100) / 100
+}
+
+/**
+ * Euro-Beträge je Platz aus den (ggf. noch in Bearbeitung befindlichen)
+ * Prozentsätzen, gegen den Gesamttopf gerechnet. Da jeder Platz einzeln
+ * kaufmännisch gerundet wird, könnte die Summe der gerundeten Beträge den
+ * Topf (100 %) um Rundungscents über- oder unterschreiten – der unterste
+ * Gewinnrang bekommt daher den exakten Rest, sodass die angezeigte Summe nie
+ * über dem Topf liegt.
+ */
+function computeAmounts(percents: number[], pool: number): number[] {
+  const naive = percents.map((pct) => roundCents((pool * pct) / 100))
+  return naive.map((amount, i) => {
+    if (i < naive.length - 1) return amount
+    const sumOthers = naive.slice(0, -1).reduce((s, a) => s + a, 0)
+    return roundCents(pool - sumOthers)
+  })
+}
+
 export function PayoutRulesEditor({ seasonId, typ, title, canManage }: PayoutRulesEditorProps) {
   const [savedPercents, setSavedPercents] = useState<number[]>([])
   const [draftPercents, setDraftPercents] = useState<string[]>([])
   const [paidOut, setPaidOut] = useState(false)
+  const [pool, setPool] = useState(0)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -27,11 +50,16 @@ export function PayoutRulesEditor({ seasonId, typ, title, canManage }: PayoutRul
   const reload = useCallback(async () => {
     setLoading(true)
     try {
-      const [rules, payoutsExist] = await Promise.all([listPayoutRules(seasonId, typ), hasPayouts(seasonId, typ)])
+      const [rules, payoutsExist, poolAmount] = await Promise.all([
+        listPayoutRules(seasonId, typ),
+        hasPayouts(seasonId, typ),
+        getPayoutPool(seasonId, typ),
+      ])
       const percents = rules.map((r) => r.prozent_anteil)
       setSavedPercents(percents)
       setDraftPercents(percents.map((p) => String(p)))
       setPaidOut(payoutsExist)
+      setPool(poolAmount)
       setError(null)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Gewinnverteilung konnte nicht geladen werden.')
@@ -52,6 +80,10 @@ export function PayoutRulesEditor({ seasonId, typ, title, canManage }: PayoutRul
   const sumIsValid = Math.abs(sum - 100) < SUM_TOLERANCE
   const isDirty = JSON.stringify(draftPercents.map((v) => String(parsePercent(v)))) !== JSON.stringify(savedPercents.map(String))
   const canSave = draftPercents.length > 0 && allValid && sumIsValid
+  const amounts = computeAmounts(
+    draftPercents.map((v) => parsePercent(v) || 0),
+    pool,
+  )
 
   function addRow() {
     setDraftPercents((prev) => [...prev, ''])
@@ -93,9 +125,12 @@ export function PayoutRulesEditor({ seasonId, typ, title, canManage }: PayoutRul
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-4">
-      <h3 className="mb-3 text-sm font-semibold text-slate-900">{title}</h3>
+      <h3 className="mb-1 text-sm font-semibold text-slate-900">{title}</h3>
+      <p className="mb-3 text-sm text-slate-500">
+        Gesamtgewinn: <span className="font-medium text-emerald-600">{currencyFormatter.format(pool)}</span>
+      </p>
 
-      {paidOut && (
+      {paidOut && canManage && (
         <p className="mb-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
           Für diese Saison wurden für diesen Verteilungstyp bereits Gewinne verbucht. Änderungen wirken sich nur
           auf künftige Berechnungen aus, nicht rückwirkend.
@@ -122,12 +157,16 @@ export function PayoutRulesEditor({ seasonId, typ, title, canManage }: PayoutRul
                     className="w-24 rounded-lg border border-slate-300 px-3 py-2 text-base focus:border-slate-900 focus:outline-none"
                   />
                   <span className="text-sm text-slate-500">%</span>
+                  <span className="text-sm text-slate-500">≈ {currencyFormatter.format(amounts[index])}</span>
                   <Button variant="danger" className="ml-auto" onClick={() => removeRow(index)}>
                     Entfernen
                   </Button>
                 </>
               ) : (
-                <span className="text-sm text-slate-900">{value} %</span>
+                <>
+                  <span className="text-sm text-slate-900">{value} %</span>
+                  <span className="text-sm text-slate-500">≈ {currencyFormatter.format(amounts[index])}</span>
+                </>
               )}
             </li>
           ))}

@@ -1,13 +1,15 @@
 import { Navigate, Outlet } from 'react-router-dom'
 import { useAuth } from './useAuth'
-import type { UserRole } from '../../types/database'
+import type { PermissionKey, UserRole } from '../../types/database'
 
 interface ProtectedRouteProps {
   allowedRoles?: UserRole[]
+  /** Granulares Recht statt fester Rollenliste, siehe src/features/permissions/permissionCatalog.ts. */
+  requiredPermission?: PermissionKey
 }
 
-export function ProtectedRoute({ allowedRoles }: ProtectedRouteProps) {
-  const { session, profile, loading } = useAuth()
+export function ProtectedRoute({ allowedRoles, requiredPermission }: ProtectedRouteProps) {
+  const { session, profile, loading, can } = useAuth()
 
   // `loading` deckt nur die allererste Session-Prüfung ab. Bei jedem
   // weiteren Auth-Wechsel (z. B. frisches Login) setzt AuthProvider zuerst
@@ -34,6 +36,10 @@ export function ProtectedRoute({ allowedRoles }: ProtectedRouteProps) {
   }
 
   if (allowedRoles && !allowedRoles.includes(profile.role)) {
+    return <Navigate to="/unauthorized" replace />
+  }
+
+  if (requiredPermission && !can(requiredPermission)) {
     return <Navigate to="/unauthorized" replace />
   }
 

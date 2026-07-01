@@ -2,16 +2,23 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { Badge } from '../../components/ui/Badge'
+import { currencyFormatter } from '../../lib/format'
 import { useAuth } from '../auth/useAuth'
+import { listPlayers } from '../players/playersApi'
+import { listAllTransactions } from '../balances/balancesApi'
 import { SeasonForm } from './SeasonForm'
 import { createSeason, listSeasons } from './seasonsApi'
-import type { Season } from '../../types/database'
+import { listAllMatchdays } from './matchdaysApi'
+import type { Matchday, Player, Season, Transaction } from '../../types/database'
 
 export function SeasonsPage() {
-  const { profile } = useAuth()
-  const canManage = profile?.role === 'admin' || profile?.role === 'spielleiter'
+  const { profile, can } = useAuth()
+  const canManage = can('seasons.manage')
 
   const [seasons, setSeasons] = useState<Season[]>([])
+  const [players, setPlayers] = useState<Player[]>([])
+  const [matchdays, setMatchdays] = useState<Matchday[]>([])
+  const [transactions, setTransactions] = useState<Transaction[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showForm, setShowForm] = useState(false)
@@ -19,7 +26,16 @@ export function SeasonsPage() {
   async function reload() {
     setLoading(true)
     try {
-      setSeasons(await listSeasons())
+      const [seasonData, playerData, matchdayData, transactionData] = await Promise.all([
+        listSeasons(),
+        listPlayers(),
+        listAllMatchdays(),
+        listAllTransactions(),
+      ])
+      setSeasons(seasonData)
+      setPlayers(playerData)
+      setMatchdays(matchdayData)
+      setTransactions(transactionData)
       setError(null)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Saisons konnten nicht geladen werden.')
@@ -31,6 +47,34 @@ export function SeasonsPage() {
   useEffect(() => {
     reload()
   }, [])
+
+  const myPlayer = players.find((p) => p.profile_id === profile?.id)
+
+  // Eigener Gesamtgewinn je Saison, analog zur Berechnung auf der
+  // Saison-Detailseite: nur Spieltage mit Status "abgerechnet" zählen, dazu
+  // die Gesamtwertung, sofern auch diese schon abgerechnet ist.
+  function myGesamtgewinnForSeason(season: Season): number {
+    if (!myPlayer) return 0
+    const abgerechnetMatchdayIds = new Set(
+      matchdays.filter((m) => m.season_id === season.id && m.status === 'abgerechnet').map((m) => m.id),
+    )
+    const spieltagSumme = transactions
+      .filter(
+        (t) =>
+          t.season_id === season.id &&
+          t.typ === 'gewinn_spieltag' &&
+          t.player_id === myPlayer.id &&
+          abgerechnetMatchdayIds.has(t.matchday_id ?? ''),
+      )
+      .reduce((sum, t) => sum + t.betrag, 0)
+    const gesamtwertungBetrag =
+      season.gesamtwertung_status === 'abgerechnet'
+        ? (transactions.find(
+            (t) => t.season_id === season.id && t.typ === 'gewinn_gesamt' && t.player_id === myPlayer.id,
+          )?.betrag ?? 0)
+        : 0
+    return spieltagSumme + gesamtwertungBetrag
+  }
 
   return (
     <div className="p-4 sm:p-6">
@@ -53,12 +97,15 @@ export function SeasonsPage() {
                 to={`/seasons/${season.id}`}
                 className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-slate-50"
               >
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <p className="truncate font-medium text-slate-900">{season.name}</p>
                   <p className="truncate text-sm text-slate-500">
                     {season.start_date} – {season.end_date}
                   </p>
                 </div>
+                <span className="shrink-0 text-right text-sm font-medium text-emerald-600">
+                  {currencyFormatter.format(myGesamtgewinnForSeason(season))}
+                </span>
                 <Badge tone={season.status === 'aktiv' ? 'positive' : 'neutral'}>{season.status}</Badge>
               </Link>
             </li>

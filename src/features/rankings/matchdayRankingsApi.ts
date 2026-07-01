@@ -7,6 +7,13 @@ export async function listMatchdayRankings(matchdayId: string): Promise<Matchday
   return data
 }
 
+export async function listMatchdayRankingsForMatchdays(matchdayIds: string[]): Promise<MatchdayRanking[]> {
+  if (matchdayIds.length === 0) return []
+  const { data, error } = await supabase.from('matchday_rankings').select('*').in('matchday_id', matchdayIds)
+  if (error) throw error
+  return data
+}
+
 export async function setMatchdayRanking(matchdayId: string, playerId: string, rang: number): Promise<MatchdayRanking> {
   const { data, error } = await supabase
     .from('matchday_rankings')

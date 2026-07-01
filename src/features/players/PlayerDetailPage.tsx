@@ -10,14 +10,17 @@ import { listSeasonParticipantsForPlayer } from '../seasons/seasonParticipantsAp
 import { listMatchdayCountsBySeasonId } from '../seasons/matchdaysApi'
 import { listPlayerTransactions } from '../balances/balancesApi'
 import { addZahlung, listZahlungen, removeZahlung } from './zahlungenApi'
+import { transferBalanceToSeason } from './transferApi'
 import { computeAccountBalance } from './accountBalance'
 import { ZahlungForm } from './ZahlungForm'
+import { TransferForm } from './TransferForm'
 import type { Player, Season, SeasonParticipant, Transaction, Zahlung } from '../../types/database'
 
 export function PlayerDetailPage() {
   const { playerId } = useParams<{ playerId: string }>()
-  const { profile } = useAuth()
-  const canManage = profile?.role === 'admin' || profile?.role === 'spielleiter'
+  const { can } = useAuth()
+  const canManage = can('accounts.manage')
+  const canManageBalanceTransfer = can('balance_transfer.manage')
 
   const [player, setPlayer] = useState<Player | null>(null)
   const [seasons, setSeasons] = useState<Season[]>([])
@@ -28,6 +31,7 @@ export function PlayerDetailPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showForm, setShowForm] = useState(false)
+  const [showTransferForm, setShowTransferForm] = useState(false)
   const [seasonFilter, setSeasonFilter] = useState('')
 
   const reload = useCallback(async () => {
@@ -92,7 +96,7 @@ export function PlayerDetailPage() {
 
   return (
     <div className="p-4 sm:p-6">
-      {canManage && (
+      {can('players.manage') && (
         <Link to="/players" className="mb-3 inline-block text-sm text-slate-500 hover:underline">
           ← Alle Spieler
         </Link>
@@ -113,7 +117,7 @@ export function PlayerDetailPage() {
           </p>
           <p className="text-lg font-semibold text-slate-900">{currencyFormatter.format(balance.beitraegeGesamt)}</p>
           <p className="mt-1 text-xs text-slate-400">
-            Gesamtsieg: {currencyFormatter.format(balance.beitraegeGesamtsieg)} · Spieltag:{' '}
+            Gesamtwertung: {currencyFormatter.format(balance.beitraegeGesamtsieg)} · Spieltag:{' '}
             {currencyFormatter.format(balance.beitraegeSpieltag)}
           </p>
         </div>
@@ -128,14 +132,24 @@ export function PlayerDetailPage() {
           <p className="text-lg font-semibold text-emerald-600">{currencyFormatter.format(balance.gewinneGesamt)}</p>
         </div>
         <div className="rounded-xl border border-slate-200 bg-white p-4 sm:col-span-2">
-          <p className="text-sm text-slate-500">{balance.offen > 0 ? 'Noch offen' : 'Guthaben'}</p>
-          <p className={`text-xl font-semibold ${balance.offen > 0 ? 'text-amber-700' : 'text-emerald-600'}`}>
-            {currencyFormatter.format(Math.abs(balance.offen))}
-          </p>
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div>
+              <p className="text-sm text-slate-500">{balance.offen > 0 ? 'Noch offen' : 'Guthaben'}</p>
+              <p className={`text-xl font-semibold ${balance.offen > 0 ? 'text-amber-700' : 'text-emerald-600'}`}>
+                {currencyFormatter.format(Math.abs(balance.offen))}
+              </p>
+            </div>
+            {canManageBalanceTransfer && seasonFilter && balance.offen !== 0 && (
+              <Button variant="secondary" onClick={() => setShowTransferForm(true)}>
+                Saldo übertragen
+              </Button>
+            )}
+          </div>
           <p className="mt-1 text-xs text-slate-400">
             Beiträge {currencyFormatter.format(balance.beitraegeGesamt)} − Einzahlungen{' '}
             {currencyFormatter.format(balance.einzahlungenGesamt)} − Gewinne{' '}
-            {currencyFormatter.format(balance.gewinneGesamt)} + Auszahlungen{' '}
+            {currencyFormatter.format(balance.gewinneGesamt)} − Korrektur/Übertrag{' '}
+            {currencyFormatter.format(balance.korrekturGesamt)} + Auszahlungen{' '}
             {currencyFormatter.format(balance.auszahlungenGesamt)}
           </p>
         </div>
@@ -186,6 +200,26 @@ export function PlayerDetailPage() {
               typ: input.typ,
               betrag: input.betrag,
               datum: input.datum,
+              notiz: input.notiz,
+            })
+            await reload()
+          }}
+        />
+      )}
+
+      {showTransferForm && player && seasonFilter && seasonsById.get(seasonFilter) && (
+        <TransferForm
+          playerName={player.name}
+          fromSeason={seasonsById.get(seasonFilter)!}
+          currentOffen={balance.offen}
+          otherSeasons={seasons.filter((s) => s.id !== seasonFilter)}
+          onClose={() => setShowTransferForm(false)}
+          onSubmit={async (input) => {
+            await transferBalanceToSeason({
+              playerId: player.id,
+              fromSeasonId: seasonFilter,
+              toSeasonId: input.toSeasonId,
+              betrag: input.betrag,
               notiz: input.notiz,
             })
             await reload()

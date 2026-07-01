@@ -1,5 +1,29 @@
 export type UserRole = 'admin' | 'spielleiter' | 'user'
 
+// Die 10 konfigurierbaren Rechte, siehe supabase/migrations/0022_role_permissions.sql
+// und src/features/permissions/permissionCatalog.ts (dort mit Label/Seite/Beschreibung).
+// Benutzerverwaltung, E-Mail-Einstellungen und dieses Modul selbst bleiben
+// bewusst außerhalb dieses Katalogs (hart admin-only, siehe Migrationskommentar).
+export type PermissionKey =
+  | 'seasons.manage'
+  | 'matchdays.manage'
+  | 'participants.manage'
+  | 'matchday_entries.manage'
+  | 'payouts.manage'
+  | 'rankings.manage'
+  | 'players.manage'
+  | 'accounts.manage'
+  | 'balance_transfer.manage'
+  | 'import.use'
+
+export type RolePermission = {
+  role: UserRole
+  permission_key: PermissionKey
+  granted: boolean
+  updated_at: string
+  updated_by: string | null
+}
+
 // Bewusst `type` statt `interface`: postgrest-js' Typinferenz für insert()/update()
 // kollabiert auf `never`, wenn der Row-Typ als `interface` deklariert ist.
 export type Profile = {
@@ -21,12 +45,17 @@ export type Player = {
 
 export type SeasonStatus = 'aktiv' | 'abgeschlossen'
 
+// Wiederverwendet für die Gesamtwertung, siehe Season.gesamtwertung_status:
+// dieselbe offen/abgerechnet-Semantik wie ein einzelner Spieltag.
+export type GesamtwertungStatus = MatchdayStatus
+
 export type Season = {
   id: string
   name: string
   start_date: string
   end_date: string
   status: SeasonStatus
+  gesamtwertung_status: GesamtwertungStatus
   created_at: string
 }
 
@@ -211,6 +240,7 @@ export interface Database {
           start_date: string
           end_date: string
           status?: SeasonStatus
+          gesamtwertung_status?: GesamtwertungStatus
           created_at?: string
         }
         Update: {
@@ -219,6 +249,7 @@ export interface Database {
           start_date?: string
           end_date?: string
           status?: SeasonStatus
+          gesamtwertung_status?: GesamtwertungStatus
           created_at?: string
         }
         Relationships: []
@@ -445,6 +476,24 @@ export interface Database {
         }
         Relationships: []
       }
+      role_permissions: {
+        Row: RolePermission
+        Insert: {
+          role: UserRole
+          permission_key: PermissionKey
+          granted?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          role?: UserRole
+          permission_key?: PermissionKey
+          granted?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: Record<string, never>
     Functions: {
@@ -464,6 +513,10 @@ export interface Database {
         Args: { p_season_id: string }
         Returns: Transaction[]
       }
+      delete_season_payout_distribution: {
+        Args: { p_season_id: string }
+        Returns: undefined
+      }
       copy_season: {
         Args: {
           p_source_season_id: string
@@ -475,6 +528,20 @@ export interface Database {
           p_copy_matchdays?: boolean
         }
         Returns: string
+      }
+      transfer_balance_to_season: {
+        Args: {
+          p_player_id: string
+          p_from_season_id: string
+          p_to_season_id: string
+          p_betrag: number
+          p_notiz?: string | null
+        }
+        Returns: undefined
+      }
+      get_payout_pool: {
+        Args: { p_season_id: string; p_typ: PayoutTyp }
+        Returns: number
       }
     }
   }

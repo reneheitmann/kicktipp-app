@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type ChangeEvent } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
+import { useAuth } from '../auth/useAuth'
 import { listSeasons } from '../seasons/seasonsApi'
 import { listMatchdays } from '../seasons/matchdaysApi'
 import { listPlayers, updatePlayer, describePlayerSaveError } from '../players/playersApi'
@@ -36,6 +37,7 @@ function findPlayerMatch(rawName: string, players: Player[]): string | null {
 
 export function ImportPage() {
   const [searchParams] = useSearchParams()
+  const { can } = useAuth()
 
   const [seasons, setSeasons] = useState<Season[]>([])
   const [players, setPlayers] = useState<Player[]>([])
@@ -81,7 +83,7 @@ export function ImportPage() {
   }, [seasonId])
 
   // Saison-Teilnehmer (inkl. hinterlegtem Standard-Spieltagseinsatz) werden
-  // immer geladen: für "Gesamtsieg" sind sie direkt die Teilnahme-Berechtigung
+  // immer geladen: für "Gesamtwertung" sind sie direkt die Teilnahme-Berechtigung
   // (FK von season_rankings auf season_participants), für "Spieltag" liefern
   // sie zusätzlich den Betrag, mit dem ein noch fehlender Spieltags-Eintrag
   // automatisch nachgetragen werden kann.
@@ -189,12 +191,16 @@ export function ImportPage() {
   const unresolvedCount = includedRows.filter((r) => !r.playerId || r.parsedRang === null).length
   const autoAssignCount = includedRows.filter((r) => r.needsAutoAssign).length
   const ineligibleExcludedCount = rows.filter((r) => !r.eligible && r.playerId).length
+  // Das Übernehmen schreibt Platzierungen (matchday_rankings/season_rankings),
+  // das erfordert zusätzlich zum reinen Import-Zugriff das Recht
+  // rankings.manage – sonst würde der Klick an der RLS-Policy scheitern.
   const canSubmit =
     !!seasonId &&
     (target === 'gesamtsieg' || !!matchdayId) &&
     includedRows.length > 0 &&
     unresolvedCount === 0 &&
-    !submitting
+    !submitting &&
+    can('rankings.manage')
 
   async function handleSubmit() {
     if (!canSubmit || !csv) return
@@ -337,7 +343,7 @@ export function ImportPage() {
             }}
             className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base focus:border-slate-900 focus:outline-none"
           >
-            <option value="gesamtsieg">Gesamtsieg (Saisonrangliste)</option>
+            <option value="gesamtsieg">Gesamtwertung (Saisonrangliste)</option>
             <option value="spieltag">Spieltag (Tagesrangliste)</option>
           </select>
         </div>

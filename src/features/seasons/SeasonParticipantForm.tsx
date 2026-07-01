@@ -45,7 +45,7 @@ export function SeasonParticipantForm({
       return
     }
     if (!Number.isFinite(parsedGesamtsieg) || parsedGesamtsieg < 0) {
-      setError('Gesamtsieg-Einsatz muss eine gültige Zahl (≥ 0) sein.')
+      setError('Gesamtwertung-Einsatz muss eine gültige Zahl (≥ 0) sein.')
       return
     }
     if (!Number.isFinite(parsedSpieltag) || parsedSpieltag < 0) {
@@ -92,7 +92,7 @@ export function SeasonParticipantForm({
 
         <div>
           <label htmlFor="participant-gesamtsieg" className="mb-1 block text-sm font-medium text-slate-700">
-            Gesamtsieg-Einsatz (€, einmalig)
+            Gesamtwertung-Einsatz (€, einmalig)
           </label>
           <input
             id="participant-gesamtsieg"

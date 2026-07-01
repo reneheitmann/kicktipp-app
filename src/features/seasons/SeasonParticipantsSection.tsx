@@ -7,6 +7,8 @@ import type { Player, SeasonParticipant } from '../../types/database'
 interface SeasonParticipantsSectionProps {
   participants: SeasonParticipant[]
   players: Player[]
+  /** Anzahl der bisher angelegten Spieltage dieser Saison, für die Spieltagseinsatz-Aufschlüsselung. */
+  matchdayCount: number
   canManage: boolean
   onAdd: (input: { playerId: string; gesamtsiegBetrag: number; spieltagsBetrag: number }) => Promise<void>
   onUpdate: (
@@ -19,6 +21,7 @@ interface SeasonParticipantsSectionProps {
 export function SeasonParticipantsSection({
   participants,
   players,
+  matchdayCount,
   canManage,
   onAdd,
   onUpdate,
@@ -59,13 +62,22 @@ export function SeasonParticipantsSection({
         <ul className="divide-y divide-slate-200 overflow-hidden rounded-xl border border-slate-200 bg-white">
           {participants.map((participant) => (
             <li key={participant.id} className="flex items-center justify-between gap-3 px-4 py-3">
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <p className="truncate font-medium text-slate-900">
                   {playersById.get(participant.player_id)?.name ?? 'Unbekannter Spieler'}
                 </p>
                 <p className="truncate text-sm text-slate-500">
-                  Gesamtsieg: {currencyFormatter.format(participant.gesamtsieg_einsatz_betrag)} · Spieltag:{' '}
-                  {currencyFormatter.format(participant.spieltags_einsatz_betrag)}
+                  Gesamtwertung: {currencyFormatter.format(participant.gesamtsieg_einsatz_betrag)} · Spieltag:{' '}
+                  {matchdayCount} × {currencyFormatter.format(participant.spieltags_einsatz_betrag)} ={' '}
+                  {currencyFormatter.format(matchdayCount * participant.spieltags_einsatz_betrag)}
+                </p>
+              </div>
+              <div className="shrink-0 text-right">
+                <p className="text-xs text-slate-400">Gesamteinsatz</p>
+                <p className="text-sm font-semibold text-slate-900">
+                  {currencyFormatter.format(
+                    participant.gesamtsieg_einsatz_betrag + participant.spieltags_einsatz_betrag * matchdayCount,
+                  )}
                 </p>
               </div>
               {canManage && (

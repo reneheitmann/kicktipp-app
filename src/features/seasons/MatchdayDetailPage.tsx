@@ -26,8 +26,9 @@ import type { Matchday, MatchdayEntry, MatchdayRanking, Player, SeasonParticipan
 
 export function MatchdayDetailPage() {
   const { seasonId, matchdayId } = useParams<{ seasonId: string; matchdayId: string }>()
-  const { profile } = useAuth()
-  const canManage = profile?.role === 'admin' || profile?.role === 'spielleiter'
+  const { can } = useAuth()
+  const canManageEntries = can('matchday_entries.manage')
+  const canManageRankings = can('rankings.manage')
 
   const [matchday, setMatchday] = useState<Matchday | null>(null)
   const [entries, setEntries] = useState<MatchdayEntry[]>([])
@@ -110,7 +111,7 @@ export function MatchdayDetailPage() {
 
       {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
 
-      {canManage && missingParticipants.length > 0 && (
+      {canManageEntries && missingParticipants.length > 0 && (
         <div className="mb-3 flex justify-end">
           <Button variant="secondary" onClick={handleBulkAdd} disabled={bulkAdding}>
             {bulkAdding
@@ -125,7 +126,7 @@ export function MatchdayDetailPage() {
         betragLabel="Spieltags-Einsatz"
         entries={entries.map((e) => ({ id: e.id, player_id: e.player_id, betrag: e.spieltags_einsatz_betrag }))}
         players={players}
-        canManage={canManage}
+        canManage={canManageEntries}
         onAdd={async (playerId, betrag) => {
           await addMatchdayEntry({ matchday_id: matchday.id, player_id: playerId, spieltags_einsatz_betrag: betrag })
           await reload()
@@ -140,7 +141,7 @@ export function MatchdayDetailPage() {
         }}
       />
 
-      {canManage && (
+      {canManageRankings && (
         <div className="mb-3 flex justify-end">
           <Link
             to={`/import?seasonId=${seasonId}&matchdayId=${matchday.id}`}
@@ -158,11 +159,11 @@ export function MatchdayDetailPage() {
         // matchday_entries nur die eigene Zeile (Einsatz bleibt privat) – die
         // öffentlich sichtbare Platzierung wird stattdessen aus den (für alle
         // lesbaren) matchday_rankings abgeleitet.
-        eligiblePlayerIds={canManage ? entries.map((e) => e.player_id) : rankings.map((r) => r.player_id)}
+        eligiblePlayerIds={canManageRankings ? entries.map((e) => e.player_id) : rankings.map((r) => r.player_id)}
         players={players}
         rankings={rankings}
         payouts={payouts.map((p) => ({ player_id: p.player_id, betrag: p.betrag }))}
-        canManage={canManage}
+        canManage={canManageRankings}
         onSetRang={async (playerId, rang) => {
           await setMatchdayRanking(matchday.id, playerId, rang)
           await reload()

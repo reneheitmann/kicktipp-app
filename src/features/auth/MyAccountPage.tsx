@@ -4,7 +4,7 @@ import { useAuth } from './useAuth'
 import { updateOwnName, updateOwnPassword } from './myAccountApi'
 
 export function MyAccountPage() {
-  const { profile, refreshProfile } = useAuth()
+  const { profile, refreshProfile, viewAsUser, setViewAsUser } = useAuth()
 
   const [name, setName] = useState(profile?.name ?? '')
   const [nameError, setNameError] = useState<string | null>(null)
@@ -100,6 +100,25 @@ export function MyAccountPage() {
           </Button>
         </form>
       </div>
+
+      {(profile.role === 'admin' || profile.role === 'spielleiter') && (
+        <div className="mb-6 rounded-xl border border-slate-200 bg-white p-4">
+          <h2 className="mb-1 text-base font-semibold text-slate-900">Ansicht</h2>
+          <p className="mb-3 text-sm text-slate-500">
+            Simuliert die Ansicht der Rolle „Spieler" (Rollen &amp; Berechtigungen bleiben in der Datenbank
+            unverändert – jederzeit umkehrbar).
+          </p>
+          <label className="flex items-center gap-2 text-sm text-slate-700">
+            <input
+              type="checkbox"
+              checked={viewAsUser}
+              onChange={(e) => setViewAsUser(e.target.checked)}
+              className="h-5 w-5"
+            />
+            Als Spieler anzeigen
+          </label>
+        </div>
+      )}
 
       <div className="rounded-xl border border-slate-200 bg-white p-4">
         <h2 className="mb-3 text-base font-semibold text-slate-900">Passwort ändern</h2>

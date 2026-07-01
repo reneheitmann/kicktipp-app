@@ -20,8 +20,9 @@ interface AdminStats {
 }
 
 export function DashboardPage() {
-  const { profile } = useAuth()
-  const canManage = profile?.role === 'admin' || profile?.role === 'spielleiter'
+  const { profile, can } = useAuth()
+  // Statistik ist eine finanzielle Gesamtübersicht -> gleiches Recht wie Konten.
+  const canManage = can('accounts.manage')
 
   const [activeSeasons, setActiveSeasons] = useState<Season[]>([])
   const [myPlayer, setMyPlayer] = useState<Player | null>(null)
@@ -142,22 +143,30 @@ export function DashboardPage() {
         </ul>
       )}
 
-      {canManage && (
+      {(can('seasons.manage') || can('players.manage') || can('accounts.manage') || can('import.use')) && (
         <>
           <h2 className="mb-3 text-base font-semibold text-slate-900">Schnellzugriff</h2>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <Link to="/seasons" className="rounded-xl border border-slate-200 bg-white p-4 text-center hover:bg-slate-50">
-              Saisons
-            </Link>
-            <Link to="/players" className="rounded-xl border border-slate-200 bg-white p-4 text-center hover:bg-slate-50">
-              Spieler
-            </Link>
-            <Link to="/konten" className="rounded-xl border border-slate-200 bg-white p-4 text-center hover:bg-slate-50">
-              Konten
-            </Link>
-            <Link to="/import" className="rounded-xl border border-slate-200 bg-white p-4 text-center hover:bg-slate-50">
-              Import
-            </Link>
+            {can('seasons.manage') && (
+              <Link to="/seasons" className="rounded-xl border border-slate-200 bg-white p-4 text-center hover:bg-slate-50">
+                Saisons
+              </Link>
+            )}
+            {can('players.manage') && (
+              <Link to="/players" className="rounded-xl border border-slate-200 bg-white p-4 text-center hover:bg-slate-50">
+                Spieler
+              </Link>
+            )}
+            {can('accounts.manage') && (
+              <Link to="/konten" className="rounded-xl border border-slate-200 bg-white p-4 text-center hover:bg-slate-50">
+                Konten
+              </Link>
+            )}
+            {can('import.use') && (
+              <Link to="/import" className="rounded-xl border border-slate-200 bg-white p-4 text-center hover:bg-slate-50">
+                Import
+              </Link>
+            )}
           </div>
         </>
       )}

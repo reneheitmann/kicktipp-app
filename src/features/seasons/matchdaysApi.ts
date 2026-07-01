@@ -11,6 +11,12 @@ export async function listMatchdays(seasonId: string): Promise<Matchday[]> {
   return data
 }
 
+export async function listAllMatchdays(): Promise<Matchday[]> {
+  const { data, error } = await supabase.from('matchdays').select('*')
+  if (error) throw error
+  return data
+}
+
 /** Anzahl angelegter Spieltage je Saison – Basis für die Spieltags-Beitragsberechnung. */
 export async function listMatchdayCountsBySeasonId(): Promise<Map<string, number>> {
   const { data, error } = await supabase.from('matchdays').select('season_id')

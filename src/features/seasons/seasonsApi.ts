@@ -1,5 +1,5 @@
 import { supabase } from '../../lib/supabaseClient'
-import type { Season, SeasonStatus } from '../../types/database'
+import type { GesamtwertungStatus, Season, SeasonStatus } from '../../types/database'
 
 export async function listSeasons(): Promise<Season[]> {
   const { data, error } = await supabase.from('seasons').select('*').order('start_date', { ascending: false })
@@ -34,6 +34,17 @@ export async function updateSeason(
 
 export async function setSeasonStatus(id: string, status: SeasonStatus): Promise<Season> {
   const { data, error } = await supabase.from('seasons').update({ status }).eq('id', id).select().single()
+  if (error) throw error
+  return data
+}
+
+export async function setGesamtwertungStatus(id: string, gesamtwertung_status: GesamtwertungStatus): Promise<Season> {
+  const { data, error } = await supabase
+    .from('seasons')
+    .update({ gesamtwertung_status })
+    .eq('id', id)
+    .select()
+    .single()
   if (error) throw error
   return data
 }

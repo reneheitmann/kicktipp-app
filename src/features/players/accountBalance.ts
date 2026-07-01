@@ -7,6 +7,7 @@ export interface AccountBalance {
   einzahlungenGesamt: number
   auszahlungenGesamt: number
   gewinneGesamt: number
+  korrekturGesamt: number
   offen: number
 }
 
@@ -21,7 +22,11 @@ export interface AccountBalance {
  * Buchungs-Ledger) mindern zusammen mit Einzahlungen die Restschuld;
  * Guthaben-Auszahlungen (bereits an den Spieler ausgezahlte Gewinne/
  * Überschüsse) erhöhen sie wieder, da der ausgezahlte Betrag nicht mehr als
- * Guthaben gegen künftige Beiträge zur Verfügung steht.
+ * Guthaben gegen künftige Beiträge zur Verfügung steht. `korrektur`-Buchungen
+ * (u. a. Saison-Übertrag, siehe transferApi.ts) wirken wie Gewinne: ein
+ * positiver Betrag mindert die Restschuld, ein negativer erhöht sie – so
+ * gleicht ein Übertrag die Quell-Saison exakt auf 0 aus und baut in der
+ * Ziel-Saison denselben Betrag als Startsaldo neu auf.
  * `offen > 0` heißt: Spieler schuldet noch Geld; `offen < 0` heißt: Spieler
  * hat (durch Einzahlungen und/oder noch nicht ausgezahlte Gewinne) mehr als
  * nötig beglichen.
@@ -43,6 +48,7 @@ export function computeAccountBalance(
   const gewinneGesamt = transactions
     .filter((t) => t.typ === 'gewinn_gesamt' || t.typ === 'gewinn_spieltag')
     .reduce((sum, t) => sum + t.betrag, 0)
+  const korrekturGesamt = transactions.filter((t) => t.typ === 'korrektur').reduce((sum, t) => sum + t.betrag, 0)
   return {
     beitraegeGesamtsieg,
     beitraegeSpieltag,
@@ -50,7 +56,8 @@ export function computeAccountBalance(
     einzahlungenGesamt,
     auszahlungenGesamt,
     gewinneGesamt,
-    offen: beitraegeGesamt - einzahlungenGesamt - gewinneGesamt + auszahlungenGesamt,
+    korrekturGesamt,
+    offen: beitraegeGesamt - einzahlungenGesamt - gewinneGesamt - korrekturGesamt + auszahlungenGesamt,
   }
 }
 

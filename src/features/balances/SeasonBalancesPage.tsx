@@ -63,7 +63,7 @@ export function SeasonBalancesPage() {
 
   const chartData = balances.map((b) => ({
     name: b.name,
-    Gesamtsieg: b.gesamtsieg_saldo,
+    Gesamtwertung: b.gesamtsieg_saldo,
     Spieltag: b.spieltag_saldo,
   }))
 
@@ -101,7 +101,7 @@ export function SeasonBalancesPage() {
                 <YAxis tick={{ fontSize: 12 }} />
                 <Tooltip formatter={(value) => currencyFormatter.format(Number(value))} />
                 <Legend />
-                <Bar dataKey="Gesamtsieg" fill="#0f172a" />
+                <Bar dataKey="Gesamtwertung" fill="#0f172a" />
                 <Bar dataKey="Spieltag" fill="#94a3b8" />
               </BarChart>
             </ResponsiveContainer>
@@ -112,9 +112,9 @@ export function SeasonBalancesPage() {
               <thead>
                 <tr className="border-b border-slate-200 text-left text-slate-500">
                   <th className="px-4 py-3 font-medium">Spieler</th>
-                  <th className="px-4 py-3 font-medium">Gesamtsieg-Einsatz</th>
-                  <th className="px-4 py-3 font-medium">Gesamtsieg-Gewinn</th>
-                  <th className="px-4 py-3 font-medium">Gesamtsieg-Saldo</th>
+                  <th className="px-4 py-3 font-medium">Gesamtwertung-Einsatz</th>
+                  <th className="px-4 py-3 font-medium">Gesamtwertung-Gewinn</th>
+                  <th className="px-4 py-3 font-medium">Gesamtwertung-Saldo</th>
                   <th className="px-4 py-3 font-medium">Spieltag-Einsatz</th>
                   <th className="px-4 py-3 font-medium">Spieltag-Gewinn</th>
                   <th className="px-4 py-3 font-medium">Spieltag-Saldo</th>

@@ -12,8 +12,10 @@ import { PlayerDetailPage } from './features/players/PlayerDetailPage'
 import { AccountsOverviewPage } from './features/players/AccountsOverviewPage'
 import { AdminUsersPage } from './features/admin-users/AdminUsersPage'
 import { EmailSettingsPage } from './features/email-settings/EmailSettingsPage'
+import { RolesPermissionsPage } from './features/permissions/RolesPermissionsPage'
 import { SeasonsPage } from './features/seasons/SeasonsPage'
 import { SeasonDetailPage } from './features/seasons/SeasonDetailPage'
+import { SeasonRankingPage } from './features/seasons/SeasonRankingPage'
 import { MatchdayDetailPage } from './features/seasons/MatchdayDetailPage'
 import { ImportPage } from './features/kicktipp-import/ImportPage'
 import { TipperImportPage } from './features/kicktipp-import/TipperImportPage'
@@ -45,6 +47,7 @@ export default function App() {
               <Route path="/" element={<DashboardPage />} />
               <Route path="/seasons" element={<SeasonsPage />} />
               <Route path="/seasons/:seasonId" element={<SeasonDetailPage />} />
+              <Route path="/seasons/:seasonId/gesamtwertung" element={<SeasonRankingPage />} />
               <Route path="/seasons/:seasonId/matchdays/:matchdayId" element={<MatchdayDetailPage />} />
               <Route path="/players/:playerId" element={<PlayerDetailPage />} />
               <Route path="/profil" element={<MyAccountPage />} />
@@ -65,9 +68,15 @@ export default function App() {
                 }
               />
 
-              <Route element={<ProtectedRoute allowedRoles={['admin', 'spielleiter']} />}>
+              <Route element={<ProtectedRoute requiredPermission="players.manage" />}>
                 <Route path="/players" element={<PlayersPage />} />
+              </Route>
+
+              <Route element={<ProtectedRoute requiredPermission="accounts.manage" />}>
                 <Route path="/konten" element={<AccountsOverviewPage />} />
+              </Route>
+
+              <Route element={<ProtectedRoute requiredPermission="import.use" />}>
                 <Route path="/import" element={<ImportPage />} />
                 <Route path="/import/tipper" element={<TipperImportPage />} />
               </Route>
@@ -75,6 +84,7 @@ export default function App() {
               <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
                 <Route path="/admin/users" element={<AdminUsersPage />} />
                 <Route path="/admin/email" element={<EmailSettingsPage />} />
+                <Route path="/admin/roles" element={<RolesPermissionsPage />} />
               </Route>
             </Route>
           </Route>
