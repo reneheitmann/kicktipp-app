@@ -73,4 +73,10 @@ export const permissionCatalog: PermissionCatalogEntry[] = [
     page: 'Import',
     description: 'Kicktipp-Datenexporte hochladen und prüfen.',
   },
+  {
+    key: 'email.send',
+    label: 'E-Mails versenden',
+    page: 'E-Mail versenden',
+    description: 'Bulk-E-Mails an Spieler senden (Empfängerauswahl, Vorlagen verwalten).',
+  },
 ]

@@ -9,10 +9,10 @@ import { listSeasonParticipants } from './seasonParticipantsApi'
 import { RankingsSection } from '../rankings/RankingsSection'
 import {
   calculateSeasonPayout,
-  deleteSeasonPayoutDistribution,
   listSeasonPayouts,
   listSeasonRankings,
   removeSeasonRanking,
+  resetSeasonRankings,
   setSeasonRanking,
 } from '../rankings/seasonRankingsApi'
 import type { Player, Season, SeasonParticipant, SeasonRanking, Transaction } from '../../types/database'
@@ -21,12 +21,7 @@ export function SeasonRankingPage() {
   const { seasonId } = useParams<{ seasonId: string }>()
   const { can } = useAuth()
   const canManage = can('rankings.manage')
-  // Löschen betrifft zwei Tabellen mit unterschiedlichen Rechten (Prozent-
-  // Verteilung -> payouts.manage, bereits verbuchte Gewinne -> rankings.manage)
-  // – ohne beide Rechte würde die RPC an der jeweils fehlenden RLS-Policy
-  // scheitern, daher hier vorab beide prüfen.
-  const canDeleteDistribution = can('payouts.manage') && can('rankings.manage')
-  const [deleting, setDeleting] = useState(false)
+  const [resetting, setResetting] = useState(false)
 
   const [season, setSeason] = useState<Season | null>(null)
   const [participants, setParticipants] = useState<SeasonParticipant[]>([])
@@ -64,24 +59,24 @@ export function SeasonRankingPage() {
     reload()
   }, [reload])
 
-  async function handleDeleteDistribution() {
+  async function handleResetRankings() {
     if (!seasonId) return
     if (
       !confirm(
-        'Gewinnverteilung (Prozentsätze) und alle bereits verbuchten Gewinne dieser Gesamtwertung wirklich unwiderruflich löschen?',
+        'Platzierungen und alle bereits verbuchten Gewinne dieser Gesamtwertung wirklich unwiderruflich zurücksetzen? Die konfigurierte Gewinnverteilung (Prozentsätze) bleibt dabei erhalten.',
       )
     ) {
       return
     }
-    setDeleting(true)
+    setResetting(true)
     setError(null)
     try {
-      await deleteSeasonPayoutDistribution(seasonId)
+      await resetSeasonRankings(seasonId)
       await reload()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Löschen fehlgeschlagen.')
+      setError(err instanceof Error ? err.message : 'Zurücksetzen fehlgeschlagen.')
     } finally {
-      setDeleting(false)
+      setResetting(false)
     }
   }
 
@@ -108,18 +103,14 @@ export function SeasonRankingPage() {
 
       {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
 
-      {(canManage || canDeleteDistribution) && (
+      {canManage && (
         <div className="mb-3 flex flex-wrap items-center justify-end gap-3">
-          {canManage && (
-            <Link to={`/import?seasonId=${season.id}`} className="text-sm font-medium text-slate-600 hover:underline">
-              Platzierungen aus Kicktipp importieren →
-            </Link>
-          )}
-          {canDeleteDistribution && (
-            <Button variant="danger" onClick={handleDeleteDistribution} disabled={deleting}>
-              {deleting ? 'Löschen...' : 'Gewinnverteilung & Gewinne löschen'}
-            </Button>
-          )}
+          <Link to={`/import?seasonId=${season.id}`} className="text-sm font-medium text-slate-600 hover:underline">
+            Platzierungen aus Kicktipp importieren →
+          </Link>
+          <Button variant="danger" onClick={handleResetRankings} disabled={resetting}>
+            {resetting ? 'Zurücksetzen...' : 'Platzierungen & Gewinne zurücksetzen'}
+          </Button>
         </div>
       )}
 

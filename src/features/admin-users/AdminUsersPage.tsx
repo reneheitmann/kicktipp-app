@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Button } from '../../components/ui/Button'
 import { CreateUserForm } from './CreateUserForm'
+import { EditUserForm } from './EditUserForm'
 import { listProfiles, sendPasswordReset, setProfileActive, updateProfileRole } from './profilesApi'
 import type { Profile, UserRole } from '../../types/database'
 
@@ -10,6 +11,7 @@ export function AdminUsersPage() {
   const [error, setError] = useState<string | null>(null)
   const [info, setInfo] = useState<string | null>(null)
   const [showCreate, setShowCreate] = useState(false)
+  const [editingProfile, setEditingProfile] = useState<Profile | null>(null)
 
   async function reload() {
     setLoading(true)
@@ -87,6 +89,9 @@ export function AdminUsersPage() {
                   <option value="spielleiter">Spielleiter</option>
                   <option value="admin">Administrator</option>
                 </select>
+                <Button variant="secondary" onClick={() => setEditingProfile(p)}>
+                  Bearbeiten
+                </Button>
                 <Button variant="secondary" onClick={() => handlePasswordReset(p)}>
                   Passwort-Reset
                 </Button>
@@ -100,6 +105,10 @@ export function AdminUsersPage() {
       )}
 
       {showCreate && <CreateUserForm onClose={() => setShowCreate(false)} onCreated={reload} />}
+
+      {editingProfile && (
+        <EditUserForm profile={editingProfile} onClose={() => setEditingProfile(null)} onSaved={reload} />
+      )}
     </div>
   )
 }

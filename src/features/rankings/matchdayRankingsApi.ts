@@ -24,8 +24,9 @@ export async function setMatchdayRanking(matchdayId: string, playerId: string, r
   return data
 }
 
+/** Entfernt die Platzierung eines Spielers samt einer dafür ggf. bereits verbuchten gewinn_spieltag-Buchung. */
 export async function removeMatchdayRanking(id: string): Promise<void> {
-  const { error } = await supabase.from('matchday_rankings').delete().eq('id', id)
+  const { error } = await supabase.rpc('remove_matchday_ranking', { p_ranking_id: id })
   if (error) throw error
 }
 

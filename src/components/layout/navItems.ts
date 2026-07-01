@@ -15,6 +15,7 @@ export const navItems: NavItem[] = [
   { to: '/players', label: 'Spieler', requiredPermission: 'players.manage' },
   { to: '/konten', label: 'Konten', requiredPermission: 'accounts.manage' },
   { to: '/import', label: 'Import', requiredPermission: 'import.use' },
+  { to: '/emails/senden', label: 'E-Mail versenden', requiredPermission: 'email.send' },
   { to: '/admin/users', label: 'Benutzer', roles: ['admin'] },
   { to: '/admin/email', label: 'E-Mail', roles: ['admin'] },
   { to: '/admin/roles', label: 'Rollen & Berechtigungen', roles: ['admin'] },

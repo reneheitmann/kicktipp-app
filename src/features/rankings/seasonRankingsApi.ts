@@ -17,8 +17,9 @@ export async function setSeasonRanking(seasonId: string, playerId: string, rang:
   return data
 }
 
+/** Entfernt die Platzierung eines Spielers samt einer dafür ggf. bereits verbuchten gewinn_gesamt-Buchung. */
 export async function removeSeasonRanking(id: string): Promise<void> {
-  const { error } = await supabase.from('season_rankings').delete().eq('id', id)
+  const { error } = await supabase.rpc('remove_season_ranking', { p_ranking_id: id })
   if (error) throw error
 }
 
@@ -39,8 +40,8 @@ export async function calculateSeasonPayout(seasonId: string): Promise<Transacti
   return data
 }
 
-/** Löscht die Gesamtwertung-Gewinnverteilung (Prozentsätze) inkl. bereits verbuchter Gewinne. */
-export async function deleteSeasonPayoutDistribution(seasonId: string): Promise<void> {
-  const { error } = await supabase.rpc('delete_season_payout_distribution', { p_season_id: seasonId })
+/** Setzt Platzierungen der Gesamtwertung samt bereits verbuchter Gewinne zurück – die konfigurierte Gewinnverteilung (Prozentsätze) bleibt unangetastet. */
+export async function resetSeasonRankings(seasonId: string): Promise<void> {
+  const { error } = await supabase.rpc('reset_season_rankings', { p_season_id: seasonId })
   if (error) throw error
 }

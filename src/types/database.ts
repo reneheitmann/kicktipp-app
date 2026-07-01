@@ -1,8 +1,9 @@
 export type UserRole = 'admin' | 'spielleiter' | 'user'
 
-// Die 10 konfigurierbaren Rechte, siehe supabase/migrations/0022_role_permissions.sql
-// und src/features/permissions/permissionCatalog.ts (dort mit Label/Seite/Beschreibung).
-// Benutzerverwaltung, E-Mail-Einstellungen und dieses Modul selbst bleiben
+// Die konfigurierbaren Rechte, siehe supabase/migrations/0022_role_permissions.sql
+// (Basis) und 0024_email_send_permission_and_templates.sql (email.send) und
+// src/features/permissions/permissionCatalog.ts (dort mit Label/Seite/Beschreibung).
+// Benutzerverwaltung, E-Mail-Einstellungen (SMTP) und dieses Modul selbst bleiben
 // bewusst außerhalb dieses Katalogs (hart admin-only, siehe Migrationskommentar).
 export type PermissionKey =
   | 'seasons.manage'
@@ -15,6 +16,7 @@ export type PermissionKey =
   | 'accounts.manage'
   | 'balance_transfer.manage'
   | 'import.use'
+  | 'email.send'
 
 export type RolePermission = {
   role: UserRole
@@ -167,6 +169,20 @@ export type Zahlung = {
   notiz: string | null
   created_by: string | null
   created_at: string
+}
+
+// Wiederverwendbare Vorlage für den Bulk-E-Mail-Versand an Spieler (nicht zu
+// verwechseln mit EmailSettings, das die SMTP-Zugangsdaten hält). body_text
+// und subject enthalten Variablen-Tokens ({{Spielername}} etc.), siehe
+// src/features/emails/templateVariables.ts.
+export type EmailTemplate = {
+  id: string
+  name: string
+  subject: string
+  body_text: string
+  created_at: string
+  updated_at: string
+  created_by: string | null
 }
 
 export type SmtpEncryption = 'none' | 'starttls' | 'tls'
@@ -494,6 +510,28 @@ export interface Database {
         }
         Relationships: []
       }
+      email_templates: {
+        Row: EmailTemplate
+        Insert: {
+          id?: string
+          name: string
+          subject: string
+          body_text: string
+          created_at?: string
+          updated_at?: string
+          created_by?: string | null
+        }
+        Update: {
+          id?: string
+          name?: string
+          subject?: string
+          body_text?: string
+          created_at?: string
+          updated_at?: string
+          created_by?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: Record<string, never>
     Functions: {
@@ -513,7 +551,15 @@ export interface Database {
         Args: { p_season_id: string }
         Returns: Transaction[]
       }
-      delete_season_payout_distribution: {
+      remove_matchday_ranking: {
+        Args: { p_ranking_id: string }
+        Returns: undefined
+      }
+      remove_season_ranking: {
+        Args: { p_ranking_id: string }
+        Returns: undefined
+      }
+      reset_season_rankings: {
         Args: { p_season_id: string }
         Returns: undefined
       }

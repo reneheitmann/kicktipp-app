@@ -25,7 +25,8 @@ export function AppShell() {
                 `${linkBaseClasses} ${isActive ? linkActiveClasses : linkInactiveClasses}`
               }
             >
-              {item.label}
+              <span>{item.label}</span>
+              {viewAsUser && item.roles && <AdminOnlyBadge className="ml-auto" />}
             </NavLink>
           ))}
         </nav>
@@ -85,11 +86,26 @@ export function AppShell() {
               }`
             }
           >
-            {item.label}
+            <span>{item.label}</span>
+            {viewAsUser && item.roles && <AdminOnlyBadge />}
           </NavLink>
         ))}
       </nav>
     </div>
+  )
+}
+
+/** Kennzeichnet einen Menüpunkt, der trotz aktiver "Als Spieler anzeigen"-Vorschau
+ * sichtbar bleibt, weil er zu den 3 fest auf Admin verdrahteten Funktionen
+ * gehört (Benutzerverwaltung, E-Mail, Rollen & Berechtigungen) und nicht Teil
+ * der simulierten Berechtigungsvorschau ist. */
+function AdminOnlyBadge({ className = '' }: { className?: string }) {
+  return (
+    <span
+      className={`shrink-0 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-800 ${className}`}
+    >
+      Admin
+    </span>
   )
 }
 

@@ -20,6 +20,8 @@ import { MatchdayDetailPage } from './features/seasons/MatchdayDetailPage'
 import { ImportPage } from './features/kicktipp-import/ImportPage'
 import { TipperImportPage } from './features/kicktipp-import/TipperImportPage'
 import { MyAccountPage } from './features/auth/MyAccountPage'
+import { SendEmailPage } from './features/emails/SendEmailPage'
+import { EmailTemplatesPage } from './features/emails/EmailTemplatesPage'
 
 // Lazy geladen, da recharts (Diagramme) allein mehrere hundert KB wiegt und nur
 // auf diesen beiden Seiten gebraucht wird – relevant für mobile Ladezeiten.
@@ -79,6 +81,11 @@ export default function App() {
               <Route element={<ProtectedRoute requiredPermission="import.use" />}>
                 <Route path="/import" element={<ImportPage />} />
                 <Route path="/import/tipper" element={<TipperImportPage />} />
+              </Route>
+
+              <Route element={<ProtectedRoute requiredPermission="email.send" />}>
+                <Route path="/emails/senden" element={<SendEmailPage />} />
+                <Route path="/emails/vorlagen" element={<EmailTemplatesPage />} />
               </Route>
 
               <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
