@@ -3,9 +3,9 @@ import { supabase } from '../../lib/supabaseClient'
 import type { MatchdayRanking, Transaction } from '../../types/database'
 
 export async function listMatchdayRankings(matchdayId: string): Promise<MatchdayRanking[]> {
-  const { data, error } = await supabase.from('matchday_rankings').select('*').eq('matchday_id', matchdayId)
-  if (error) throw error
-  return data
+  return fetchAllRows((from, to) =>
+    supabase.from('matchday_rankings').select('*').eq('matchday_id', matchdayId).range(from, to),
+  )
 }
 
 export async function listMatchdayRankingsForMatchdays(matchdayIds: string[]): Promise<MatchdayRanking[]> {

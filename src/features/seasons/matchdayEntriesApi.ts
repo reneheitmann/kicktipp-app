@@ -3,12 +3,9 @@ import { supabase } from '../../lib/supabaseClient'
 import type { MatchdayEntry } from '../../types/database'
 
 export async function listMatchdayEntries(matchdayId: string): Promise<MatchdayEntry[]> {
-  const { data, error } = await supabase
-    .from('matchday_entries')
-    .select('*')
-    .eq('matchday_id', matchdayId)
-  if (error) throw error
-  return data
+  return fetchAllRows((from, to) =>
+    supabase.from('matchday_entries').select('*').eq('matchday_id', matchdayId).range(from, to),
+  )
 }
 
 export async function listMatchdayEntriesForMatchdays(matchdayIds: string[]): Promise<MatchdayEntry[]> {

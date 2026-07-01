@@ -3,18 +3,15 @@ import { supabase } from '../../lib/supabaseClient'
 import type { SeasonParticipant } from '../../types/database'
 
 export async function listSeasonParticipants(seasonId: string): Promise<SeasonParticipant[]> {
-  const { data, error } = await supabase
-    .from('season_participants')
-    .select('*')
-    .eq('season_id', seasonId)
-  if (error) throw error
-  return data
+  return fetchAllRows((from, to) =>
+    supabase.from('season_participants').select('*').eq('season_id', seasonId).range(from, to),
+  )
 }
 
 export async function listSeasonParticipantsForPlayer(playerId: string): Promise<SeasonParticipant[]> {
-  const { data, error } = await supabase.from('season_participants').select('*').eq('player_id', playerId)
-  if (error) throw error
-  return data
+  return fetchAllRows((from, to) =>
+    supabase.from('season_participants').select('*').eq('player_id', playerId).range(from, to),
+  )
 }
 
 export async function listAllSeasonParticipants(): Promise<SeasonParticipant[]> {

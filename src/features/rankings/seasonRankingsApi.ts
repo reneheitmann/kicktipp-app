@@ -1,10 +1,11 @@
+import { fetchAllRows } from '../../lib/fetchAllRows'
 import { supabase } from '../../lib/supabaseClient'
 import type { SeasonRanking, Transaction } from '../../types/database'
 
 export async function listSeasonRankings(seasonId: string): Promise<SeasonRanking[]> {
-  const { data, error } = await supabase.from('season_rankings').select('*').eq('season_id', seasonId)
-  if (error) throw error
-  return data
+  return fetchAllRows((from, to) =>
+    supabase.from('season_rankings').select('*').eq('season_id', seasonId).range(from, to),
+  )
 }
 
 export async function setSeasonRanking(seasonId: string, playerId: string, rang: number): Promise<SeasonRanking> {

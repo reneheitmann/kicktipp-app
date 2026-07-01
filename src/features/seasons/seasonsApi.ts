@@ -1,10 +1,9 @@
+import { fetchAllRows } from '../../lib/fetchAllRows'
 import { supabase } from '../../lib/supabaseClient'
 import type { GesamtwertungStatus, Season, SeasonStatus } from '../../types/database'
 
 export async function listSeasons(): Promise<Season[]> {
-  const { data, error } = await supabase.from('seasons').select('*').order('start_date', { ascending: false })
-  if (error) throw error
-  return data
+  return fetchAllRows((from, to) => supabase.from('seasons').select('*').order('start_date', { ascending: false }).range(from, to))
 }
 
 export async function getSeason(id: string): Promise<Season> {

@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
+import { SearchInput } from '../../components/ui/SearchInput'
 import { SeasonFilter } from '../../components/ui/SeasonFilter'
+import { SortableTh } from '../../components/ui/SortableTh'
 import { currencyFormatter } from '../../lib/format'
 import { listPlayers } from './playersApi'
 import { addZahlung, listAllZahlungen } from './zahlungenApi'
@@ -24,6 +26,20 @@ export function AccountsOverviewPage() {
   const [error, setError] = useState<string | null>(null)
   const [zahlungFor, setZahlungFor] = useState<Player | null>(null)
   const [seasonFilter, setSeasonFilter] = useState('')
+  const [search, setSearch] = useState('')
+  const [sortColumn, setSortColumn] = useState<
+    'name' | 'beitraegeGesamt' | 'einzahlungenGesamt' | 'auszahlungenGesamt' | 'gewinneGesamt' | 'offen'
+  >('offen')
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
+
+  function handleSort(column: string) {
+    if (column === sortColumn) {
+      setSortDirection((d) => (d === 'asc' ? 'desc' : 'asc'))
+    } else {
+      setSortColumn(column as typeof sortColumn)
+      setSortDirection(column === 'name' ? 'asc' : 'desc')
+    }
+  }
 
   async function reload() {
     setLoading(true)
@@ -65,6 +81,7 @@ export function AccountsOverviewPage() {
   const filteredTransactions = seasonFilter ? transactions.filter((t) => t.season_id === seasonFilter) : transactions
 
   const rows = players
+    .filter((player) => player.name.toLowerCase().includes(search.trim().toLowerCase()))
     .map((player) => ({
       player,
       balance: computeAccountBalance(
@@ -74,7 +91,11 @@ export function AccountsOverviewPage() {
         filteredTransactions.filter((t) => t.player_id === player.id),
       ),
     }))
-    .sort((a, b) => b.balance.offen - a.balance.offen)
+    .sort((a, b) => {
+      const dir = sortDirection === 'asc' ? 1 : -1
+      if (sortColumn === 'name') return a.player.name.localeCompare(b.player.name) * dir
+      return (a.balance[sortColumn] - b.balance[sortColumn]) * dir
+    })
 
   const totalOffen = computeTotalOutstanding(
     players.map((p) => p.id),
@@ -90,26 +111,64 @@ export function AccountsOverviewPage() {
         <h1 className="text-xl font-semibold text-slate-900">Konten-Übersicht</h1>
         <SeasonFilter seasons={seasons} value={seasonFilter} onChange={setSeasonFilter} />
       </div>
-      <p className="mb-6 text-sm font-medium text-slate-700">
+      <p className="mb-4 text-sm font-medium text-slate-700">
         Insgesamt offen: {currencyFormatter.format(totalOffen)}
       </p>
+      <SearchInput value={search} onChange={setSearch} placeholder="Spieler suchen..." className="mb-4 max-w-xs" />
 
       {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
 
       {rows.length === 0 ? (
-        <p className="text-sm text-slate-500">Noch keine Spieler angelegt.</p>
+        <p className="text-sm text-slate-500">
+          {players.length === 0 ? 'Noch keine Spieler angelegt.' : 'Keine Treffer für die Suche.'}
+        </p>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+        <div className="max-h-[70vh] overflow-auto rounded-xl border border-slate-200 bg-white">
           <table className="w-full min-w-[720px] text-sm">
             <thead>
-              <tr className="border-b border-slate-200 text-left text-slate-500">
-                <th className="px-4 py-3 font-medium">Spieler</th>
-                <th className="px-4 py-3 font-medium">Beiträge gesamt</th>
-                <th className="px-4 py-3 font-medium">Eingezahlt</th>
-                <th className="px-4 py-3 font-medium">Ausgezahlt</th>
-                <th className="px-4 py-3 font-medium">Gewinne</th>
-                <th className="px-4 py-3 font-medium">Status</th>
-                <th className="px-4 py-3 font-medium"></th>
+              <tr className="border-b border-slate-200 text-slate-500">
+                <SortableTh columnKey="name" label="Spieler" activeKey={sortColumn} direction={sortDirection} onSort={handleSort} />
+                <SortableTh
+                  columnKey="beitraegeGesamt"
+                  label="Beiträge gesamt"
+                  activeKey={sortColumn}
+                  direction={sortDirection}
+                  onSort={handleSort}
+                  align="right"
+                />
+                <SortableTh
+                  columnKey="einzahlungenGesamt"
+                  label="Eingezahlt"
+                  activeKey={sortColumn}
+                  direction={sortDirection}
+                  onSort={handleSort}
+                  align="right"
+                />
+                <SortableTh
+                  columnKey="auszahlungenGesamt"
+                  label="Ausgezahlt"
+                  activeKey={sortColumn}
+                  direction={sortDirection}
+                  onSort={handleSort}
+                  align="right"
+                />
+                <SortableTh
+                  columnKey="gewinneGesamt"
+                  label="Gewinne"
+                  activeKey={sortColumn}
+                  direction={sortDirection}
+                  onSort={handleSort}
+                  align="right"
+                />
+                <SortableTh
+                  columnKey="offen"
+                  label="Status"
+                  activeKey={sortColumn}
+                  direction={sortDirection}
+                  onSort={handleSort}
+                  align="right"
+                />
+                <th className="sticky top-0 z-10 bg-white px-4 py-3 font-medium"></th>
               </tr>
             </thead>
             <tbody>
@@ -120,11 +179,11 @@ export function AccountsOverviewPage() {
                       {player.name}
                     </Link>
                   </td>
-                  <td className="px-4 py-3 text-slate-700">{currencyFormatter.format(balance.beitraegeGesamt)}</td>
-                  <td className="px-4 py-3 text-slate-700">{currencyFormatter.format(balance.einzahlungenGesamt)}</td>
-                  <td className="px-4 py-3 text-slate-700">{currencyFormatter.format(balance.auszahlungenGesamt)}</td>
-                  <td className="px-4 py-3 text-slate-700">{currencyFormatter.format(balance.gewinneGesamt)}</td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 text-right text-slate-700">{currencyFormatter.format(balance.beitraegeGesamt)}</td>
+                  <td className="px-4 py-3 text-right text-slate-700">{currencyFormatter.format(balance.einzahlungenGesamt)}</td>
+                  <td className="px-4 py-3 text-right text-slate-700">{currencyFormatter.format(balance.auszahlungenGesamt)}</td>
+                  <td className="px-4 py-3 text-right text-slate-700">{currencyFormatter.format(balance.gewinneGesamt)}</td>
+                  <td className="px-4 py-3 text-right">
                     {balance.offen > 0 ? (
                       <span className="font-medium text-amber-700">
                         {currencyFormatter.format(balance.offen)} offen

@@ -1,10 +1,9 @@
+import { fetchAllRows } from '../../lib/fetchAllRows'
 import { supabase } from '../../lib/supabaseClient'
 import type { EmailTemplate } from '../../types/database'
 
 export async function listEmailTemplates(): Promise<EmailTemplate[]> {
-  const { data, error } = await supabase.from('email_templates').select('*').order('name')
-  if (error) throw error
-  return data
+  return fetchAllRows((from, to) => supabase.from('email_templates').select('*').order('name').range(from, to))
 }
 
 export async function createEmailTemplate(input: {

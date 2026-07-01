@@ -2,14 +2,29 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { Button } from '../../components/ui/Button'
+import { SearchInput } from '../../components/ui/SearchInput'
+import { SortableTh } from '../../components/ui/SortableTh'
 import { currencyFormatter } from '../../lib/format'
 import { listPlayers } from '../players/playersApi'
+import { listZahlungenForSeason } from '../players/zahlungenApi'
 import { getSeason } from '../seasons/seasonsApi'
 import { listMatchdays } from '../seasons/matchdaysApi'
 import { listSeasonParticipants } from '../seasons/seasonParticipantsApi'
 import { listSeasonTransactions } from './balancesApi'
 import { computePlayerBalances, type PlayerBalance } from './balanceCalculations'
 import type { Matchday, Player, Season, Transaction } from '../../types/database'
+
+type SortColumn = keyof Pick<
+  PlayerBalance,
+  | 'name'
+  | 'gesamtsieg_einsatz'
+  | 'gesamtsieg_gewinn'
+  | 'gesamtsieg_saldo'
+  | 'spieltag_einsatz'
+  | 'spieltag_gewinn'
+  | 'spieltag_saldo'
+  | 'gesamt_saldo'
+>
 
 export function SeasonBalancesPage() {
   const { seasonId } = useParams<{ seasonId: string }>()
@@ -21,6 +36,19 @@ export function SeasonBalancesPage() {
   const [loading, setLoading] = useState(true)
   const [exporting, setExporting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [sortColumn, setSortColumn] = useState<SortColumn>('name')
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
+  const [search, setSearch] = useState('')
+
+  function handleSort(column: string) {
+    if (column === sortColumn) {
+      setSortDirection((d) => (d === 'asc' ? 'desc' : 'asc'))
+    } else {
+      setSortColumn(column as SortColumn)
+      // Zahlenspalten sinnvollerweise erst absteigend (höchster Saldo/Gewinn zuerst), Name aufsteigend.
+      setSortDirection(column === 'name' ? 'asc' : 'desc')
+    }
+  }
 
   useEffect(() => {
     if (!seasonId) return
@@ -30,13 +58,16 @@ export function SeasonBalancesPage() {
       listSeasonTransactions(seasonId),
       listMatchdays(seasonId),
       listSeasonParticipants(seasonId),
+      listZahlungenForSeason(seasonId),
     ])
-      .then(([seasonData, playerData, transactionData, matchdayData, participantData]) => {
+      .then(([seasonData, playerData, transactionData, matchdayData, participantData, zahlungData]) => {
         setSeason(seasonData)
         setPlayers(playerData)
         setTransactions(transactionData)
         setMatchdays(matchdayData)
-        setBalances(computePlayerBalances(transactionData, playerData, participantData, matchdayData.length))
+        setBalances(
+          computePlayerBalances(transactionData, playerData, participantData, matchdayData.length, zahlungData),
+        )
         setError(null)
       })
       .catch((err) => setError(err instanceof Error ? err.message : 'Guthabenübersicht konnte nicht geladen werden.'))
@@ -66,6 +97,14 @@ export function SeasonBalancesPage() {
     Gesamtwertung: b.gesamtsieg_saldo,
     Spieltag: b.spieltag_saldo,
   }))
+
+  const sortedBalances = balances
+    .filter((b) => b.name.toLowerCase().includes(search.trim().toLowerCase()))
+    .sort((a, b) => {
+      const dir = sortDirection === 'asc' ? 1 : -1
+      if (sortColumn === 'name') return a.name.localeCompare(b.name) * dir
+      return (a[sortColumn] - b[sortColumn]) * dir
+    })
 
   return (
     <div className="p-4 sm:p-6">
@@ -107,35 +146,89 @@ export function SeasonBalancesPage() {
             </ResponsiveContainer>
           </div>
 
-          <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+          <SearchInput value={search} onChange={setSearch} placeholder="Spieler suchen..." className="mb-4 max-w-xs" />
+
+          {sortedBalances.length === 0 ? (
+            <p className="text-sm text-slate-500">Keine Treffer für die Suche.</p>
+          ) : (
+          <div className="max-h-[70vh] overflow-auto rounded-xl border border-slate-200 bg-white">
             <table className="w-full min-w-[640px] text-sm">
               <thead>
-                <tr className="border-b border-slate-200 text-left text-slate-500">
-                  <th className="px-4 py-3 font-medium">Spieler</th>
-                  <th className="px-4 py-3 font-medium">Gesamtwertung-Einsatz</th>
-                  <th className="px-4 py-3 font-medium">Gesamtwertung-Gewinn</th>
-                  <th className="px-4 py-3 font-medium">Gesamtwertung-Saldo</th>
-                  <th className="px-4 py-3 font-medium">Spieltag-Einsatz</th>
-                  <th className="px-4 py-3 font-medium">Spieltag-Gewinn</th>
-                  <th className="px-4 py-3 font-medium">Spieltag-Saldo</th>
-                  <th className="px-4 py-3 font-medium">Gesamt-Saldo</th>
+                <tr className="border-b border-slate-200 text-slate-500">
+                  <SortableTh columnKey="name" label="Spieler" activeKey={sortColumn} direction={sortDirection} onSort={handleSort} />
+                  <SortableTh
+                    columnKey="gesamtsieg_einsatz"
+                    label="Gesamtwertung-Einsatz"
+                    activeKey={sortColumn}
+                    direction={sortDirection}
+                    onSort={handleSort}
+                    align="right"
+                  />
+                  <SortableTh
+                    columnKey="gesamtsieg_gewinn"
+                    label="Gesamtwertung-Gewinn"
+                    activeKey={sortColumn}
+                    direction={sortDirection}
+                    onSort={handleSort}
+                    align="right"
+                  />
+                  <SortableTh
+                    columnKey="gesamtsieg_saldo"
+                    label="Gesamtwertung-Saldo"
+                    activeKey={sortColumn}
+                    direction={sortDirection}
+                    onSort={handleSort}
+                    align="right"
+                  />
+                  <SortableTh
+                    columnKey="spieltag_einsatz"
+                    label="Spieltag-Einsatz"
+                    activeKey={sortColumn}
+                    direction={sortDirection}
+                    onSort={handleSort}
+                    align="right"
+                  />
+                  <SortableTh
+                    columnKey="spieltag_gewinn"
+                    label="Spieltag-Gewinn"
+                    activeKey={sortColumn}
+                    direction={sortDirection}
+                    onSort={handleSort}
+                    align="right"
+                  />
+                  <SortableTh
+                    columnKey="spieltag_saldo"
+                    label="Spieltag-Saldo"
+                    activeKey={sortColumn}
+                    direction={sortDirection}
+                    onSort={handleSort}
+                    align="right"
+                  />
+                  <SortableTh
+                    columnKey="gesamt_saldo"
+                    label="Gesamt-Saldo"
+                    activeKey={sortColumn}
+                    direction={sortDirection}
+                    onSort={handleSort}
+                    align="right"
+                  />
                 </tr>
               </thead>
               <tbody>
-                {balances.map((b) => (
+                {sortedBalances.map((b) => (
                   <tr key={b.player_id} className="border-b border-slate-100 last:border-0">
                     <td className="px-4 py-3 font-medium text-slate-900">{b.name}</td>
-                    <td className="px-4 py-3 text-slate-700">{currencyFormatter.format(b.gesamtsieg_einsatz)}</td>
-                    <td className="px-4 py-3 text-slate-700">{currencyFormatter.format(b.gesamtsieg_gewinn)}</td>
-                    <td className="px-4 py-3 font-medium text-slate-900">
+                    <td className="px-4 py-3 text-right text-slate-700">{currencyFormatter.format(b.gesamtsieg_einsatz)}</td>
+                    <td className="px-4 py-3 text-right text-slate-700">{currencyFormatter.format(b.gesamtsieg_gewinn)}</td>
+                    <td className="px-4 py-3 text-right font-medium text-slate-900">
                       {currencyFormatter.format(b.gesamtsieg_saldo)}
                     </td>
-                    <td className="px-4 py-3 text-slate-700">{currencyFormatter.format(b.spieltag_einsatz)}</td>
-                    <td className="px-4 py-3 text-slate-700">{currencyFormatter.format(b.spieltag_gewinn)}</td>
-                    <td className="px-4 py-3 font-medium text-slate-900">
+                    <td className="px-4 py-3 text-right text-slate-700">{currencyFormatter.format(b.spieltag_einsatz)}</td>
+                    <td className="px-4 py-3 text-right text-slate-700">{currencyFormatter.format(b.spieltag_gewinn)}</td>
+                    <td className="px-4 py-3 text-right font-medium text-slate-900">
                       {currencyFormatter.format(b.spieltag_saldo)}
                     </td>
-                    <td className="px-4 py-3 font-semibold text-slate-900">
+                    <td className="px-4 py-3 text-right font-semibold text-slate-900">
                       {currencyFormatter.format(b.gesamt_saldo)}
                     </td>
                   </tr>
@@ -143,6 +236,7 @@ export function SeasonBalancesPage() {
               </tbody>
             </table>
           </div>
+          )}
         </>
       )}
     </div>

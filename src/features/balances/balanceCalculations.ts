@@ -1,4 +1,4 @@
-import type { Player, SeasonParticipant, Transaction } from '../../types/database'
+import type { Player, SeasonParticipant, Transaction, Zahlung } from '../../types/database'
 
 export interface PlayerBalance {
   player_id: string
@@ -34,12 +34,21 @@ interface Accumulator {
  * einsatz_spieltag-Transaktionen berechnet, damit der volle erwartete
  * Saison-Beitrag sichtbar ist, auch wenn noch nicht alle Spieltage angelegt
  * wurden (analog zur Kontostand-Berechnung in accountBalance.ts).
+ *
+ * `gesamtsieg_saldo`/`spieltag_saldo` bleiben reine Spiel-Ergebnisse (Einsatz
+ * vs. Gewinn je Topf, ohne Zahlungen) – nützlich, um die Performance je
+ * Einsatzart zu sehen. `gesamt_saldo` bezieht zusätzlich `zahlungen`
+ * (Ein-/Auszahlungen) ein, damit die Summe exakt dem tatsächlichen Guthaben
+ * aus accountBalance.ts entspricht (dort: `-offen`) – ohne das würden
+ * Guthabenübersicht/Saisonvergleich systematisch von der Konten-Übersicht
+ * abweichen, sobald ein Spieler ein-/ausgezahlt hat.
  */
 export function computePlayerBalances(
   transactions: Transaction[],
   players: Player[],
   participants: SeasonParticipant[] = [],
   matchdayCount = 0,
+  zahlungen: Zahlung[] = [],
 ): PlayerBalance[] {
   const accumulators = new Map<string, Accumulator>()
 
@@ -87,9 +96,17 @@ export function computePlayerBalances(
     entry.spieltag_einsatz = participant.spieltags_einsatz_betrag * matchdayCount
   }
 
+  const zahlungenSaldoByPlayer = new Map<string, number>()
+  for (const z of zahlungen) {
+    get(z.player_id) // stellt sicher, dass auch reine Zahler ohne Buchungen in der Ausgabe erscheinen
+    const delta = z.typ === 'einzahlung' ? z.betrag : -z.betrag
+    zahlungenSaldoByPlayer.set(z.player_id, (zahlungenSaldoByPlayer.get(z.player_id) ?? 0) + delta)
+  }
+
   const balances: PlayerBalance[] = [...accumulators.entries()].map(([player_id, entry]) => {
     const gesamtsieg_saldo = entry.gesamtsieg_gewinn - entry.gesamtsieg_einsatz + entry.gesamtsieg_korrektur
     const spieltag_saldo = entry.spieltag_gewinn - entry.spieltag_einsatz + entry.spieltag_korrektur
+    const zahlungenSaldo = zahlungenSaldoByPlayer.get(player_id) ?? 0
     return {
       player_id,
       name: entry.name,
@@ -99,7 +116,7 @@ export function computePlayerBalances(
       spieltag_einsatz: entry.spieltag_einsatz,
       spieltag_gewinn: entry.spieltag_gewinn,
       spieltag_saldo,
-      gesamt_saldo: gesamtsieg_saldo + spieltag_saldo,
+      gesamt_saldo: gesamtsieg_saldo + spieltag_saldo + zahlungenSaldo,
     }
   })
 

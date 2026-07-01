@@ -3,17 +3,17 @@ import { supabase } from '../../lib/supabaseClient'
 import type { Zahlung, ZahlungTyp } from '../../types/database'
 
 export async function listZahlungen(playerId: string): Promise<Zahlung[]> {
-  const { data, error } = await supabase
-    .from('zahlungen')
-    .select('*')
-    .eq('player_id', playerId)
-    .order('datum', { ascending: false })
-  if (error) throw error
-  return data
+  return fetchAllRows((from, to) =>
+    supabase.from('zahlungen').select('*').eq('player_id', playerId).order('datum', { ascending: false }).range(from, to),
+  )
 }
 
 export async function listAllZahlungen(): Promise<Zahlung[]> {
   return fetchAllRows((from, to) => supabase.from('zahlungen').select('*').range(from, to))
+}
+
+export async function listZahlungenForSeason(seasonId: string): Promise<Zahlung[]> {
+  return fetchAllRows((from, to) => supabase.from('zahlungen').select('*').eq('season_id', seasonId).range(from, to))
 }
 
 export async function addZahlung(input: {

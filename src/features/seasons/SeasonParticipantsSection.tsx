@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Button } from '../../components/ui/Button'
 import { CollapsibleSection } from '../../components/ui/CollapsibleSection'
+import { SearchInput } from '../../components/ui/SearchInput'
 import { SeasonParticipantForm } from './SeasonParticipantForm'
 import { currencyFormatter } from '../../lib/format'
 import type { Player, SeasonParticipant } from '../../types/database'
@@ -31,10 +32,16 @@ export function SeasonParticipantsSection({
   const [showAddForm, setShowAddForm] = useState(false)
   const [editingParticipant, setEditingParticipant] = useState<SeasonParticipant | undefined>(undefined)
   const [error, setError] = useState<string | null>(null)
+  const [search, setSearch] = useState('')
 
   const playersById = new Map(players.map((p) => [p.id, p]))
   const assignedPlayerIds = new Set(participants.map((p) => p.player_id))
   const availablePlayers = players.filter((p) => !assignedPlayerIds.has(p.id))
+  const filteredParticipants = participants.filter((participant) => {
+    const term = search.trim().toLowerCase()
+    if (!term) return true
+    return (playersById.get(participant.player_id)?.name ?? '').toLowerCase().includes(term)
+  })
 
   async function handleRemove(participant: SeasonParticipant) {
     const playerName = playersById.get(participant.player_id)?.name ?? 'Spieler'
@@ -59,11 +66,17 @@ export function SeasonParticipantsSection({
       >
         {error && <p className="mb-2 text-sm text-red-600">{error}</p>}
 
+        {participants.length > 0 && (
+          <SearchInput value={search} onChange={setSearch} placeholder="Spieler suchen..." className="mb-3 max-w-xs" />
+        )}
+
         {participants.length === 0 ? (
           <p className="text-sm text-slate-500">Noch keine Teilnehmer.</p>
+        ) : filteredParticipants.length === 0 ? (
+          <p className="text-sm text-slate-500">Keine Treffer für die Suche.</p>
         ) : (
           <ul className="divide-y divide-slate-200 overflow-hidden rounded-xl border border-slate-200 bg-white">
-            {participants.map((participant) => (
+            {filteredParticipants.map((participant) => (
               <li key={participant.id} className="flex items-center justify-between gap-3 px-4 py-3">
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium text-slate-900">

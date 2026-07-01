@@ -1,13 +1,16 @@
 import { useEffect, useMemo, useState } from 'react'
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { SearchInput } from '../../components/ui/SearchInput'
+import { SortableTh } from '../../components/ui/SortableTh'
 import { currencyFormatter } from '../../lib/format'
 import { listPlayers } from '../players/playersApi'
+import { listAllZahlungen } from '../players/zahlungenApi'
 import { listSeasons } from '../seasons/seasonsApi'
 import { listAllSeasonParticipants } from '../seasons/seasonParticipantsApi'
 import { listMatchdayCountsBySeasonId } from '../seasons/matchdaysApi'
 import { listAllTransactions } from './balancesApi'
 import { computePlayerBalances } from './balanceCalculations'
-import type { Player, Season, SeasonParticipant, Transaction } from '../../types/database'
+import type { Player, Season, SeasonParticipant, Transaction, Zahlung } from '../../types/database'
 
 const lineColors = ['#0f172a', '#2563eb', '#16a34a', '#d97706', '#dc2626', '#7c3aed', '#0891b2', '#be185d']
 
@@ -22,20 +25,42 @@ export function SeasonComparisonPage() {
   const [players, setPlayers] = useState<Player[]>([])
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [participants, setParticipants] = useState<SeasonParticipant[]>([])
+  const [zahlungen, setZahlungen] = useState<Zahlung[]>([])
   const [matchdayCounts, setMatchdayCounts] = useState<Map<string, number>>(new Map())
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedPlayerIds, setSelectedPlayerIds] = useState<Set<string>>(new Set())
   const [playerSearch, setPlayerSearch] = useState('')
+  const [tableSearch, setTableSearch] = useState('')
+  // 'name' | 'total' | eine season.id – Saison-Spalten sind dynamisch, daher kein festes Enum.
+  const [sortKey, setSortKey] = useState<string>('total')
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
+
+  function handleSort(key: string) {
+    if (key === sortKey) {
+      setSortDirection((d) => (d === 'asc' ? 'desc' : 'asc'))
+    } else {
+      setSortKey(key)
+      setSortDirection(key === 'name' ? 'asc' : 'desc')
+    }
+  }
 
   useEffect(() => {
-    Promise.all([listSeasons(), listPlayers(), listAllTransactions(), listAllSeasonParticipants(), listMatchdayCountsBySeasonId()])
-      .then(([seasonData, playerData, txData, participantData, countsData]) => {
+    Promise.all([
+      listSeasons(),
+      listPlayers(),
+      listAllTransactions(),
+      listAllSeasonParticipants(),
+      listMatchdayCountsBySeasonId(),
+      listAllZahlungen(),
+    ])
+      .then(([seasonData, playerData, txData, participantData, countsData, zahlungData]) => {
         setSeasons([...seasonData].sort((a, b) => a.start_date.localeCompare(b.start_date)))
         setPlayers(playerData)
         setTransactions(txData)
         setParticipants(participantData)
         setMatchdayCounts(countsData)
+        setZahlungen(zahlungData)
         setError(null)
       })
       .catch((err) => setError(err instanceof Error ? err.message : 'Saisonvergleich konnte nicht geladen werden.'))
@@ -50,9 +75,10 @@ export function SeasonComparisonPage() {
         players,
         participants.filter((p) => p.season_id === season.id),
         matchdayCounts.get(season.id) ?? 0,
+        zahlungen.filter((z) => z.season_id === season.id),
       ),
     }))
-  }, [seasons, players, transactions, participants, matchdayCounts])
+  }, [seasons, players, transactions, participants, matchdayCounts, zahlungen])
 
   // Eine Zeile je Spieler (statt einer Spalte) mit dem Saldo pro Saison sowie
   // dem Gesamt-Saldo über alle Saisons, absteigend sortiert – skaliert auch
@@ -74,6 +100,21 @@ export function SeasonComparisonPage() {
       })
       .sort((a, b) => b.total - a.total)
   }, [players, transactions, perSeasonBalances])
+
+  // Eigene Sortierung + Suche nur für die Tabelle – playerRows selbst bleibt
+  // total-absteigend sortiert, da die Vorauswahl-Logik unten (größte
+  // Gewinner/Verlierer) darauf aufbaut.
+  const sortedPlayerRows = useMemo(() => {
+    const term = tableSearch.trim().toLowerCase()
+    const dir = sortDirection === 'asc' ? 1 : -1
+    return playerRows
+      .filter((r) => r.player.name.toLowerCase().includes(term))
+      .sort((a, b) => {
+        if (sortKey === 'name') return a.player.name.localeCompare(b.player.name) * dir
+        if (sortKey === 'total') return (a.total - b.total) * dir
+        return ((a.bySeasonId.get(sortKey) ?? 0) - (b.bySeasonId.get(sortKey) ?? 0)) * dir
+      })
+  }, [playerRows, sortKey, sortDirection, tableSearch])
 
   // Vorauswahl beim ersten Laden: die größten Gewinner und Verlierer über
   // alle Saisons hinweg, damit das Diagramm sofort etwas Aussagekräftiges
@@ -194,29 +235,45 @@ export function SeasonComparisonPage() {
             links über die Suche gezielt hinzufügen.
           </p>
 
-          <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+          <SearchInput
+            value={tableSearch}
+            onChange={setTableSearch}
+            placeholder="Spieler suchen..."
+            className="mb-4 max-w-xs"
+          />
+
+          {sortedPlayerRows.length === 0 ? (
+            <p className="text-sm text-slate-500">Keine Treffer für die Suche.</p>
+          ) : (
+          <div className="max-h-[70vh] overflow-auto rounded-xl border border-slate-200 bg-white">
             <table className="w-full min-w-[480px] text-sm">
               <thead>
-                <tr className="border-b border-slate-200 text-left text-slate-500">
-                  <th className="px-4 py-3 font-medium">Spieler</th>
+                <tr className="border-b border-slate-200 text-slate-500">
+                  <SortableTh columnKey="name" label="Spieler" activeKey={sortKey} direction={sortDirection} onSort={handleSort} />
                   {seasons.map((season) => (
-                    <th key={season.id} className="px-4 py-3 font-medium">
-                      {season.name}
-                    </th>
+                    <SortableTh
+                      key={season.id}
+                      columnKey={season.id}
+                      label={season.name}
+                      activeKey={sortKey}
+                      direction={sortDirection}
+                      onSort={handleSort}
+                      align="right"
+                    />
                   ))}
-                  <th className="px-4 py-3 font-medium">Gesamt</th>
+                  <SortableTh columnKey="total" label="Gesamt" activeKey={sortKey} direction={sortDirection} onSort={handleSort} align="right" />
                 </tr>
               </thead>
               <tbody>
-                {playerRows.map(({ player, bySeasonId, total }) => (
+                {sortedPlayerRows.map(({ player, bySeasonId, total }) => (
                   <tr key={player.id} className="border-b border-slate-100 last:border-0">
                     <td className="px-4 py-3 font-medium text-slate-900">{player.name}</td>
                     {seasons.map((season) => (
-                      <td key={season.id} className="px-4 py-3 text-slate-700">
+                      <td key={season.id} className="px-4 py-3 text-right text-slate-700">
                         {currencyFormatter.format(bySeasonId.get(season.id) ?? 0)}
                       </td>
                     ))}
-                    <td className={`px-4 py-3 font-semibold ${total >= 0 ? 'text-emerald-600' : 'text-amber-700'}`}>
+                    <td className={`px-4 py-3 text-right font-semibold ${total >= 0 ? 'text-emerald-600' : 'text-amber-700'}`}>
                       {currencyFormatter.format(total)}
                     </td>
                   </tr>
@@ -224,6 +281,7 @@ export function SeasonComparisonPage() {
               </tbody>
             </table>
           </div>
+          )}
         </>
       )}
     </div>

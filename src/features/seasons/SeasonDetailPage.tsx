@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { Badge } from '../../components/ui/Badge'
 import { CollapsibleSection } from '../../components/ui/CollapsibleSection'
+import { SearchInput } from '../../components/ui/SearchInput'
 import { currencyFormatter } from '../../lib/format'
 import { useAuth } from '../auth/useAuth'
 import { listPlayers } from '../players/playersApi'
@@ -61,6 +62,7 @@ export function SeasonDetailPage() {
   const [showMatchdayForm, setShowMatchdayForm] = useState(false)
   const [statusFilter, setStatusFilter] = useState<'abgerechnet' | 'offen' | 'alle'>('abgerechnet')
   const [sortOrder, setSortOrder] = useState<'neueste' | 'aelteste'>('neueste')
+  const [matchdaySearch, setMatchdaySearch] = useState('')
 
   const reload = useCallback(async () => {
     if (!seasonId) return
@@ -153,8 +155,15 @@ export function SeasonDetailPage() {
 
   const nextNummer = matchdays.length > 0 ? Math.max(...matchdays.map((m) => m.nummer)) + 1 : 1
 
+  const matchdaySearchTerm = matchdaySearch.trim().toLowerCase()
   const filteredSortedMatchdays = matchdays
     .filter((m) => statusFilter === 'alle' || m.status === statusFilter)
+    .filter(
+      (m) =>
+        !matchdaySearchTerm ||
+        `spieltag ${m.nummer}`.includes(matchdaySearchTerm) ||
+        (m.datum ?? '').toLowerCase().includes(matchdaySearchTerm),
+    )
     .sort((a, b) => (sortOrder === 'neueste' ? b.nummer - a.nummer : a.nummer - b.nummer))
   const showGesamtwertungRow = statusFilter === 'alle' || season.gesamtwertung_status === statusFilter
 
@@ -298,6 +307,15 @@ export function SeasonDetailPage() {
           </p>
         )}
 
+        {matchdays.length > 0 && (
+          <SearchInput
+            value={matchdaySearch}
+            onChange={setMatchdaySearch}
+            placeholder="Spieltag suchen (Nummer oder Datum)..."
+            className="mb-3 max-w-xs"
+          />
+        )}
+
         <ul className="divide-y divide-slate-200 overflow-hidden rounded-xl border border-slate-200 bg-white">
           {showGesamtwertungRow && (
             <li className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
@@ -335,7 +353,9 @@ export function SeasonDetailPage() {
             <li className="px-4 py-3 text-sm text-slate-500">Noch keine Spieltage angelegt.</li>
           )}
           {matchdays.length > 0 && filteredSortedMatchdays.length === 0 && (
-            <li className="px-4 py-3 text-sm text-slate-500">Keine Spieltage für diesen Filter.</li>
+            <li className="px-4 py-3 text-sm text-slate-500">
+              {matchdaySearchTerm ? 'Keine Treffer für die Suche.' : 'Keine Spieltage für diesen Filter.'}
+            </li>
           )}
           {filteredSortedMatchdays.map((matchday) => {
             const myRanking = myPlayer

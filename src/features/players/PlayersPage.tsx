@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
+import { SearchInput } from '../../components/ui/SearchInput'
 import { PlayerForm } from './PlayerForm'
 import { createPlayer, deletePlayer, listPlayers, updatePlayer } from './playersApi'
 import type { Player } from '../../types/database'
@@ -11,6 +12,7 @@ export function PlayersPage() {
   const [error, setError] = useState<string | null>(null)
   const [editingPlayer, setEditingPlayer] = useState<Player | undefined>(undefined)
   const [showForm, setShowForm] = useState(false)
+  const [search, setSearch] = useState('')
 
   async function reload() {
     setLoading(true)
@@ -48,6 +50,12 @@ export function PlayersPage() {
     }
   }
 
+  const filteredPlayers = players.filter((player) => {
+    const term = search.trim().toLowerCase()
+    if (!term) return true
+    return player.name.toLowerCase().includes(term) || (player.kicktipp_name ?? '').toLowerCase().includes(term)
+  })
+
   return (
     <div className="p-4 sm:p-6">
       <div className="mb-4 flex items-center justify-between">
@@ -55,15 +63,19 @@ export function PlayersPage() {
         <Button onClick={openCreate}>+ Spieler</Button>
       </div>
 
+      <SearchInput value={search} onChange={setSearch} placeholder="Spieler suchen..." className="mb-4 max-w-xs" />
+
       {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
 
       {loading ? (
         <p className="text-sm text-slate-500">Lade...</p>
-      ) : players.length === 0 ? (
-        <p className="text-sm text-slate-500">Noch keine Spieler angelegt.</p>
+      ) : filteredPlayers.length === 0 ? (
+        <p className="text-sm text-slate-500">
+          {players.length === 0 ? 'Noch keine Spieler angelegt.' : 'Keine Treffer für die Suche.'}
+        </p>
       ) : (
         <ul className="divide-y divide-slate-200 overflow-hidden rounded-xl border border-slate-200 bg-white">
-          {players.map((player) => (
+          {filteredPlayers.map((player) => (
             <li key={player.id} className="flex items-center justify-between gap-3 px-4 py-3">
               <Link to={`/players/${player.id}`} className="min-w-0 hover:underline">
                 <p className="truncate font-medium text-slate-900">{player.name}</p>

@@ -1,3 +1,4 @@
+import { fetchAllRows } from '../../lib/fetchAllRows'
 import { supabase } from '../../lib/supabaseClient'
 import type { KicktippImport, KicktippImportRohdaten } from '../../types/database'
 
@@ -25,11 +26,12 @@ export async function markImportTaken(id: string): Promise<void> {
 }
 
 export async function listImports(seasonId: string): Promise<KicktippImport[]> {
-  const { data, error } = await supabase
-    .from('kicktipp_imports')
-    .select('*')
-    .eq('season_id', seasonId)
-    .order('uploaded_at', { ascending: false })
-  if (error) throw error
-  return data
+  return fetchAllRows((from, to) =>
+    supabase
+      .from('kicktipp_imports')
+      .select('*')
+      .eq('season_id', seasonId)
+      .order('uploaded_at', { ascending: false })
+      .range(from, to),
+  )
 }

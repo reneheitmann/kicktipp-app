@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Button } from '../../components/ui/Button'
+import { SearchInput } from '../../components/ui/SearchInput'
 import { CreateUserForm } from './CreateUserForm'
 import { EditUserForm } from './EditUserForm'
 import { listProfiles, sendPasswordReset, setProfileActive, updateProfileRole } from './profilesApi'
@@ -12,6 +13,7 @@ export function AdminUsersPage() {
   const [info, setInfo] = useState<string | null>(null)
   const [showCreate, setShowCreate] = useState(false)
   const [editingProfile, setEditingProfile] = useState<Profile | null>(null)
+  const [search, setSearch] = useState('')
 
   async function reload() {
     setLoading(true)
@@ -57,6 +59,12 @@ export function AdminUsersPage() {
     }
   }
 
+  const filteredProfiles = profiles.filter((p) => {
+    const term = search.trim().toLowerCase()
+    if (!term) return true
+    return p.name.toLowerCase().includes(term) || (p.email ?? '').toLowerCase().includes(term)
+  })
+
   return (
     <div className="p-4 sm:p-6">
       <div className="mb-4 flex items-center justify-between">
@@ -64,14 +72,20 @@ export function AdminUsersPage() {
         <Button onClick={() => setShowCreate(true)}>+ Benutzer</Button>
       </div>
 
+      <SearchInput value={search} onChange={setSearch} placeholder="Benutzer suchen..." className="mb-4 max-w-xs" />
+
       {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
       {info && <p className="mb-4 text-sm text-emerald-600">{info}</p>}
 
       {loading ? (
         <p className="text-sm text-slate-500">Lade...</p>
+      ) : filteredProfiles.length === 0 ? (
+        <p className="text-sm text-slate-500">
+          {profiles.length === 0 ? 'Noch keine Benutzer angelegt.' : 'Keine Treffer für die Suche.'}
+        </p>
       ) : (
         <ul className="divide-y divide-slate-200 overflow-hidden rounded-xl border border-slate-200 bg-white">
-          {profiles.map((p) => (
+          {filteredProfiles.map((p) => (
             <li key={p.id} className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="min-w-0">
                 <p className="truncate font-medium text-slate-900">
