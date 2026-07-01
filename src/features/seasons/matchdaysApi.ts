@@ -1,3 +1,4 @@
+import { fetchAllRows } from '../../lib/fetchAllRows'
 import { supabase } from '../../lib/supabaseClient'
 import type { Matchday, MatchdayStatus } from '../../types/database'
 
@@ -12,15 +13,14 @@ export async function listMatchdays(seasonId: string): Promise<Matchday[]> {
 }
 
 export async function listAllMatchdays(): Promise<Matchday[]> {
-  const { data, error } = await supabase.from('matchdays').select('*')
-  if (error) throw error
-  return data
+  return fetchAllRows((from, to) => supabase.from('matchdays').select('*').range(from, to))
 }
 
 /** Anzahl angelegter Spieltage je Saison – Basis für die Spieltags-Beitragsberechnung. */
 export async function listMatchdayCountsBySeasonId(): Promise<Map<string, number>> {
-  const { data, error } = await supabase.from('matchdays').select('season_id')
-  if (error) throw error
+  const data = await fetchAllRows((from, to) =>
+    supabase.from('matchdays').select('season_id').range(from, to),
+  )
   const counts = new Map<string, number>()
   for (const row of data) {
     counts.set(row.season_id, (counts.get(row.season_id) ?? 0) + 1)

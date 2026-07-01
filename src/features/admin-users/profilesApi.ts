@@ -1,10 +1,9 @@
+import { fetchAllRows } from '../../lib/fetchAllRows'
 import { supabase } from '../../lib/supabaseClient'
 import type { Profile, UserRole } from '../../types/database'
 
 export async function listProfiles(): Promise<Profile[]> {
-  const { data, error } = await supabase.from('profiles').select('*').order('name')
-  if (error) throw error
-  return data
+  return fetchAllRows((from, to) => supabase.from('profiles').select('*').order('name').range(from, to))
 }
 
 export async function updateProfileRole(id: string, role: UserRole): Promise<void> {

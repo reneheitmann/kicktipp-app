@@ -1,10 +1,9 @@
+import { fetchAllRows } from '../../lib/fetchAllRows'
 import { supabase } from '../../lib/supabaseClient'
 import type { Player } from '../../types/database'
 
 export async function listPlayers(): Promise<Player[]> {
-  const { data, error } = await supabase.from('players').select('*').order('name')
-  if (error) throw error
-  return data
+  return fetchAllRows((from, to) => supabase.from('players').select('*').order('name').range(from, to))
 }
 
 export async function getPlayer(id: string): Promise<Player> {

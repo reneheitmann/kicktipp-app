@@ -1,3 +1,4 @@
+import { fetchAllRows } from '../../lib/fetchAllRows'
 import { supabase } from '../../lib/supabaseClient'
 import { listSeasonTransactions } from '../balances/balancesApi'
 import { computeAccountBalance } from '../players/accountBalance'
@@ -13,12 +14,10 @@ export type PlayerWithProfile = Player & {
 }
 
 export async function listPlayersWithProfiles(): Promise<PlayerWithProfile[]> {
-  const { data, error } = await supabase
-    .from('players')
-    .select('*, profile:profiles(id, name, email, is_active)')
-    .order('name')
-  if (error) throw error
-  return data as unknown as PlayerWithProfile[]
+  const data = await fetchAllRows<unknown>((from, to) =>
+    supabase.from('players').select('*, profile:profiles(id, name, email, is_active)').order('name').range(from, to),
+  )
+  return data as PlayerWithProfile[]
 }
 
 /** Spieler mit betrag > 0 aus den gewinn_spieltag-Buchungen des Spieltags ("echte" Gewinner, nicht nur Rang 1). */
