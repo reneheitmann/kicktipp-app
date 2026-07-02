@@ -15,7 +15,7 @@ export function SortableTh({ columnKey, label, activeKey, direction, onSort, ali
   const active = activeKey === columnKey
   return (
     <th
-      className={`sticky top-0 z-10 bg-white px-4 py-3 font-medium ${align === 'right' ? 'text-right' : 'text-left'} ${className}`}
+      className={`sticky top-0 z-10 bg-white px-2 py-2 text-xs font-medium sm:px-4 sm:py-3 sm:text-sm ${align === 'right' ? 'text-right' : 'text-left'} ${className}`}
     >
       <button
         type="button"
