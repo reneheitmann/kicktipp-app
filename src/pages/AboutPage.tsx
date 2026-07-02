@@ -45,6 +45,10 @@ export function AboutPage() {
   const commitSha = import.meta.env.VITE_APP_COMMIT_SHA
   const buildDate = import.meta.env.VITE_APP_BUILD_DATE
   const channel = import.meta.env.VITE_APP_CHANNEL === 'beta' ? 'Beta' : 'Produktion'
+  const changelog = (import.meta.env.VITE_APP_CHANGELOG ?? '')
+    .split('\\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
   const [device] = useState(getDeviceInfo)
   const [copied, setCopied] = useState(false)
 
@@ -104,6 +108,17 @@ export function AboutPage() {
           </div>
         </dl>
       </div>
+
+      {changelog.length > 0 && (
+        <div className="mb-6 rounded-xl border border-slate-200 bg-white p-4">
+          <h2 className="mb-3 text-base font-semibold text-slate-900">Änderungen im letzten Update</h2>
+          <ul className="list-disc space-y-1 pl-5 text-sm text-slate-700">
+            {changelog.map((line, i) => (
+              <li key={i}>{line}</li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <div className="mb-6 rounded-xl border border-slate-200 bg-white p-4">
         <div className="mb-3 flex items-center justify-between gap-3">
