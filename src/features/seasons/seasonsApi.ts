@@ -6,8 +6,13 @@ export async function listSeasons(): Promise<Season[]> {
   return fetchAllRows((from, to) => supabase.from('seasons').select('*').order('start_date', { ascending: false }).range(from, to))
 }
 
-export async function getSeason(id: string): Promise<Season> {
-  const { data, error } = await supabase.from('seasons').select('*').eq('id', id).single()
+// maybeSingle statt single: eine Saison, die RLS ausblendet (z. B. weil der
+// aktuelle User dort kein Teilnehmer ist), liefert 0 Zeilen zurück – das ist
+// kein Fehlerfall, sondern soll der aufrufenden Seite einfach `null` liefern
+// (die dann "Saison nicht gefunden." anzeigt), statt einen rohen
+// Postgrest-Fehler zu werfen.
+export async function getSeason(id: string): Promise<Season | null> {
+  const { data, error } = await supabase.from('seasons').select('*').eq('id', id).maybeSingle()
   if (error) throw error
   return data
 }

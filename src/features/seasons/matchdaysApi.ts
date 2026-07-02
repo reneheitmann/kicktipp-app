@@ -28,8 +28,11 @@ export async function listMatchdayCountsBySeasonId(): Promise<Map<string, number
   return counts
 }
 
-export async function getMatchday(id: string): Promise<Matchday> {
-  const { data, error } = await supabase.from('matchdays').select('*').eq('id', id).single()
+// maybeSingle statt single: siehe Kommentar bei getSeason in seasonsApi.ts –
+// ein per RLS ausgeblendeter Spieltag ist kein Fehlerfall, sondern liefert
+// `null`.
+export async function getMatchday(id: string): Promise<Matchday | null> {
+  const { data, error } = await supabase.from('matchdays').select('*').eq('id', id).maybeSingle()
   if (error) throw error
   return data
 }

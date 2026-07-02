@@ -45,6 +45,11 @@ export function MatchdayDetailPage() {
     setLoading(true)
     try {
       const matchdayData = await getMatchday(matchdayId)
+      if (!matchdayData) {
+        setMatchday(null)
+        setError(null)
+        return
+      }
       const [entryData, playerData, participantData, rankingData, payoutData] = await Promise.all([
         listMatchdayEntries(matchdayId),
         listPlayers(),
