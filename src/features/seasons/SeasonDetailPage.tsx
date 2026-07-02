@@ -35,6 +35,11 @@ import type {
   Transaction,
 } from '../../types/database'
 
+// Global (nicht pro Saison) gemerkt – wer einen Spieler als Favorit
+// markiert, will dessen Platzierungen/Gewinne meist über alle Saisons
+// hinweg als Standard sehen, nicht nur in der Saison, in der markiert wurde.
+const FAVORITE_PLAYER_STORAGE_KEY = 'kicktipp_favorite_player_id'
+
 export function SeasonDetailPage() {
   const { seasonId } = useParams<{ seasonId: string }>()
   const navigate = useNavigate()
@@ -63,6 +68,14 @@ export function SeasonDetailPage() {
   const [statusFilter, setStatusFilter] = useState<'abgerechnet' | 'offen' | 'alle'>('abgerechnet')
   const [sortOrder, setSortOrder] = useState<'neueste' | 'aelteste'>('neueste')
   const [matchdaySearch, setMatchdaySearch] = useState('')
+  const [favoritePlayerId, setFavoritePlayerId] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem(FAVORITE_PLAYER_STORAGE_KEY)
+    } catch {
+      return null
+    }
+  })
+  const [selectedPlayerId, setSelectedPlayerId] = useState('')
 
   const reload = useCallback(async () => {
     if (!seasonId) return
@@ -98,6 +111,37 @@ export function SeasonDetailPage() {
   useEffect(() => {
     reload()
   }, [reload])
+
+  // Standardauswahl für den Spieler, dessen Platzierungen/Gewinne in
+  // "Spieltage" angezeigt werden: bei genau einem Teilnehmer immer dieser,
+  // sonst der als Favorit markierte (falls Teilnehmer dieser Saison),
+  // sonst der eigene verknüpfte Spieler (falls Teilnehmer), sonst keiner.
+  useEffect(() => {
+    if (participants.length === 1) {
+      setSelectedPlayerId(participants[0]?.player_id ?? '')
+      return
+    }
+    if (favoritePlayerId && participants.some((p) => p.player_id === favoritePlayerId)) {
+      setSelectedPlayerId(favoritePlayerId)
+      return
+    }
+    const ownPlayer = players.find((p) => p.profile_id === profile?.id)
+    setSelectedPlayerId(ownPlayer && participants.some((p) => p.player_id === ownPlayer.id) ? ownPlayer.id : '')
+  }, [participants, favoritePlayerId, players, profile?.id])
+
+  function toggleFavoritePlayer(playerId: string) {
+    setFavoritePlayerId((prev) => {
+      const next = prev === playerId ? null : playerId
+      try {
+        if (next) localStorage.setItem(FAVORITE_PLAYER_STORAGE_KEY, next)
+        else localStorage.removeItem(FAVORITE_PLAYER_STORAGE_KEY)
+      } catch {
+        // z. B. privates Fenster ohne Storage-Zugriff – Favorit bleibt dann
+        // nur für die aktuelle Sitzung erhalten, kein Absturz nötig.
+      }
+      return next
+    })
+  }
 
   async function handleToggleSeasonStatus() {
     if (!season) return
@@ -149,9 +193,9 @@ export function SeasonDetailPage() {
     return <p className="p-4 text-sm text-red-600 sm:p-6">{error ?? 'Saison nicht gefunden.'}</p>
   }
 
-  const myPlayer = players.find((p) => p.profile_id === profile?.id)
-  const myOverallRanking = myPlayer ? rankings.find((r) => r.player_id === myPlayer.id) : undefined
-  const myOverallPayout = myPlayer ? payouts.find((p) => p.player_id === myPlayer.id) : undefined
+  const playersById = new Map(players.map((p) => [p.id, p]))
+  const selectedOverallRanking = selectedPlayerId ? rankings.find((r) => r.player_id === selectedPlayerId) : undefined
+  const selectedOverallPayout = selectedPlayerId ? payouts.find((p) => p.player_id === selectedPlayerId) : undefined
 
   const nextNummer = matchdays.length > 0 ? Math.max(...matchdays.map((m) => m.nummer)) + 1 : 1
 
@@ -167,20 +211,22 @@ export function SeasonDetailPage() {
     .sort((a, b) => (sortOrder === 'neueste' ? b.nummer - a.nummer : a.nummer - b.nummer))
   const showGesamtwertungRow = statusFilter === 'alle' || season.gesamtwertung_status === statusFilter
 
-  // Eigene Gesamtgewinnsumme über alle bereits abgerechneten Spieltage
-  // (unabhängig vom aktuell gewählten Filter) plus die Gesamtwertung, sofern
-  // auch diese schon abgerechnet ist.
+  // Gesamtgewinnsumme des ausgewählten Spielers über alle bereits
+  // abgerechneten Spieltage (unabhängig vom aktuell gewählten Filter) plus
+  // die Gesamtwertung, sofern auch diese schon abgerechnet ist.
   const abgerechnetMatchdayIds = new Set(matchdays.filter((m) => m.status === 'abgerechnet').map((m) => m.id))
-  const myMatchdayGewinnSumme = myPlayer
+  const selectedMatchdayGewinnSumme = selectedPlayerId
     ? seasonTransactions
         .filter(
           (t) =>
-            t.typ === 'gewinn_spieltag' && t.player_id === myPlayer.id && abgerechnetMatchdayIds.has(t.matchday_id ?? ''),
+            t.typ === 'gewinn_spieltag' &&
+            t.player_id === selectedPlayerId &&
+            abgerechnetMatchdayIds.has(t.matchday_id ?? ''),
         )
         .reduce((sum, t) => sum + t.betrag, 0)
     : 0
-  const myGesamtgewinnsumme =
-    myMatchdayGewinnSumme + (season.gesamtwertung_status === 'abgerechnet' ? (myOverallPayout?.betrag ?? 0) : 0)
+  const selectedGesamtgewinnsumme =
+    selectedMatchdayGewinnSumme + (season.gesamtwertung_status === 'abgerechnet' ? (selectedOverallPayout?.betrag ?? 0) : 0)
 
   return (
     <div className="p-4 sm:p-6">
@@ -233,11 +279,20 @@ export function SeasonDetailPage() {
 
       {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
 
+      <CollapsibleSection title="Gewinnverteilung" defaultOpen={false}>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <PayoutRulesEditor seasonId={season.id} typ="spieltag" title="Spieltag" canManage={canManagePayouts} />
+          <PayoutRulesEditor seasonId={season.id} typ="gesamtsieg" title="Gesamtwertung" canManage={canManagePayouts} />
+        </div>
+      </CollapsibleSection>
+
       <SeasonParticipantsSection
         participants={participants}
         players={players}
         matchdayCount={matchdays.length}
         canManage={canManageParticipants}
+        favoritePlayerId={favoritePlayerId}
+        onToggleFavorite={toggleFavoritePlayer}
         onAdd={async ({ playerId, gesamtsiegBetrag, spieltagsBetrag }) => {
           await addSeasonParticipant({
             season_id: season.id,
@@ -259,13 +314,6 @@ export function SeasonDetailPage() {
           await reload()
         }}
       />
-
-      <CollapsibleSection title="Gewinnverteilung" defaultOpen={false}>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <PayoutRulesEditor seasonId={season.id} typ="spieltag" title="Spieltag" canManage={canManagePayouts} />
-          <PayoutRulesEditor seasonId={season.id} typ="gesamtsieg" title="Gesamtwertung" canManage={canManagePayouts} />
-        </div>
-      </CollapsibleSection>
 
       <CollapsibleSection
         title="Spieltage"
@@ -289,10 +337,26 @@ export function SeasonDetailPage() {
               <option value="neueste">Neueste zuerst</option>
               <option value="aelteste">Älteste zuerst</option>
             </select>
-            <span className="text-sm text-slate-500">
-              Gesamtgewinn:{' '}
-              <span className="font-medium text-emerald-600">{currencyFormatter.format(myGesamtgewinnsumme)}</span>
-            </span>
+            {participants.length > 1 && (
+              <select
+                value={selectedPlayerId}
+                onChange={(e) => setSelectedPlayerId(e.target.value)}
+                className="rounded-lg border border-slate-300 px-2 py-2 text-sm focus:border-slate-900 focus:outline-none"
+              >
+                <option value="">Kein Spieler ausgewählt</option>
+                {participants.map((p) => (
+                  <option key={p.player_id} value={p.player_id}>
+                    {playersById.get(p.player_id)?.name ?? 'Unbekannt'}
+                  </option>
+                ))}
+              </select>
+            )}
+            {selectedPlayerId && (
+              <span className="text-sm text-slate-500">
+                Gesamtgewinn:{' '}
+                <span className="font-medium text-emerald-600">{currencyFormatter.format(selectedGesamtgewinnsumme)}</span>
+              </span>
+            )}
             {canManageMatchdays && (
               <>
                 <Button variant="secondary" onClick={() => setShowImportSpieltageDialog(true)}>
@@ -332,21 +396,21 @@ export function SeasonDetailPage() {
               <Link to={`/seasons/${season.id}/gesamtwertung`} className="min-w-0 flex-1 hover:underline">
                 <p className="font-medium text-slate-900">Gesamtwertung</p>
                 <p className="truncate text-sm text-slate-500">Saisonrangliste</p>
-                {myOverallRanking && (
+                {selectedOverallRanking && (
                   <p className="text-sm font-medium text-slate-700 sm:hidden">
-                    Platz {myOverallRanking.rang}
-                    {myOverallPayout && (
-                      <span className="text-emerald-600"> · {currencyFormatter.format(myOverallPayout.betrag)}</span>
+                    Platz {selectedOverallRanking.rang}
+                    {selectedOverallPayout && (
+                      <span className="text-emerald-600"> · {currencyFormatter.format(selectedOverallPayout.betrag)}</span>
                     )}
                   </p>
                 )}
               </Link>
               <div className="flex shrink-0 items-center gap-4">
                 <span className="hidden w-16 text-right text-sm text-slate-700 sm:inline">
-                  {myOverallRanking ? `Platz ${myOverallRanking.rang}` : '–'}
+                  {selectedOverallRanking ? `Platz ${selectedOverallRanking.rang}` : '–'}
                 </span>
                 <span className="hidden w-20 text-right text-sm font-medium text-emerald-600 sm:inline">
-                  {myOverallPayout ? currencyFormatter.format(myOverallPayout.betrag) : '–'}
+                  {selectedOverallPayout ? currencyFormatter.format(selectedOverallPayout.betrag) : '–'}
                 </span>
                 <Badge tone={season.gesamtwertung_status === 'abgerechnet' ? 'positive' : 'warning'}>
                   {season.gesamtwertung_status}
@@ -368,12 +432,12 @@ export function SeasonDetailPage() {
             </li>
           )}
           {filteredSortedMatchdays.map((matchday) => {
-            const myRanking = myPlayer
-              ? matchdayRankings.find((r) => r.matchday_id === matchday.id && r.player_id === myPlayer.id)
+            const selectedRanking = selectedPlayerId
+              ? matchdayRankings.find((r) => r.matchday_id === matchday.id && r.player_id === selectedPlayerId)
               : undefined
-            const myPayout = myPlayer
+            const selectedPayout = selectedPlayerId
               ? seasonTransactions.find(
-                  (t) => t.matchday_id === matchday.id && t.typ === 'gewinn_spieltag' && t.player_id === myPlayer.id,
+                  (t) => t.matchday_id === matchday.id && t.typ === 'gewinn_spieltag' && t.player_id === selectedPlayerId,
                 )
               : undefined
             return (
@@ -383,21 +447,21 @@ export function SeasonDetailPage() {
                   <p className="truncate text-sm text-slate-500">
                     {matchday.datum ? formatGermanDate(matchday.datum) : 'Kein Datum hinterlegt'}
                   </p>
-                  {myRanking && (
+                  {selectedRanking && (
                     <p className="text-sm font-medium text-slate-700 sm:hidden">
-                      Platz {myRanking.rang}
-                      {myPayout && (
-                        <span className="text-emerald-600"> · {currencyFormatter.format(myPayout.betrag)}</span>
+                      Platz {selectedRanking.rang}
+                      {selectedPayout && (
+                        <span className="text-emerald-600"> · {currencyFormatter.format(selectedPayout.betrag)}</span>
                       )}
                     </p>
                   )}
                 </Link>
                 <div className="flex shrink-0 items-center gap-4">
                   <span className="hidden w-16 text-right text-sm text-slate-700 sm:inline">
-                    {myRanking ? `Platz ${myRanking.rang}` : '–'}
+                    {selectedRanking ? `Platz ${selectedRanking.rang}` : '–'}
                   </span>
                   <span className="hidden w-20 text-right text-sm font-medium text-emerald-600 sm:inline">
-                    {myPayout ? currencyFormatter.format(myPayout.betrag) : '–'}
+                    {selectedPayout ? currencyFormatter.format(selectedPayout.betrag) : '–'}
                   </span>
                   <Badge tone={matchday.status === 'abgerechnet' ? 'positive' : 'warning'}>{matchday.status}</Badge>
                   {canManageMatchdays && (
