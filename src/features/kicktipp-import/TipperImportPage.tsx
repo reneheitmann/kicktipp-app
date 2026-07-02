@@ -2,7 +2,8 @@ import { useEffect, useState, type ChangeEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { useAuth } from '../auth/useAuth'
-import { listPlayers, createPlayer, updatePlayer, describePlayerSaveError } from '../players/playersApi'
+import { listPlayers, createPlayer, describePlayerSaveError } from '../players/playersApi'
+import { listPlayerProfileLinks, setPlayerProfileLinks } from '../players/playerProfileLinksApi'
 import { listProfiles } from '../admin-users/profilesApi'
 import { requestPasswordReset } from '../auth/passwordResetApi'
 import { adminCreateUser } from '../admin-users/adminCreateUser'
@@ -24,6 +25,7 @@ export function TipperImportPage() {
 
   const [players, setPlayers] = useState<Player[]>([])
   const [profiles, setProfiles] = useState<Profile[]>([])
+  const [linkedPlayerIds, setLinkedPlayerIds] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -39,10 +41,11 @@ export function TipperImportPage() {
   const [done, setDone] = useState(false)
 
   useEffect(() => {
-    Promise.all([listPlayers(), isAdmin ? listProfiles() : Promise.resolve([])])
-      .then(([playerData, profileData]) => {
+    Promise.all([listPlayers(), isAdmin ? listProfiles() : Promise.resolve([]), listPlayerProfileLinks()])
+      .then(([playerData, profileData, linkData]) => {
         setPlayers(playerData)
         setProfiles(profileData)
+        setLinkedPlayerIds(new Set(linkData.map((l) => l.player_id)))
         setError(null)
       })
       .catch((err) => setError(err instanceof Error ? err.message : 'Daten konnten nicht geladen werden.'))
@@ -53,7 +56,7 @@ export function TipperImportPage() {
     const rawRows = parsed.rows
       .filter((cells) => cells.some((c) => c.trim() !== ''))
       .map((cells) => ({ name: cells[nameCol] ?? '', email: cells[emailCol] ?? '' }))
-    const classified = classifyTipperRows(rawRows, players, profiles)
+    const classified = classifyTipperRows(rawRows, players, profiles, linkedPlayerIds)
     return classified.map((row) => ({
       row,
       included: !row.playerExists || willCreateLogin(row, loginsEnabled),
@@ -109,7 +112,6 @@ export function TipperImportPage() {
           const created = await createPlayer({
             name: entry.row.kicktippName,
             kicktipp_name: entry.row.kicktippName,
-            profile_id: null,
           })
           playerId = created.id
         }
@@ -126,7 +128,7 @@ export function TipperImportPage() {
             await requestPasswordReset(entry.row.email)
           }
           if (playerId) {
-            await updatePlayer(playerId, { profile_id: createdUser.id })
+            await setPlayerProfileLinks(playerId, [createdUser.id])
           }
         }
 

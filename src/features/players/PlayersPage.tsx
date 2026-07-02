@@ -4,10 +4,12 @@ import { Button } from '../../components/ui/Button'
 import { SearchInput } from '../../components/ui/SearchInput'
 import { PlayerForm } from './PlayerForm'
 import { createPlayer, deletePlayer, listPlayers, updatePlayer } from './playersApi'
-import type { Player } from '../../types/database'
+import { listPlayerProfileLinks, setPlayerProfileLinks } from './playerProfileLinksApi'
+import type { Player, PlayerProfileLink } from '../../types/database'
 
 export function PlayersPage() {
   const [players, setPlayers] = useState<Player[]>([])
+  const [links, setLinks] = useState<PlayerProfileLink[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [editingPlayer, setEditingPlayer] = useState<Player | undefined>(undefined)
@@ -17,7 +19,9 @@ export function PlayersPage() {
   async function reload() {
     setLoading(true)
     try {
-      setPlayers(await listPlayers())
+      const [playerData, linkData] = await Promise.all([listPlayers(), listPlayerProfileLinks()])
+      setPlayers(playerData)
+      setLinks(linkData)
       setError(null)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Spieler konnten nicht geladen werden.')
@@ -100,13 +104,13 @@ export function PlayersPage() {
         <PlayerForm
           player={editingPlayer}
           existingPlayers={players}
+          existingLinks={links}
           onClose={() => setShowForm(false)}
-          onSubmit={async (input) => {
-            if (editingPlayer) {
-              await updatePlayer(editingPlayer.id, input)
-            } else {
-              await createPlayer(input)
-            }
+          onSubmit={async ({ profileIds, ...input }) => {
+            const playerId = editingPlayer
+              ? (await updatePlayer(editingPlayer.id, input)).id
+              : (await createPlayer(input)).id
+            await setPlayerProfileLinks(playerId, profileIds)
             await reload()
           }}
         />

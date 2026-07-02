@@ -19,6 +19,7 @@ export function classifyTipperRows(
   rawRows: { name: string; email: string }[],
   existingPlayers: Player[],
   existingProfiles: Profile[],
+  linkedPlayerIds: Set<string>,
 ): TipperRow[] {
   return rawRows
     .filter((r) => r.name.trim() !== '')
@@ -40,7 +41,7 @@ export function classifyTipperRows(
         hasValidEmail,
         playerExists: !!existingPlayer,
         existingPlayerId: existingPlayer?.id ?? null,
-        existingPlayerHasLogin: !!existingPlayer?.profile_id,
+        existingPlayerHasLogin: existingPlayer ? linkedPlayerIds.has(existingPlayer.id) : false,
         loginAlreadyExistsForEmail,
       }
     })

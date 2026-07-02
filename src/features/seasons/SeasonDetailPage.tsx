@@ -7,6 +7,7 @@ import { SearchInput } from '../../components/ui/SearchInput'
 import { currencyFormatter, formatGermanDate } from '../../lib/format'
 import { useAuth } from '../auth/useAuth'
 import { listPlayers } from '../players/playersApi'
+import { listPlayerProfileLinks } from '../players/playerProfileLinksApi'
 import { SeasonForm } from './SeasonForm'
 import { MatchdayForm } from './MatchdayForm'
 import { DeleteSeasonDialog } from './DeleteSeasonDialog'
@@ -29,6 +30,7 @@ import type {
   Matchday,
   MatchdayRanking,
   Player,
+  PlayerProfileLink,
   Season,
   SeasonParticipant,
   SeasonRanking,
@@ -76,12 +78,13 @@ export function SeasonDetailPage() {
     }
   })
   const [selectedPlayerId, setSelectedPlayerId] = useState('')
+  const [profileLinks, setProfileLinks] = useState<PlayerProfileLink[]>([])
 
   const reload = useCallback(async () => {
     if (!seasonId) return
     setLoading(true)
     try {
-      const [seasonData, matchdayData, participantData, playerData, rankingData, payoutData, transactionData] =
+      const [seasonData, matchdayData, participantData, playerData, rankingData, payoutData, transactionData, linkData] =
         await Promise.all([
           getSeason(seasonId),
           listMatchdays(seasonId),
@@ -90,8 +93,10 @@ export function SeasonDetailPage() {
           listSeasonRankings(seasonId),
           listSeasonPayouts(seasonId),
           listSeasonTransactions(seasonId),
+          listPlayerProfileLinks(),
         ])
       const matchdayRankingData = await listMatchdayRankingsForMatchdays(matchdayData.map((m) => m.id))
+      setProfileLinks(linkData)
       setSeason(seasonData)
       setMatchdays(matchdayData)
       setParticipants(participantData)
@@ -125,9 +130,12 @@ export function SeasonDetailPage() {
       setSelectedPlayerId(favoritePlayerId)
       return
     }
-    const ownPlayer = players.find((p) => p.profile_id === profile?.id)
-    setSelectedPlayerId(ownPlayer && participants.some((p) => p.player_id === ownPlayer.id) ? ownPlayer.id : '')
-  }, [participants, favoritePlayerId, players, profile?.id])
+    // Ein Login kann mit mehreren Spielern verknüpft sein – hier genügt der
+    // erste eigene Spieler, der auch Teilnehmer dieser Saison ist.
+    const ownPlayerIds = new Set(profileLinks.filter((l) => l.profile_id === profile?.id).map((l) => l.player_id))
+    const ownParticipant = participants.find((p) => ownPlayerIds.has(p.player_id))
+    setSelectedPlayerId(ownParticipant?.player_id ?? '')
+  }, [participants, favoritePlayerId, profileLinks, profile?.id])
 
   function toggleFavoritePlayer(playerId: string) {
     setFavoritePlayerId((prev) => {

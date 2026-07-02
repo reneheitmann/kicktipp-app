@@ -5,6 +5,7 @@ import { currencyFormatter } from '../lib/format'
 import { useAuth } from '../features/auth/useAuth'
 import { listSeasons } from '../features/seasons/seasonsApi'
 import { listPlayers } from '../features/players/playersApi'
+import { listPlayerProfileLinks } from '../features/players/playerProfileLinksApi'
 import { listSeasonParticipantsForPlayer, listAllSeasonParticipants } from '../features/seasons/seasonParticipantsApi'
 import { listAllMatchdays, listMatchdayCountsBySeasonId } from '../features/seasons/matchdaysApi'
 import { listZahlungen, listAllZahlungen } from '../features/players/zahlungenApi'
@@ -46,11 +47,14 @@ export function DashboardPage() {
 
   useEffect(() => {
     if (!profile) return
-    Promise.all([listSeasons(), listPlayers(), listMatchdayCountsBySeasonId()])
-      .then(async ([seasons, players, matchdayCounts]) => {
+    Promise.all([listSeasons(), listPlayers(), listMatchdayCountsBySeasonId(), listPlayerProfileLinks()])
+      .then(async ([seasons, players, matchdayCounts, links]) => {
         setActiveSeasons(seasons.filter((s) => s.status === 'aktiv'))
 
-        const linked = players.filter((p) => p.profile_id === profile.id)
+        const linkedPlayerIds = new Set(
+          links.filter((l) => l.profile_id === profile.id).map((l) => l.player_id),
+        )
+        const linked = players.filter((p) => linkedPlayerIds.has(p.id))
         setLinkedPlayers(linked)
         if (linked.length > 0) {
           const perPlayerData = await Promise.all(
