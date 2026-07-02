@@ -6,6 +6,8 @@ interface CreateUserInput {
   email: string
   password: string
   name: string
+  vorname?: string
+  nachname?: string
   role: UserRole
   /** true für den bei "Per E-Mail einladen" zufällig generierten Platzhalter
    *  (siehe CreateUserForm.tsx) – lässt die Passwort-Richtlinie serverseitig

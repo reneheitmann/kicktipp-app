@@ -68,14 +68,22 @@ async function handle(req: Request, supabaseUrl: string, serviceRoleKey: string)
     return jsonResponse({ error: 'Nur aktive Administratoren dürfen Benutzer anlegen.' }, 403)
   }
 
-  let body: { name?: string; email?: string; password?: string; role?: string; isGeneratedPlaceholder?: boolean }
+  let body: {
+    name?: string
+    vorname?: string
+    nachname?: string
+    email?: string
+    password?: string
+    role?: string
+    isGeneratedPlaceholder?: boolean
+  }
   try {
     body = await req.json()
   } catch {
     return jsonResponse({ error: 'Ungültiger Request-Body' }, 400)
   }
 
-  const { name, email, password, role, isGeneratedPlaceholder } = body
+  const { name, vorname, nachname, email, password, role, isGeneratedPlaceholder } = body
 
   if (!name?.trim() || !email?.trim() || !password) {
     return jsonResponse({ error: 'Name, E-Mail und Passwort sind erforderlich.' }, 400)
@@ -113,7 +121,7 @@ async function handle(req: Request, supabaseUrl: string, serviceRoleKey: string)
     email: email.trim(),
     password,
     email_confirm: true,
-    user_metadata: { name: name.trim(), role },
+    user_metadata: { name: name.trim(), vorname: vorname?.trim() || null, nachname: nachname?.trim() || null, role },
   })
 
   if (createError || !created.user) {

@@ -10,6 +10,8 @@ import type { PasswordPolicy, UserRole } from '../../types/database'
 
 export function CreateUserForm({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
   const [name, setName] = useState('')
+  const [vorname, setVorname] = useState('')
+  const [nachname, setNachname] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [role, setRole] = useState<UserRole>('user')
@@ -43,6 +45,8 @@ export function CreateUserForm({ onClose, onCreated }: { onClose: () => void; on
       const usedPassword = inviteByEmail ? generateRandomPassword() : password
       await adminCreateUser({
         name: name.trim(),
+        vorname: vorname.trim() || undefined,
+        nachname: nachname.trim() || undefined,
         email: email.trim(),
         password: usedPassword,
         role,
@@ -75,6 +79,34 @@ export function CreateUserForm({ onClose, onCreated }: { onClose: () => void; on
             className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base focus:border-slate-900 focus:outline-none"
           />
         </div>
+        <div className="flex gap-3">
+          <div className="flex-1">
+            <label htmlFor="user-vorname" className="mb-1 block text-sm font-medium text-slate-700">
+              Vorname
+            </label>
+            <input
+              id="user-vorname"
+              value={vorname}
+              onChange={(e) => setVorname(e.target.value)}
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base focus:border-slate-900 focus:outline-none"
+            />
+          </div>
+          <div className="flex-1">
+            <label htmlFor="user-nachname" className="mb-1 block text-sm font-medium text-slate-700">
+              Nachname
+            </label>
+            <input
+              id="user-nachname"
+              value={nachname}
+              onChange={(e) => setNachname(e.target.value)}
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base focus:border-slate-900 focus:outline-none"
+            />
+          </div>
+        </div>
+        <p className="-mt-2 text-xs text-slate-400">
+          Optional – wird für die Personalisierung von E-Mails genutzt (Variablen {'{{Vorname}}'}/{'{{Nachname}}'}).
+        </p>
+
         <div>
           <label htmlFor="user-email" className="mb-1 block text-sm font-medium text-slate-700">
             E-Mail

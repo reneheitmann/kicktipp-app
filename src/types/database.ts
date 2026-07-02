@@ -45,6 +45,10 @@ export type RolePermission = {
 export type Profile = {
   id: string
   name: string
+  /** Zusätzliche strukturierte Namensfelder, primär für E-Mail-Personalisierung
+   *  (siehe templateVariables.ts) – ergänzen "name", ersetzen es nicht. */
+  vorname: string | null
+  nachname: string | null
   email: string | null
   role: UserRole
   /** Ursprüngliche Rolle, während ein echter Rollenwechsel aktiv ist (siehe
@@ -275,6 +279,8 @@ export interface Database {
         Insert: {
           id: string
           name: string
+          vorname?: string | null
+          nachname?: string | null
           email?: string | null
           role?: UserRole
           base_role?: UserRole | null
@@ -284,6 +290,8 @@ export interface Database {
         Update: {
           id?: string
           name?: string
+          vorname?: string | null
+          nachname?: string | null
           email?: string | null
           role?: UserRole
           base_role?: UserRole | null
