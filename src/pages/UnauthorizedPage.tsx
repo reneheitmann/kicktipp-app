@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../features/auth/useAuth'
 
@@ -6,7 +7,14 @@ import { useAuth } from '../features/auth/useAuth'
 // visibleNavItems-Liste durch eine fehlerhafte "Als Spieler anzeigen"-Vorschau
 // –, muss immer ein Weg zurück ins eigene Profil bzw. zum Abmelden bleiben.
 export function UnauthorizedPage() {
-  const { profile, viewAsUser, setViewAsUser, signOut } = useAuth()
+  const { profile, switchBackToBaseRole, signOut } = useAuth()
+  const [switching, setSwitching] = useState(false)
+
+  async function handleSwitchBack() {
+    setSwitching(true)
+    await switchBackToBaseRole()
+    setSwitching(false)
+  }
 
   return (
     <div className="flex h-full flex-col items-center justify-center gap-3 p-8 text-center">
@@ -15,12 +23,13 @@ export function UnauthorizedPage() {
         Du hast nicht die erforderliche Rolle, um diesen Bereich zu sehen.
       </p>
 
-      {viewAsUser && (
+      {profile?.base_role && (
         <button
-          onClick={() => setViewAsUser(false)}
-          className="rounded-lg bg-amber-100 px-4 py-2 text-sm font-medium text-amber-800 hover:bg-amber-200"
+          onClick={handleSwitchBack}
+          disabled={switching}
+          className="rounded-lg bg-amber-100 px-4 py-2 text-sm font-medium text-amber-800 hover:bg-amber-200 disabled:opacity-60"
         >
-          Vorschau „Als Spieler anzeigen" beenden
+          {switching ? 'Wechsle zurück...' : 'Zurück zur eigentlichen Rolle wechseln'}
         </button>
       )}
 

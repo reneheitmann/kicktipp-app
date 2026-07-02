@@ -6,13 +6,34 @@ import { getPasswordPolicy } from '../password-policy/passwordPolicyApi'
 import { describePasswordPolicy, validatePasswordAgainstPolicy } from '../../lib/passwordValidation'
 import type { PasswordPolicy } from '../../types/database'
 
+const roleLabels = { admin: 'Administrator', spielleiter: 'Spielleiter', user: 'Spieler' } as const
+
 export function MyAccountPage() {
-  const { profile, refreshProfile, viewAsUser, setViewAsUser } = useAuth()
+  const { profile, refreshProfile, switchToUserRole, switchBackToBaseRole } = useAuth()
 
   const [name, setName] = useState(profile?.name ?? '')
   const [nameError, setNameError] = useState<string | null>(null)
   const [nameSuccess, setNameSuccess] = useState<string | null>(null)
   const [savingName, setSavingName] = useState(false)
+
+  const [switching, setSwitching] = useState(false)
+  const [switchError, setSwitchError] = useState<string | null>(null)
+
+  async function handleSwitchToUser() {
+    setSwitching(true)
+    setSwitchError(null)
+    const { error } = await switchToUserRole()
+    if (error) setSwitchError(error)
+    setSwitching(false)
+  }
+
+  async function handleSwitchBack() {
+    setSwitching(true)
+    setSwitchError(null)
+    const { error } = await switchBackToBaseRole()
+    if (error) setSwitchError(error)
+    setSwitching(false)
+  }
 
   const [passwordPolicy, setPasswordPolicy] = useState<PasswordPolicy | null>(null)
   const [newPassword, setNewPassword] = useState('')
@@ -106,7 +127,10 @@ export function MyAccountPage() {
           </div>
           <div>
             <p className="mb-1 text-sm font-medium text-slate-700">Rolle</p>
-            <p className="rounded-lg bg-slate-50 px-3 py-2 text-base text-slate-500">{profile.role}</p>
+            <p className="rounded-lg bg-slate-50 px-3 py-2 text-base text-slate-500">
+              {roleLabels[profile.role]}
+              {profile.base_role && ` (eigentliche Rolle: ${roleLabels[profile.base_role]})`}
+            </p>
           </div>
 
           {nameError && <p className="text-sm text-red-600">{nameError}</p>}
@@ -118,22 +142,31 @@ export function MyAccountPage() {
         </form>
       </div>
 
-      {(profile.role === 'admin' || profile.role === 'spielleiter') && (
+      {(profile.role === 'admin' || profile.role === 'spielleiter') && !profile.base_role && (
         <div className="mb-6 rounded-xl border border-slate-200 bg-white p-4">
-          <h2 className="mb-1 text-base font-semibold text-slate-900">Ansicht</h2>
+          <h2 className="mb-1 text-base font-semibold text-slate-900">Als Spieler agieren</h2>
           <p className="mb-3 text-sm text-slate-500">
-            Simuliert die Ansicht der Rolle „Spieler" (Rollen &amp; Berechtigungen bleiben in der Datenbank
-            unverändert – jederzeit umkehrbar).
+            Wechselt deine Rolle tatsächlich auf „Spieler" – Admin-/Spielleiter-Funktionen sind währenddessen
+            wirklich nicht mehr nutzbar (kein Vorschau-Modus). Jederzeit über diese Seite rückgängig zu machen.
           </p>
-          <label className="flex items-center gap-2 text-sm text-slate-700">
-            <input
-              type="checkbox"
-              checked={viewAsUser}
-              onChange={(e) => setViewAsUser(e.target.checked)}
-              className="h-5 w-5"
-            />
-            Als Spieler anzeigen
-          </label>
+          {switchError && <p className="mb-3 text-sm text-red-600">{switchError}</p>}
+          <Button variant="secondary" onClick={handleSwitchToUser} disabled={switching}>
+            {switching ? 'Wechsle...' : 'Als Spieler agieren'}
+          </Button>
+        </div>
+      )}
+
+      {profile.base_role && (
+        <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4">
+          <h2 className="mb-1 text-base font-semibold text-amber-900">Du agierst als Spieler</h2>
+          <p className="mb-3 text-sm text-amber-800">
+            Eigentliche Rolle: {roleLabels[profile.base_role]}. Admin-/Spielleiter-Funktionen sind bis zum
+            Zurückwechseln nicht sichtbar.
+          </p>
+          {switchError && <p className="mb-3 text-sm text-red-600">{switchError}</p>}
+          <Button onClick={handleSwitchBack} disabled={switching}>
+            {switching ? 'Wechsle zurück...' : `Zurück zu ${roleLabels[profile.base_role]}`}
+          </Button>
         </div>
       )}
 

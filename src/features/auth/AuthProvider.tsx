@@ -4,8 +4,6 @@ import { supabase } from '../../lib/supabaseClient'
 import type { PermissionKey, Profile, UserRole } from '../../types/database'
 import { AuthContext } from './AuthContext'
 
-const VIEW_AS_USER_STORAGE_KEY = 'kicktipp_view_as_user'
-
 async function fetchProfile(userId: string): Promise<Profile | null> {
   const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single()
   if (error) {
@@ -33,37 +31,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [permissions, setPermissions] = useState<Set<PermissionKey>>(new Set())
   const [loading, setLoading] = useState(true)
-  const [viewAsUser, setViewAsUserState] = useState(
-    () => sessionStorage.getItem(VIEW_AS_USER_STORAGE_KEY) === 'true',
-  )
-  // Rechte der Rolle "user", separat von den eigenen `permissions` geladen –
-  // can() während der Vorschau muss die TATSÄCHLICHE Konfiguration der Rolle
-  // "user" widerspiegeln (page.*.view steht z. B. standardmäßig auf true),
-  // nicht pauschal alles verweigern. Ein pauschales „immer false" hätte vor
-  // Einführung von page.*.view noch gepasst (Spieler hatten ohnehin nie
-  // *.manage-Rechte), blendet seit page.*.view aber auch Seiten aus, die ein
-  // echter Spieler-Account durchaus sehen würde (z. B. Übersicht/Saisons) –
-  // die Vorschau landete dadurch fälschlich auf /unauthorized.
-  const [userRolePermissions, setUserRolePermissions] = useState<Set<PermissionKey>>(new Set())
-  // Lazy wie viewAsUser selbst initialisiert (nicht einfach `false`): ist
-  // viewAsUser schon beim Mount aus sessionStorage true, muss can() sofort
-  // wissen, dass userRolePermissions noch nicht geladen ist – sonst gäbe es
-  // exakt eine Render-Lücke, in der can() für alles fälschlich false liefert
-  // (leeres Set), bevor der Effekt unten überhaupt zu laufen beginnt.
-  const [userRolePermissionsLoading, setUserRolePermissionsLoading] = useState(
-    () => sessionStorage.getItem(VIEW_AS_USER_STORAGE_KEY) === 'true',
-  )
   const [passwordRecovery, setPasswordRecovery] = useState(false)
-
-  useEffect(() => {
-    if (viewAsUser) {
-      setUserRolePermissionsLoading(true)
-      fetchPermissions('user').then((perms) => {
-        setUserRolePermissions(perms)
-        setUserRolePermissionsLoading(false)
-      })
-    }
-  }, [viewAsUser])
 
   useEffect(() => {
     let isMounted = true
@@ -120,13 +88,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function signOut() {
-    // "Als Spieler anzeigen" ist eine Vorschau für die aktuelle Admin-/
-    // Spielleiter-Session, kein dauerhaftes Gerätesetting – ohne dieses Reset
-    // bleibt sessionStorage im selben Browser-Tab gesetzt, und ein danach
-    // eingeloggter ECHTER "user"-Account (der die Checkbox dafür gar nicht
-    // sieht, sie ist nur für admin/spielleiter sichtbar) würde die Vorschau
-    // ungewollt erben und könnte sie selbst nicht mehr ausschalten.
-    setViewAsUser(false)
     await supabase.auth.signOut()
   }
 
@@ -144,35 +105,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  function setViewAsUser(value: boolean) {
-    sessionStorage.setItem(VIEW_AS_USER_STORAGE_KEY, String(value))
-    setViewAsUserState(value)
-  }
-
   function clearPasswordRecovery() {
     setPasswordRecovery(false)
   }
 
   function can(key: PermissionKey): boolean {
-    return viewAsUser ? userRolePermissions.has(key) : permissions.has(key)
+    return permissions.has(key)
   }
 
-  // Muss auch userRolePermissionsLoading einschließen: ProtectedRoute/
-  // LoginPage warten anhand von `loading` damit, can()-Ergebnisse für eine
-  // Redirect-Entscheidung zu verwenden – ohne das hier mit einzubeziehen,
-  // gäbe es bei aktiver Vorschau genau die Render-Lücke (userRolePermissions
-  // noch leer), die zur fälschlichen /unauthorized-Weiterleitung geführt hat.
-  const effectiveLoading = loading || (viewAsUser && userRolePermissionsLoading)
+  // Echter Rollenwechsel statt Vorschau: ruft die SECURITY DEFINER-Funktionen
+  // aus 0036_real_role_switch.sql auf (die prüfen Berechtigung/Zustand selbst
+  // serverseitig), lädt danach Profil+Rechte für die neue, echte Rolle neu –
+  // ab da greifen alle RLS-Policies ganz normal, keine Sonderfälle im
+  // Frontend nötig.
+  async function switchToUserRole(): Promise<{ error: string | null }> {
+    const { error } = await supabase.rpc('switch_to_user_role')
+    if (error) return { error: error.message }
+    await refreshProfile()
+    return { error: null }
+  }
+
+  async function switchBackToBaseRole(): Promise<{ error: string | null }> {
+    const { error } = await supabase.rpc('switch_back_to_base_role')
+    if (error) return { error: error.message }
+    await refreshProfile()
+    return { error: null }
+  }
 
   return (
     <AuthContext.Provider
       value={{
         session,
         profile,
-        loading: effectiveLoading,
+        loading,
         permissions,
-        viewAsUser,
-        setViewAsUser,
+        switchToUserRole,
+        switchBackToBaseRole,
         passwordRecovery,
         clearPasswordRecovery,
         can,

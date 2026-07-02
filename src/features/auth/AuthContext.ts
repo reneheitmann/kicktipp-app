@@ -6,11 +6,16 @@ export interface AuthContextValue {
   session: Session | null
   profile: Profile | null
   loading: boolean
-  /** Rechte der aktuellen Rolle (nicht die Vorschau-Wirkung von viewAsUser – dafür can() verwenden). */
+  /** Rechte der aktuellen (echten) Rolle – für UI-Gating can() verwenden. */
   permissions: Set<PermissionKey>
-  /** Rein clientseitiger Vorschau-Modus: simuliert die Rolle "user", ändert profiles.role nie. */
-  viewAsUser: boolean
-  setViewAsUser: (value: boolean) => void
+  /**
+   * Echter Rollenwechsel (ändert profiles.role tatsächlich, keine reine
+   * Vorschau) – nur für admin/spielleiter, um kurzzeitig als "user" zu
+   * agieren. profile.base_role != null zeigt an, dass ein Wechsel aktiv ist
+   * (enthält die ursprüngliche Rolle zum Zurückwechseln).
+   */
+  switchToUserRole: () => Promise<{ error: string | null }>
+  switchBackToBaseRole: () => Promise<{ error: string | null }>
   /**
    * true, sobald Supabase beim Öffnen eines Passwort-Reset-Links (Self-Service
    * auf der Login-Seite ODER vom Admin ausgelöst) das PASSWORD_RECOVERY-Event
@@ -21,7 +26,7 @@ export interface AuthContextValue {
    */
   passwordRecovery: boolean
   clearPasswordRecovery: () => void
-  /** Einzige Stelle, die für UI-Gating genutzt werden soll – berücksichtigt viewAsUser automatisch. */
+  /** Einzige Stelle, die für UI-Gating genutzt werden soll. */
   can: (key: PermissionKey) => boolean
   signIn: (email: string, password: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>

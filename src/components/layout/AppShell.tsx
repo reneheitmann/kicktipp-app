@@ -9,12 +9,24 @@ const linkBaseClasses = 'flex items-center rounded-lg px-3 py-2.5 text-sm font-m
 const linkActiveClasses = 'bg-[var(--color-primary)] text-white'
 const linkInactiveClasses = 'text-slate-600 hover:bg-slate-100'
 
+const roleLabels = { admin: 'Administrator', spielleiter: 'Spielleiter', user: 'Spieler' } as const
+
 export function AppShell() {
-  const { profile, signOut, can, viewAsUser, setViewAsUser } = useAuth()
+  const { profile, signOut, can, switchBackToBaseRole } = useAuth()
   const { appName } = useAppBranding()
   const items = visibleNavItems(profile?.role, can)
   const [accountMenuOpen, setAccountMenuOpen] = useState(false)
   const [navMenuOpen, setNavMenuOpen] = useState(false)
+  const [switchingBack, setSwitchingBack] = useState(false)
+  const [switchBackError, setSwitchBackError] = useState<string | null>(null)
+
+  async function handleSwitchBack() {
+    setSwitchingBack(true)
+    setSwitchBackError(null)
+    const { error } = await switchBackToBaseRole()
+    if (error) setSwitchBackError(error)
+    setSwitchingBack(false)
+  }
 
   return (
     <div className="flex h-full flex-col md:flex-row">
@@ -35,11 +47,10 @@ export function AppShell() {
               }
             >
               <span>{item.label}</span>
-              {viewAsUser && item.roles && <AdminOnlyBadge className="ml-auto" />}
             </NavLink>
           ))}
         </nav>
-        <UserFooter name={profile?.name} role={profile?.role} viewAsUser={viewAsUser} onSignOut={signOut} />
+        <UserFooter name={profile?.name} role={profile?.role} baseRole={profile?.base_role} onSignOut={signOut} />
       </aside>
 
       <div className="flex min-h-0 flex-1 flex-col">
@@ -88,7 +99,6 @@ export function AppShell() {
                   }
                 >
                   <span>{item.label}</span>
-                  {viewAsUser && item.roles && <AdminOnlyBadge />}
                 </NavLink>
               ))}
             </nav>
@@ -98,8 +108,8 @@ export function AppShell() {
         {accountMenuOpen && (
           <Modal title={profile?.name ?? 'Konto'} onClose={() => setAccountMenuOpen(false)}>
             <p className="mb-3 text-xs text-slate-500">
-              {profile?.role}
-              {viewAsUser && ' (Vorschau: Spieler)'}
+              {profile?.role && roleLabels[profile.role]}
+              {profile?.base_role && ` (eigentliche Rolle: ${roleLabels[profile.base_role]})`}
             </p>
             <div className="space-y-1">
               <NavLink
@@ -129,14 +139,18 @@ export function AppShell() {
           </Modal>
         )}
 
-        {viewAsUser && (
-          <div className="flex items-center justify-between gap-3 border-b border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800">
-            <span>Vorschau: Ansicht als Spieler (deine echte Rolle bleibt unverändert)</span>
+        {profile?.base_role && (
+          <div className="flex flex-col gap-2 border-b border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800 sm:flex-row sm:items-center sm:justify-between">
+            <span>
+              Du agierst aktuell als Spieler (eigentliche Rolle: {roleLabels[profile.base_role]})
+              {switchBackError && <span className="block text-red-600 sm:inline sm:ml-2">{switchBackError}</span>}
+            </span>
             <button
-              onClick={() => setViewAsUser(false)}
-              className="shrink-0 rounded-lg bg-amber-100 px-3 py-1.5 text-xs font-medium hover:bg-amber-200"
+              onClick={handleSwitchBack}
+              disabled={switchingBack}
+              className="shrink-0 self-start rounded-lg bg-amber-100 px-3 py-1.5 text-xs font-medium hover:bg-amber-200 disabled:opacity-60 sm:self-auto"
             >
-              Beenden
+              {switchingBack ? 'Wechsle zurück...' : `Zurück zu ${roleLabels[profile.base_role]}`}
             </button>
           </div>
         )}
@@ -170,29 +184,15 @@ function BetaBadge() {
   )
 }
 
-/** Kennzeichnet einen Menüpunkt, der trotz aktiver "Als Spieler anzeigen"-Vorschau
- * sichtbar bleibt, weil er zu den 3 fest auf Admin verdrahteten Funktionen
- * gehört (Benutzerverwaltung, E-Mail, Rollen & Berechtigungen) und nicht Teil
- * der simulierten Berechtigungsvorschau ist. */
-function AdminOnlyBadge({ className = '' }: { className?: string }) {
-  return (
-    <span
-      className={`shrink-0 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-800 ${className}`}
-    >
-      Admin
-    </span>
-  )
-}
-
 function UserFooter({
   name,
   role,
-  viewAsUser,
+  baseRole,
   onSignOut,
 }: {
   name?: string
-  role?: string
-  viewAsUser: boolean
+  role?: keyof typeof roleLabels
+  baseRole?: keyof typeof roleLabels | null
   onSignOut: () => void
 }) {
   return (
@@ -200,8 +200,8 @@ function UserFooter({
       <NavLink to="/profil" className="block rounded-lg px-2 py-1.5 hover:bg-slate-100">
         <p className="text-sm font-medium text-slate-900">{name}</p>
         <p className="text-xs text-slate-500">
-          {role}
-          {viewAsUser && ' (Vorschau: Spieler)'}
+          {role && roleLabels[role]}
+          {baseRole && ` (eigentliche Rolle: ${roleLabels[baseRole]})`}
         </p>
       </NavLink>
       <NavLink

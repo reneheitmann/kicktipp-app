@@ -91,6 +91,12 @@ export function AdminUsersPage() {
               <div className="min-w-0">
                 <p className="truncate font-medium text-slate-900">
                   {p.name} {!p.is_active && <span className="text-xs font-normal text-red-500">(gesperrt)</span>}
+                  {p.base_role && (
+                    <span className="text-xs font-normal text-amber-600">
+                      {' '}
+                      (agiert aktuell als Spieler, eigentlich {p.base_role})
+                    </span>
+                  )}
                 </p>
                 <p className="truncate text-sm text-slate-500">{p.email}</p>
               </div>
