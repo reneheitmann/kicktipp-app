@@ -45,11 +45,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // echter Spieler-Account durchaus sehen würde (z. B. Übersicht/Saisons) –
   // die Vorschau landete dadurch fälschlich auf /unauthorized.
   const [userRolePermissions, setUserRolePermissions] = useState<Set<PermissionKey>>(new Set())
+  // Lazy wie viewAsUser selbst initialisiert (nicht einfach `false`): ist
+  // viewAsUser schon beim Mount aus sessionStorage true, muss can() sofort
+  // wissen, dass userRolePermissions noch nicht geladen ist – sonst gäbe es
+  // exakt eine Render-Lücke, in der can() für alles fälschlich false liefert
+  // (leeres Set), bevor der Effekt unten überhaupt zu laufen beginnt.
+  const [userRolePermissionsLoading, setUserRolePermissionsLoading] = useState(
+    () => sessionStorage.getItem(VIEW_AS_USER_STORAGE_KEY) === 'true',
+  )
   const [passwordRecovery, setPasswordRecovery] = useState(false)
 
   useEffect(() => {
     if (viewAsUser) {
-      fetchPermissions('user').then(setUserRolePermissions)
+      setUserRolePermissionsLoading(true)
+      fetchPermissions('user').then((perms) => {
+        setUserRolePermissions(perms)
+        setUserRolePermissionsLoading(false)
+      })
     }
   }, [viewAsUser])
 
@@ -108,6 +120,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function signOut() {
+    // "Als Spieler anzeigen" ist eine Vorschau für die aktuelle Admin-/
+    // Spielleiter-Session, kein dauerhaftes Gerätesetting – ohne dieses Reset
+    // bleibt sessionStorage im selben Browser-Tab gesetzt, und ein danach
+    // eingeloggter ECHTER "user"-Account (der die Checkbox dafür gar nicht
+    // sieht, sie ist nur für admin/spielleiter sichtbar) würde die Vorschau
+    // ungewollt erben und könnte sie selbst nicht mehr ausschalten.
+    setViewAsUser(false)
     await supabase.auth.signOut()
   }
 
@@ -138,12 +157,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return viewAsUser ? userRolePermissions.has(key) : permissions.has(key)
   }
 
+  // Muss auch userRolePermissionsLoading einschließen: ProtectedRoute/
+  // LoginPage warten anhand von `loading` damit, can()-Ergebnisse für eine
+  // Redirect-Entscheidung zu verwenden – ohne das hier mit einzubeziehen,
+  // gäbe es bei aktiver Vorschau genau die Render-Lücke (userRolePermissions
+  // noch leer), die zur fälschlichen /unauthorized-Weiterleitung geführt hat.
+  const effectiveLoading = loading || (viewAsUser && userRolePermissionsLoading)
+
   return (
     <AuthContext.Provider
       value={{
         session,
         profile,
-        loading,
+        loading: effectiveLoading,
         permissions,
         viewAsUser,
         setViewAsUser,
