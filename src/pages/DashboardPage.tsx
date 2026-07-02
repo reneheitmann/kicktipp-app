@@ -110,10 +110,7 @@ export function DashboardPage() {
 
   return (
     <div className="p-4 sm:p-6">
-      <h1 className="text-xl font-semibold text-slate-900">Willkommen, {profile?.name}</h1>
-      <p className="mt-1 mb-6 text-sm text-slate-500">
-        Rolle: <span className="font-medium">{profile?.role}</span>
-      </p>
+      <h1 className="mb-6 text-xl font-semibold text-slate-900">Willkommen, {profile?.name}</h1>
 
       {myPlayer && myBalance && (
         <Link
