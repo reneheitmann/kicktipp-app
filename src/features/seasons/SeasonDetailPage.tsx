@@ -4,7 +4,7 @@ import { Button } from '../../components/ui/Button'
 import { Badge } from '../../components/ui/Badge'
 import { CollapsibleSection } from '../../components/ui/CollapsibleSection'
 import { SearchInput } from '../../components/ui/SearchInput'
-import { currencyFormatter } from '../../lib/format'
+import { currencyFormatter, formatGermanDate } from '../../lib/format'
 import { useAuth } from '../auth/useAuth'
 import { listPlayers } from '../players/playersApi'
 import { SeasonForm } from './SeasonForm'
@@ -370,7 +370,9 @@ export function SeasonDetailPage() {
               <li key={matchday.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
                 <Link to={`/seasons/${season.id}/matchdays/${matchday.id}`} className="min-w-0 flex-1 hover:underline">
                   <p className="font-medium text-slate-900">Spieltag {matchday.nummer}</p>
-                  <p className="truncate text-sm text-slate-500">{matchday.datum ?? 'Kein Datum hinterlegt'}</p>
+                  <p className="truncate text-sm text-slate-500">
+                    {matchday.datum ? formatGermanDate(matchday.datum) : 'Kein Datum hinterlegt'}
+                  </p>
                   {myRanking && (
                     <p className="text-sm font-medium text-slate-700 sm:hidden">
                       Platz {myRanking.rang}

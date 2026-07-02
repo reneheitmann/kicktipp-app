@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Modal } from '../../components/ui/Modal'
 import { Button } from '../../components/ui/Button'
+import { formatGermanDate } from '../../lib/format'
 import { fetchBundesligaSpieltage, type FetchedSpieltag } from './openLigaDbApi'
 import { createMatchday } from './matchdaysApi'
 import type { Season } from '../../types/database'
@@ -119,7 +120,7 @@ export function ImportSpieltageDialog({ season, existingNummern, onClose, onImpo
                       className="h-5 w-5 shrink-0"
                     />
                     <span className="w-24 shrink-0 text-sm text-slate-900">Spieltag {s.nummer}</span>
-                    <span className="text-sm text-slate-500">{s.datum}</span>
+                    <span className="text-sm text-slate-500">{formatGermanDate(s.datum)}</span>
                     {alreadyExists && <span className="ml-auto text-xs text-slate-400">bereits vorhanden</span>}
                   </li>
                 )
