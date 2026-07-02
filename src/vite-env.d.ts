@@ -14,11 +14,12 @@ interface ImportMetaEnv {
    *  (siehe .github/workflows/docker-publish.yml). Lokal (ohne .env-Eintrag)
    *  leer – AppShell zeigt dann keine BETA-Kennzeichnung an. */
   readonly VITE_APP_CHANNEL?: string
-  /** Commit-Betreffzeilen seit dem letzten Push auf diesen Branch, per
-   *  Docker-Build-Arg aus GitHub Actions gesetzt – mit dem literalen
-   *  2-Zeichen-Trenner "\n" (kein echter Zeilenumbruch, da Build-Args nur
-   *  einzeilige Werte erlauben) statt Zeilenumbrüchen zusammengefügt.
-   *  AboutPage.tsx splittet entsprechend wieder auf. Lokal leer. */
+  /** Base64-codiertes JSON-Array der letzten 10 Versionen samt
+   *  Commit-Betreffzeilen (siehe .github/scripts/generate-changelog.cjs),
+   *  per Docker-Build-Arg aus GitHub Actions gesetzt. Base64 statt roher
+   *  Einbettung, da Build-Args nur einzeilige Werte erlauben und
+   *  Commit-Nachrichten Anführungszeichen enthalten können. AboutPage.tsx
+   *  decodiert wieder. Lokal leer. */
   readonly VITE_APP_CHANGELOG?: string
 }
 

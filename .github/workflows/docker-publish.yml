@@ -72,22 +72,23 @@ jobs:
           echo "commit_sha=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
           echo "build_date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
 
+      - name: main-Historie nachladen (für Versions-Changelog)
+        # .github/scripts/generate-changelog.cjs braucht origin/main als
+        # verlässliche Versions-Historie, auch wenn dieser Build auf beta
+        # läuft (dessen eigene Historie Mains spätere Bump-Commits nicht
+        # enthält – beta wird nie in main zurückgemerged, nur umgekehrt).
+        run: git fetch origin main
+
       - name: Änderungsprotokoll ermitteln
         id: changelog
         run: |
-          if [ -n "${{ github.event.before }}" ] && git cat-file -e "${{ github.event.before }}" 2>/dev/null; then
-            RAW=$(git log "${{ github.event.before }}..${{ github.sha }}" --no-merges --format='%s' | grep -v '^chore: bump version' || true)
-          else
-            RAW=$(git log -1 --format='%s')
-          fi
-          # Anführungszeichen/Backticks entfernen, da der Wert unten ungeschützt
-          # in die build-args-YAML eingesetzt wird – ein Commit-Betreff mit
-          # solchen Zeichen könnte sonst den Docker-Build brechen. Zeilen mit
-          # echtem "\n" (zwei Zeichen) getrennt statt echtem Zeilenumbruch, da
-          # build-args nur einzeilige Werte erlaubt – AboutPage.tsx splittet
-          # entsprechend wieder auf.
-          JOINED=$(printf '%s' "$RAW" | tr -d '"`' | awk 'NR>1{printf "\\n"} {printf "%s", $0}')
-          echo "changelog=$JOINED" >> "$GITHUB_OUTPUT"
+          JSON=$(node .github/scripts/generate-changelog.cjs)
+          # Base64 statt roher Einbettung: der Wert landet unten ungeschützt in
+          # der build-args-YAML – Anführungszeichen/Zeilenumbrüche in
+          # Commit-Nachrichten (im JSON enthalten) würden das sonst brechen.
+          # AboutPage.tsx decodiert per atob() wieder.
+          ENCODED=$(printf '%s' "$JSON" | base64 | tr -d '\n')
+          echo "changelog=$ENCODED" >> "$GITHUB_OUTPUT"
 
       - name: Image-Tags bestimmen
         id: tags
