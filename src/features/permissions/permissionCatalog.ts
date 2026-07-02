@@ -7,11 +7,13 @@ export interface PermissionCatalogEntry {
   description: string
 }
 
-// Einzige Quelle für Beschriftung/Gruppierung der 10 konfigurierbaren Rechte –
+// Einzige Quelle für Beschriftung/Gruppierung der konfigurierbaren Rechte –
 // sowohl für die "Rollen & Berechtigungen"-Seite als auch als Referenz für
 // can()-Aufrufe im restlichen Code (immer über PermissionKey, nie als
 // String-Literal), damit auf einen Blick erkennbar ist, welches Recht auf
-// welcher Seite greift.
+// welcher Seite greift. Die page.*.view-Einträge steuern die Sichtbarkeit
+// der jeweiligen Seite selbst (Menüpunkt + Route), die übrigen Einträge
+// steuern einzelne Aktionen innerhalb einer Seite.
 export const permissionCatalog: PermissionCatalogEntry[] = [
   {
     key: 'seasons.manage',
@@ -78,5 +80,48 @@ export const permissionCatalog: PermissionCatalogEntry[] = [
     label: 'E-Mails versenden',
     page: 'E-Mail versenden',
     description: 'Bulk-E-Mails an Spieler senden (Empfängerauswahl, Vorlagen verwalten).',
+  },
+  {
+    key: 'page.dashboard.view',
+    label: 'Seite sichtbar',
+    page: 'Übersicht',
+    description: 'Blendet die Übersichtsseite (Startseite nach dem Login) im Menü und als Route komplett aus.',
+  },
+  {
+    key: 'page.seasons.view',
+    label: 'Seite sichtbar',
+    page: 'Saisons',
+    description:
+      'Blendet Saisons-Liste, Saison-Detail, Gesamtwertung, Spieltag-Detail und Guthaben im Menü und als Route komplett aus.',
+  },
+  {
+    key: 'page.vergleich.view',
+    label: 'Seite sichtbar',
+    page: 'Vergleich',
+    description: 'Blendet den Saisonvergleich im Menü und als Route komplett aus.',
+  },
+  {
+    key: 'page.players.view',
+    label: 'Seite sichtbar',
+    page: 'Spieler',
+    description: 'Blendet die Spieler-Verwaltung im Menü und als Route zusätzlich zum Recht "Spieler verwalten" aus.',
+  },
+  {
+    key: 'page.accounts.view',
+    label: 'Seite sichtbar',
+    page: 'Konten / Spieler-Detail',
+    description: 'Blendet die Konten-Übersicht im Menü und als Route zusätzlich zum Recht "Konten & Zahlungen" aus.',
+  },
+  {
+    key: 'page.import.view',
+    label: 'Seite sichtbar',
+    page: 'Import',
+    description: 'Blendet den Kicktipp-Import im Menü und als Route zusätzlich zum Recht "Kicktipp-Import nutzen" aus.',
+  },
+  {
+    key: 'page.email_send.view',
+    label: 'Seite sichtbar',
+    page: 'E-Mail versenden',
+    description: 'Blendet den E-Mail-Versand im Menü und als Route zusätzlich zum Recht "E-Mails versenden" aus.',
   },
 ]

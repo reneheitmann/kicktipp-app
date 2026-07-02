@@ -4,8 +4,13 @@ import type { PermissionKey, UserRole } from '../../types/database'
 
 interface ProtectedRouteProps {
   allowedRoles?: UserRole[]
-  /** Granulares Recht statt fester Rollenliste, siehe src/features/permissions/permissionCatalog.ts. */
-  requiredPermission?: PermissionKey
+  /**
+   * Granulares Recht statt fester Rollenliste, siehe
+   * src/features/permissions/permissionCatalog.ts. Ein Array verknüpft
+   * mehrere Rechte mit UND (z. B. Aktionsrecht + page.*.view müssen beide
+   * erfüllt sein, siehe navItems.ts).
+   */
+  requiredPermission?: PermissionKey | PermissionKey[]
 }
 
 export function ProtectedRoute({ allowedRoles, requiredPermission }: ProtectedRouteProps) {
@@ -39,8 +44,11 @@ export function ProtectedRoute({ allowedRoles, requiredPermission }: ProtectedRo
     return <Navigate to="/unauthorized" replace />
   }
 
-  if (requiredPermission && !can(requiredPermission)) {
-    return <Navigate to="/unauthorized" replace />
+  if (requiredPermission) {
+    const required = Array.isArray(requiredPermission) ? requiredPermission : [requiredPermission]
+    if (!required.every((key) => can(key))) {
+      return <Navigate to="/unauthorized" replace />
+    }
   }
 
   return <Outlet />

@@ -54,6 +54,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: subscription } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
       setSession(newSession)
       if (newSession) {
+        // `loading` war nach dem allerersten getSession()-Check (oben) bereits
+        // `false` (typischerweise "kein Session" bei frischem Seitenaufruf) –
+        // ohne dieses erneute setLoading(true) würden ProtectedRoute/LoginPage
+        // in der Lücke zwischen setProfile() und dem noch laufenden
+        // fetchPermissions() mit einem frisch gesetzten Profil, aber noch
+        // leeren/veralteten permissions rendern (can() liefert dann für jedes
+        // Recht fälschlich false) – bei jedem Login sichtbar, sobald eine Route
+        // wie "/" selbst über ein Recht (page.dashboard.view) gesteuert wird.
+        setLoading(true)
         const loadedProfile = await fetchProfile(newSession.user.id)
         setProfile(loadedProfile)
         setPermissions(loadedProfile ? await fetchPermissions(loadedProfile.role) : new Set())

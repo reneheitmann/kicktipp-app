@@ -2,9 +2,10 @@ import { useState, type FormEvent } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from './useAuth'
 import { useAppBranding } from '../app-settings/useAppBranding'
+import { visibleNavItems } from '../../components/layout/navItems'
 
 export function LoginPage() {
-  const { session, signIn } = useAuth()
+  const { session, profile, loading, can, signIn } = useAuth()
   const { appName } = useAppBranding()
   const location = useLocation()
   const [email, setEmail] = useState('')
@@ -13,7 +14,15 @@ export function LoginPage() {
   const [submitting, setSubmitting] = useState(false)
 
   if (session) {
-    return <Navigate to="/" replace />
+    // Übersicht ("/") kann per page.dashboard.view für eine Rolle ausgeblendet
+    // sein – ein blindes Redirect dorthin würde diese Rolle bei jedem Login
+    // sofort auf /unauthorized umleiten. Stattdessen zum ersten für die Rolle
+    // sichtbaren Menüpunkt navigieren (gleiche Reihenfolge wie im Menü selbst).
+    if (loading || !profile) {
+      return <div className="flex h-full items-center justify-center p-8 text-slate-500">Lade...</div>
+    }
+    const target = visibleNavItems(profile.role, can)[0]?.to ?? '/unauthorized'
+    return <Navigate to={target} replace />
   }
 
   const disabledHint = (location.state as { reason?: string } | null)?.reason === 'disabled'

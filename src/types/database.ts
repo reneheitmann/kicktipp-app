@@ -1,10 +1,17 @@
 export type UserRole = 'admin' | 'spielleiter' | 'user'
 
 // Die konfigurierbaren Rechte, siehe supabase/migrations/0022_role_permissions.sql
-// (Basis) und 0024_email_send_permission_and_templates.sql (email.send) und
+// (Basis), 0024_email_send_permission_and_templates.sql (email.send),
+// 0029_page_visibility.sql (page.*.view) und
 // src/features/permissions/permissionCatalog.ts (dort mit Label/Seite/Beschreibung).
-// Benutzerverwaltung, E-Mail-Einstellungen (SMTP) und dieses Modul selbst bleiben
-// bewusst außerhalb dieses Katalogs (hart admin-only, siehe Migrationskommentar).
+// Benutzerverwaltung, E-Mail-Einstellungen (SMTP), dieses Modul selbst und
+// Erscheinungsbild bleiben bewusst außerhalb dieses Katalogs (hart admin-only,
+// siehe Migrationskommentar in 0029).
+//
+// page.*.view steuert die Sichtbarkeit einer ganzen Seite (Menüpunkt +
+// Route), unabhängig von den *.manage/*.use/email.send-Aktionsrechten – für
+// Seiten mit bereits bestehendem Aktionsrecht (Spieler/Konten/Import/
+// E-Mail versenden) verknüpfen navItems.ts/ProtectedRoute.tsx beide mit UND.
 export type PermissionKey =
   | 'seasons.manage'
   | 'matchdays.manage'
@@ -17,6 +24,13 @@ export type PermissionKey =
   | 'balance_transfer.manage'
   | 'import.use'
   | 'email.send'
+  | 'page.dashboard.view'
+  | 'page.seasons.view'
+  | 'page.vergleich.view'
+  | 'page.players.view'
+  | 'page.accounts.view'
+  | 'page.import.view'
+  | 'page.email_send.view'
 
 export type RolePermission = {
   role: UserRole

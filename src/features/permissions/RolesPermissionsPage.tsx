@@ -67,8 +67,9 @@ export function RolesPermissionsPage() {
       <h1 className="mb-1 text-xl font-semibold text-slate-900">Rollen & Berechtigungen</h1>
       <p className="mb-6 text-sm text-slate-500">
         Legt fest, welche der 3 Rollen welche Funktionen nutzen darf. Jede Zeile zeigt, auf welcher Seite das
-        jeweilige Recht greift. Benutzerverwaltung, E-Mail-Einstellungen und dieses Modul selbst sind bewusst fest
-        auf Admin beschränkt und hier nicht änderbar.
+        jeweilige Recht greift – die Zeile "Seite sichtbar" blendet dabei die komplette Seite (Menüpunkt + Route) aus,
+        die übrigen Zeilen steuern einzelne Aktionen innerhalb einer Seite. Benutzerverwaltung, E-Mail-Einstellungen,
+        Erscheinungsbild und dieses Modul selbst sind bewusst fest auf Admin beschränkt und hier nicht änderbar.
       </p>
 
       {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
