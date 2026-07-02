@@ -7,6 +7,7 @@ import { ProtectedRoute } from './features/auth/ProtectedRoute'
 import { LoginPage } from './features/auth/LoginPage'
 import { AppShell } from './components/layout/AppShell'
 import { DashboardPage } from './pages/DashboardPage'
+import { AboutPage } from './pages/AboutPage'
 import { UnauthorizedPage } from './pages/UnauthorizedPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { PlayersPage } from './features/players/PlayersPage'
@@ -74,6 +75,7 @@ export default function App() {
                     Saisons- oder Konten-Übersichtsseite für seine Rolle ausgeblendet ist. */}
                 <Route path="/players/:playerId" element={<PlayerDetailPage />} />
                 <Route path="/profil" element={<MyAccountPage />} />
+                <Route path="/ueber" element={<AboutPage />} />
 
                 <Route element={<ProtectedRoute requiredPermission="page.vergleich.view" />}>
                   <Route

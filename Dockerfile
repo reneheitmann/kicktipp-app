@@ -19,6 +19,14 @@ ARG VITE_SUPABASE_ANON_KEY
 ENV VITE_SUPABASE_URL=$VITE_SUPABASE_URL
 ENV VITE_SUPABASE_ANON_KEY=$VITE_SUPABASE_ANON_KEY
 
+# Nur für die "Über"-Seite (Commit/Build-Datum) – .git ist per .dockerignore
+# nicht im Build-Kontext, daher von GitHub Actions als Build-Arg hereingereicht
+# statt hier per `git rev-parse` ermittelt (siehe docker-publish.yml).
+ARG VITE_APP_COMMIT_SHA
+ARG VITE_APP_BUILD_DATE
+ENV VITE_APP_COMMIT_SHA=$VITE_APP_COMMIT_SHA
+ENV VITE_APP_BUILD_DATE=$VITE_APP_BUILD_DATE
+
 RUN npm run build
 
 FROM nginx:alpine AS runtime

@@ -35,6 +35,12 @@ jobs:
       - name: Docker Buildx einrichten
         uses: docker/setup-buildx-action@v3
 
+      - name: Build-Metadaten ermitteln
+        id: meta
+        run: |
+          echo "commit_sha=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+          echo "build_date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+
       - name: Image bauen und veröffentlichen
         uses: docker/build-push-action@v6
         with:
@@ -46,5 +52,7 @@ jobs:
           build-args: |
             VITE_SUPABASE_URL=${{ secrets.VITE_SUPABASE_URL }}
             VITE_SUPABASE_ANON_KEY=${{ secrets.VITE_SUPABASE_ANON_KEY }}
+            VITE_APP_COMMIT_SHA=${{ steps.meta.outputs.commit_sha }}
+            VITE_APP_BUILD_DATE=${{ steps.meta.outputs.build_date }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

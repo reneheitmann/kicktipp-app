@@ -48,6 +48,14 @@ export function AppShell() {
             >
               Profil
             </NavLink>
+            <NavLink
+              to="/ueber"
+              className={({ isActive }) =>
+                `rounded-lg px-3 py-2 text-sm font-medium ${isActive ? 'text-slate-900' : 'text-slate-600'} active:bg-slate-100`
+              }
+            >
+              Über
+            </NavLink>
             <button
               onClick={signOut}
               className="rounded-lg px-3 py-2 text-sm font-medium text-slate-600 active:bg-slate-100"
@@ -131,9 +139,15 @@ function UserFooter({
           {viewAsUser && ' (Vorschau: Spieler)'}
         </p>
       </NavLink>
+      <NavLink
+        to="/ueber"
+        className="mt-1 block rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100"
+      >
+        Über diese App
+      </NavLink>
       <button
         onClick={onSignOut}
-        className="mt-2 w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-slate-600 hover:bg-slate-100"
+        className="mt-1 w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-slate-600 hover:bg-slate-100"
       >
         Abmelden
       </button>
