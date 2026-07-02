@@ -64,7 +64,7 @@ export function AboutPage() {
   const { appName, iconUrl } = useAppBranding()
   const commitSha = import.meta.env.VITE_APP_COMMIT_SHA
   const buildDate = import.meta.env.VITE_APP_BUILD_DATE
-  const channel = import.meta.env.VITE_APP_CHANNEL === 'beta' ? 'Beta' : 'Produktion'
+  const channel = import.meta.env.VITE_APP_CHANNEL === 'beta' ? 'Beta' : 'Produktiv'
   const changelog = parseChangelog(import.meta.env.VITE_APP_CHANGELOG)
   const [changelogOpen, setChangelogOpen] = useState(true)
   const [device] = useState(getDeviceInfo)
