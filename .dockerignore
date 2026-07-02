@@ -1,0 +1,10 @@
+node_modules
+dist
+dist-ssr
+.git
+.env
+.env.*
+!.env.example
+.claude
+supabase/.temp
+*.log
