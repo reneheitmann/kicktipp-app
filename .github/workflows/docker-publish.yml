@@ -10,11 +10,15 @@ name: Docker Image bauen und veröffentlichen
 # Nur auf main wird zusätzlich automatisch die Patch-Version in package.json
 # erhöht (z. B. 1.1.0 -> 1.1.1), außer package.json wurde im selben Push
 # bereits selbst geändert (z. B. um bewusst auf eine neue Minor-/Major-Version
-# zu springen) – dann bleibt die manuell gesetzte Version unangetastet. Beta-
-# Builds lassen die Versionsnummer unverändert (Commit-SHA im Image-Tag reicht
-# zur Unterscheidung); der Versions-Bump wird mit "[skip ci]" zurückcommitted,
-# damit das keinen weiteren Workflow-Lauf auslöst (von GitHub Actions nativ
-# unterstützt).
+# zu springen) – dann bleibt die manuell gesetzte Version unangetastet. Der
+# Versions-Bump wird mit "[skip ci]" zurückcommitted, damit das keinen
+# weiteren Workflow-Lauf auslöst (von GitHub Actions nativ unterstützt).
+#
+# Beta-Builds bumpen package.json bewusst NIE (würde bei jedem Merge mit main
+# zu Versions-Konflikten in der Datei führen) – stattdessen hängt vite.config.ts
+# an die zuletzt von main gemergte Versionsnummer "_beta.<Commit-Anzahl auf
+# beta>" an, sodass die angezeigte Version trotzdem bei jedem Beta-Push sichtbar
+# hochzählt (z. B. "1.1.7_beta.42").
 
 on:
   push:
@@ -109,6 +113,9 @@ jobs:
               echo "EOF"
             } >> "$GITHUB_OUTPUT"
             echo "channel=beta" >> "$GITHUB_OUTPUT"
+            # Gesamtzahl der Commits auf beta als "hochzählende" Versionszahl,
+            # da package.json hier nie gebumpt wird (siehe vite.config.ts).
+            echo "beta_build_number=$(git rev-list --count HEAD)" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Image bauen und veröffentlichen
@@ -124,6 +131,7 @@ jobs:
             VITE_APP_BUILD_DATE=${{ steps.meta.outputs.build_date }}
             VITE_APP_CHANNEL=${{ steps.tags.outputs.channel }}
             VITE_APP_CHANGELOG=${{ steps.changelog.outputs.changelog }}
+            VITE_APP_BETA_BUILD_NUMBER=${{ steps.tags.outputs.beta_build_number }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 

@@ -11,6 +11,15 @@ import tailwindcss from '@tailwindcss/vite'
 // VITE_APP_COMMIT_SHA/VITE_APP_BUILD_DATE in .env.example bzw. Dockerfile).
 const pkg = JSON.parse(readFileSync(fileURLToPath(new URL('./package.json', import.meta.url)), 'utf-8'))
 
+// Auf beta hängt Docker (siehe Dockerfile/docker-publish.yml) die
+// Gesamtzahl der Commits auf dem Branch als VITE_APP_BETA_BUILD_NUMBER an –
+// package.json selbst bumpt dort nie (würde bei jedem Merge mit main zu
+// Versions-Konflikten führen), sonst bliebe die angezeigte Version dauerhaft
+// bei der zuletzt von main gemergten Zahl stehen.
+const betaBuildNumber = process.env.VITE_APP_BETA_BUILD_NUMBER
+const displayVersion =
+  process.env.VITE_APP_CHANNEL === 'beta' && betaBuildNumber ? `${pkg.version}_beta.${betaBuildNumber}` : pkg.version
+
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), tailwindcss()],
@@ -18,6 +27,6 @@ export default defineConfig({
     host: true,
   },
   define: {
-    __APP_VERSION__: JSON.stringify(pkg.version),
+    __APP_VERSION__: JSON.stringify(displayVersion),
   },
 })

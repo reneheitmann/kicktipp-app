@@ -35,6 +35,14 @@ ENV VITE_APP_CHANGELOG=$VITE_APP_CHANGELOG
 ARG VITE_APP_CHANNEL=production
 ENV VITE_APP_CHANNEL=$VITE_APP_CHANNEL
 
+# Nur auf beta gesetzt (siehe docker-publish.yml): Gesamtzahl der Commits auf
+# dem beta-Branch. package.json bumpt dort bewusst nie (würde bei jedem Merge
+# mit main zu Versions-Konflikten führen) – dieser Zähler sorgt trotzdem für
+# eine sich sichtbar erhöhende Versionsanzeige ("1.1.7_beta.42" statt
+# dauerhaft der letzten von main gemergten Zahl). Siehe vite.config.ts.
+ARG VITE_APP_BETA_BUILD_NUMBER
+ENV VITE_APP_BETA_BUILD_NUMBER=$VITE_APP_BETA_BUILD_NUMBER
+
 RUN npm run build
 
 FROM nginx:alpine AS runtime
