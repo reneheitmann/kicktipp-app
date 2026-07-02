@@ -12,6 +12,7 @@ export function LoginPage() {
   const [mode, setMode] = useState<'login' | 'forgot'>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
@@ -109,15 +110,25 @@ export function LoginPage() {
                     Passwort vergessen?
                   </button>
                 </div>
-                <input
-                  id="password"
-                  type="password"
-                  autoComplete="current-password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base focus:border-slate-900 focus:outline-none"
-                />
+                <div className="relative">
+                  <input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    autoComplete="current-password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 pr-16 text-base focus:border-slate-900 focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    aria-label={showPassword ? 'Passwort verbergen' : 'Passwort anzeigen'}
+                    className="absolute inset-y-0 right-2 text-xs font-medium text-slate-500 hover:text-slate-700"
+                  >
+                    {showPassword ? 'Verbergen' : 'Anzeigen'}
+                  </button>
+                </div>
               </div>
 
               {error && <p className="text-sm text-red-600">{error}</p>}
