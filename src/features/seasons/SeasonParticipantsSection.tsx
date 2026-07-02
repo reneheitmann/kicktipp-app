@@ -58,6 +58,7 @@ export function SeasonParticipantsSection({
       <CollapsibleSection
         title="Teilnehmer & Einsätze"
         count={participants.length}
+        defaultOpen={false}
         actions={
           canManage && availablePlayers.length > 0 ? (
             <Button onClick={() => setShowAddForm(true)}>+ Spieler</Button>
