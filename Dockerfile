@@ -19,13 +19,16 @@ ARG VITE_SUPABASE_ANON_KEY
 ENV VITE_SUPABASE_URL=$VITE_SUPABASE_URL
 ENV VITE_SUPABASE_ANON_KEY=$VITE_SUPABASE_ANON_KEY
 
-# Nur für die "Über"-Seite (Commit/Build-Datum) – .git ist per .dockerignore
-# nicht im Build-Kontext, daher von GitHub Actions als Build-Arg hereingereicht
-# statt hier per `git rev-parse` ermittelt (siehe docker-publish.yml).
+# Nur für die "Über"-Seite (Commit/Build-Datum/Änderungsprotokoll) – .git ist
+# per .dockerignore nicht im Build-Kontext, daher von GitHub Actions als
+# Build-Arg hereingereicht statt hier per `git log` ermittelt (siehe
+# docker-publish.yml).
 ARG VITE_APP_COMMIT_SHA
 ARG VITE_APP_BUILD_DATE
+ARG VITE_APP_CHANGELOG
 ENV VITE_APP_COMMIT_SHA=$VITE_APP_COMMIT_SHA
 ENV VITE_APP_BUILD_DATE=$VITE_APP_BUILD_DATE
+ENV VITE_APP_CHANGELOG=$VITE_APP_CHANGELOG
 
 # "production" oder "beta" – von GitHub Actions je nach Branch gesetzt (siehe
 # docker-publish.yml), zeigt eine BETA-Kennzeichnung in der App an.
