@@ -15,7 +15,6 @@ export async function getPlayer(id: string): Promise<Player> {
 export async function createPlayer(input: {
   name: string
   kicktipp_name: string | null
-  profile_id: string | null
 }): Promise<Player> {
   const { data, error } = await supabase.from('players').insert(input).select().single()
   if (error) throw error
@@ -24,7 +23,7 @@ export async function createPlayer(input: {
 
 export async function updatePlayer(
   id: string,
-  input: Partial<Pick<Player, 'name' | 'kicktipp_name' | 'profile_id'>>,
+  input: Partial<Pick<Player, 'name' | 'kicktipp_name'>>,
 ): Promise<Player> {
   const { data, error } = await supabase.from('players').update(input).eq('id', id).select().single()
   if (error) throw error

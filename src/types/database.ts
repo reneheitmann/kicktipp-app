@@ -60,9 +60,17 @@ export type Profile = {
 
 export type Player = {
   id: string
-  profile_id: string | null
   name: string
   kicktipp_name: string | null
+  created_at: string
+}
+
+/** Many-to-many-Verknüpfung: ein Spieler kann mehrere Logins haben (z. B.
+ *  Vater + Kind teilen sich einen Spieler-Eintrag) und ein Login kann mit
+ *  mehreren Spielern verknüpft sein. */
+export type PlayerProfileLink = {
+  player_id: string
+  profile_id: string
   created_at: string
 }
 
@@ -307,16 +315,28 @@ export interface Database {
         Row: Player
         Insert: {
           id?: string
-          profile_id?: string | null
           name: string
           kicktipp_name?: string | null
           created_at?: string
         }
         Update: {
           id?: string
-          profile_id?: string | null
           name?: string
           kicktipp_name?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      player_profile_links: {
+        Row: PlayerProfileLink
+        Insert: {
+          player_id: string
+          profile_id: string
+          created_at?: string
+        }
+        Update: {
+          player_id?: string
+          profile_id?: string
           created_at?: string
         }
         Relationships: []

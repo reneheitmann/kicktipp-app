@@ -5,6 +5,7 @@ import { currencyFormatter } from '../lib/format'
 import { useAuth } from '../features/auth/useAuth'
 import { listSeasons } from '../features/seasons/seasonsApi'
 import { listPlayers } from '../features/players/playersApi'
+import { listPlayerProfileLinks } from '../features/players/playerProfileLinksApi'
 import { listSeasonParticipantsForPlayer, listAllSeasonParticipants } from '../features/seasons/seasonParticipantsApi'
 import { listAllMatchdays, listMatchdayCountsBySeasonId } from '../features/seasons/matchdaysApi'
 import { listZahlungen, listAllZahlungen } from '../features/players/zahlungenApi'
@@ -19,63 +20,98 @@ interface AdminStats {
   totalOutstanding: number
 }
 
+interface PlayerBalanceEntry {
+  player: Player
+  balance: AccountBalance
+}
+
 export function DashboardPage() {
   const { profile, can } = useAuth()
   // Statistik ist eine finanzielle Gesamtübersicht -> gleiches Recht wie Konten.
   const canManage = can('accounts.manage')
 
   const [activeSeasons, setActiveSeasons] = useState<Season[]>([])
-  const [myPlayer, setMyPlayer] = useState<Player | null>(null)
+  // Ein Login-Konto kann mit mehreren Spielern verknüpft sein (z. B. eine
+  // Person tippt für mehrere Kicktipp-Profile) – daher hier bewusst ein
+  // Array statt eines einzelnen Spielers.
+  const [linkedPlayers, setLinkedPlayers] = useState<Player[]>([])
   const [myBalance, setMyBalance] = useState<AccountBalance | null>(null)
-  // Nur Saisons, an denen myPlayer tatsächlich teilnimmt, haben hier einen
-  // Eintrag – so lässt sich "kein Gewinn ausgewiesen" (Admin/Spielleiter ohne
-  // eigene Teilnahme) von "0,00 € Gewinn" (Teilnehmer ohne bisherige
-  // Auszahlung) unterscheiden.
+  const [myPlayerBalances, setMyPlayerBalances] = useState<PlayerBalanceEntry[]>([])
+  // Nur Saisons, an denen mindestens einer der verknüpften Spieler tatsächlich
+  // teilnimmt, haben hier einen Eintrag – so lässt sich "kein Gewinn
+  // ausgewiesen" (Admin/Spielleiter ohne eigene Teilnahme) von "0,00 €
+  // Gewinn" (Teilnehmer ohne bisherige Auszahlung) unterscheiden.
   const [myGewinnBySeasonId, setMyGewinnBySeasonId] = useState<Map<string, number>>(new Map())
   const [stats, setStats] = useState<AdminStats | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     if (!profile) return
-    Promise.all([listSeasons(), listPlayers(), listMatchdayCountsBySeasonId()])
-      .then(async ([seasons, players, matchdayCounts]) => {
+    Promise.all([listSeasons(), listPlayers(), listMatchdayCountsBySeasonId(), listPlayerProfileLinks()])
+      .then(async ([seasons, players, matchdayCounts, links]) => {
         setActiveSeasons(seasons.filter((s) => s.status === 'aktiv'))
 
-        const linked = players.find((p) => p.profile_id === profile.id) ?? null
-        setMyPlayer(linked)
-        if (linked) {
-          const [participants, zahlungen, transactions, matchdays] = await Promise.all([
-            listSeasonParticipantsForPlayer(linked.id),
-            listZahlungen(linked.id),
-            listPlayerTransactions(linked.id),
-            listAllMatchdays(),
-          ])
-          setMyBalance(computeAccountBalance(participants, matchdayCounts, zahlungen, transactions))
+        const linkedPlayerIds = new Set(
+          links.filter((l) => l.profile_id === profile.id).map((l) => l.player_id),
+        )
+        const linked = players.filter((p) => linkedPlayerIds.has(p.id))
+        setLinkedPlayers(linked)
+        if (linked.length > 0) {
+          const perPlayerData = await Promise.all(
+            linked.map(async (player) => {
+              const [participants, zahlungen, transactions] = await Promise.all([
+                listSeasonParticipantsForPlayer(player.id),
+                listZahlungen(player.id),
+                listPlayerTransactions(player.id),
+              ])
+              return { player, participants, zahlungen, transactions }
+            }),
+          )
 
-          // Eigener Gesamtgewinn je Saison, an der teilgenommen wird – analog zur
-          // Berechnung auf der Saison-Detailseite/Saisons-Liste: nur Spieltage mit
-          // Status "abgerechnet" zählen, dazu die Gesamtwertung, sofern auch diese
+          // Gesamtkonto: dieselbe computeAccountBalance()-Funktion wie für
+          // einen einzelnen Spieler, nur mit den zusammengeführten Rohdaten
+          // aller verknüpften Spieler – rechnerisch identisch zum Aufsummieren
+          // der Einzelsalden, aber ohne die Aggregationslogik zu duplizieren.
+          const allParticipants = perPlayerData.flatMap((d) => d.participants)
+          const allZahlungen = perPlayerData.flatMap((d) => d.zahlungen)
+          const allTransactions = perPlayerData.flatMap((d) => d.transactions)
+          setMyBalance(computeAccountBalance(allParticipants, matchdayCounts, allZahlungen, allTransactions))
+          setMyPlayerBalances(
+            perPlayerData.map(({ player, participants, zahlungen, transactions }) => ({
+              player,
+              balance: computeAccountBalance(participants, matchdayCounts, zahlungen, transactions),
+            })),
+          )
+
+          // Eigener Gesamtgewinn je Saison, an der mindestens einer der
+          // verknüpften Spieler teilnimmt – analog zur Berechnung auf der
+          // Saison-Detailseite/Saisons-Liste: nur Spieltage mit Status
+          // "abgerechnet" zählen, dazu die Gesamtwertung, sofern auch diese
           // schon abgerechnet ist.
+          const matchdays = await listAllMatchdays()
           const abgerechnetMatchdayIds = new Set(
             matchdays.filter((m) => m.status === 'abgerechnet').map((m) => m.id),
           )
           const gewinnMap = new Map<string, number>()
-          for (const participant of participants) {
-            const spieltagSumme = transactions
-              .filter(
-                (t) =>
-                  t.season_id === participant.season_id &&
-                  t.typ === 'gewinn_spieltag' &&
-                  abgerechnetMatchdayIds.has(t.matchday_id ?? ''),
-              )
-              .reduce((sum, t) => sum + t.betrag, 0)
-            const season = seasons.find((s) => s.id === participant.season_id)
-            const gesamtwertungBetrag =
-              season?.gesamtwertung_status === 'abgerechnet'
-                ? (transactions.find((t) => t.season_id === participant.season_id && t.typ === 'gewinn_gesamt')
-                    ?.betrag ?? 0)
-                : 0
-            gewinnMap.set(participant.season_id, spieltagSumme + gesamtwertungBetrag)
+          for (const { participants, transactions } of perPlayerData) {
+            for (const participant of participants) {
+              const spieltagSumme = transactions
+                .filter(
+                  (t) =>
+                    t.season_id === participant.season_id &&
+                    t.typ === 'gewinn_spieltag' &&
+                    abgerechnetMatchdayIds.has(t.matchday_id ?? ''),
+                )
+                .reduce((sum, t) => sum + t.betrag, 0)
+              const season = seasons.find((s) => s.id === participant.season_id)
+              const gesamtwertungBetrag =
+                season?.gesamtwertung_status === 'abgerechnet'
+                  ? (transactions.find((t) => t.season_id === participant.season_id && t.typ === 'gewinn_gesamt')
+                      ?.betrag ?? 0)
+                  : 0
+              const bisher = gewinnMap.get(participant.season_id) ?? 0
+              gewinnMap.set(participant.season_id, bisher + spieltagSumme + gesamtwertungBetrag)
+            }
           }
           setMyGewinnBySeasonId(gewinnMap)
         }
@@ -112,30 +148,19 @@ export function DashboardPage() {
     <div className="p-4 sm:p-6">
       <h1 className="mb-6 text-xl font-semibold text-slate-900">Willkommen, {profile?.name}</h1>
 
-      {myPlayer && myBalance && (
-        <Link
-          to={`/players/${myPlayer.id}`}
-          className="mb-6 block rounded-xl border border-slate-200 bg-white p-4 hover:bg-slate-50"
-        >
-          <p className="text-sm text-slate-500">Mein Konto</p>
-          <p
-            className={`text-xl font-semibold ${
-              myBalance.offen > 0 ? 'text-amber-700' : myBalance.offen < 0 ? 'text-emerald-600' : 'text-slate-900'
-            }`}
-          >
-            {myBalance.offen > 0
-              ? `${currencyFormatter.format(myBalance.offen)} offen`
-              : myBalance.offen < 0
-                ? `${currencyFormatter.format(-myBalance.offen)} Guthaben`
-                : 'Ausgeglichen'}
-          </p>
-          <p className="mt-1 text-xs text-slate-400">
-            Beiträge: {currencyFormatter.format(myBalance.beitraegeGesamt)} · Eingezahlt:{' '}
-            {currencyFormatter.format(myBalance.einzahlungenGesamt)} · Ausgezahlt:{' '}
-            {currencyFormatter.format(myBalance.auszahlungenGesamt)} · Gewinne:{' '}
-            {currencyFormatter.format(myBalance.gewinneGesamt)}
-          </p>
-        </Link>
+      {linkedPlayers.length === 1 && myBalance && (
+        <PlayerBalanceCard player={linkedPlayers[0]} balance={myBalance} title="Mein Konto" className="mb-6" />
+      )}
+
+      {linkedPlayers.length > 1 && myBalance && (
+        <div className="mb-6">
+          <PlayerBalanceSummary balance={myBalance} title="Mein Konto (alle Spieler)" />
+          <div className="mt-3 space-y-3">
+            {myPlayerBalances.map(({ player, balance }) => (
+              <PlayerBalanceCard key={player.id} player={player} balance={balance} title={player.name} />
+            ))}
+          </div>
+        </div>
       )}
 
       {canManage && stats && (
@@ -218,5 +243,67 @@ function StatCard({ label, value, tone }: { label: string; value: string; tone?:
       <p className="text-sm text-slate-500">{label}</p>
       <p className={`text-lg font-semibold ${tone === 'amber' ? 'text-amber-700' : 'text-slate-900'}`}>{value}</p>
     </div>
+  )
+}
+
+/** Reine Saldo-Anzeige ohne Link – für die Gesamtsumme über mehrere verknüpfte Spieler, die zu keiner einzelnen Spieler-Detailseite führt. */
+function PlayerBalanceSummary({ balance, title }: { balance: AccountBalance; title: string }) {
+  return (
+    <div className="block rounded-xl border border-slate-200 bg-white p-4">
+      <p className="text-sm text-slate-500">{title}</p>
+      <BalanceHeadline balance={balance} />
+      <BalanceBreakdown balance={balance} />
+    </div>
+  )
+}
+
+/** Saldo-Karte eines einzelnen Spielers, verlinkt auf dessen Detailseite. */
+function PlayerBalanceCard({
+  player,
+  balance,
+  title,
+  className = '',
+}: {
+  player: Player
+  balance: AccountBalance
+  title: string
+  className?: string
+}) {
+  return (
+    <Link
+      to={`/players/${player.id}`}
+      className={`block rounded-xl border border-slate-200 bg-white p-4 hover:bg-slate-50 ${className}`}
+    >
+      <p className="text-sm text-slate-500">{title}</p>
+      <BalanceHeadline balance={balance} />
+      <BalanceBreakdown balance={balance} />
+    </Link>
+  )
+}
+
+function BalanceHeadline({ balance }: { balance: AccountBalance }) {
+  return (
+    <p
+      className={`text-xl font-semibold ${
+        balance.offen > 0 ? 'text-amber-700' : balance.offen < 0 ? 'text-emerald-600' : 'text-slate-900'
+      }`}
+    >
+      {balance.offen > 0
+        ? `${currencyFormatter.format(balance.offen)} offen`
+        : balance.offen < 0
+          ? `${currencyFormatter.format(-balance.offen)} Guthaben`
+          : 'Ausgeglichen'}
+    </p>
+  )
+}
+
+function BalanceBreakdown({ balance }: { balance: AccountBalance }) {
+  return (
+    <p className="mt-1 text-xs text-slate-400">
+      Beiträge: {currencyFormatter.format(balance.beitraegeGesamt)} · Eingezahlt:{' '}
+      {currencyFormatter.format(balance.einzahlungenGesamt)} · Ausgezahlt:{' '}
+      {currencyFormatter.format(balance.auszahlungenGesamt)} · Gewinne:{' '}
+      {currencyFormatter.format(balance.gewinneGesamt)}
+    </p>
   )
 }

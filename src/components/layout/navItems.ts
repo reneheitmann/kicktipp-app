@@ -14,7 +14,7 @@ export interface NavItem {
 
 export const navItems: NavItem[] = [
   { to: '/', label: 'Übersicht', requiredPermission: 'page.dashboard.view' },
-  { to: '/seasons', label: 'Saisons', requiredPermission: 'page.seasons.view' },
+  { to: '/seasons', label: 'Saison', requiredPermission: 'page.seasons.view' },
   { to: '/vergleich', label: 'Vergleich', requiredPermission: 'page.vergleich.view' },
   { to: '/players', label: 'Spieler', requiredPermission: ['players.manage', 'page.players.view'] },
   { to: '/konten', label: 'Konten', requiredPermission: ['accounts.manage', 'page.accounts.view'] },

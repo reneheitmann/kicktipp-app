@@ -4,20 +4,20 @@ import { Button } from '../../components/ui/Button'
 import { Badge } from '../../components/ui/Badge'
 import { currencyFormatter } from '../../lib/format'
 import { useAuth } from '../auth/useAuth'
-import { listPlayers } from '../players/playersApi'
+import { listPlayerProfileLinks } from '../players/playerProfileLinksApi'
 import { listAllTransactions } from '../balances/balancesApi'
 import { SeasonForm } from './SeasonForm'
 import { createSeason, listSeasons } from './seasonsApi'
 import { listAllMatchdays } from './matchdaysApi'
 import { listAllSeasonParticipants } from './seasonParticipantsApi'
-import type { Matchday, Player, Season, SeasonParticipant, Transaction } from '../../types/database'
+import type { Matchday, PlayerProfileLink, Season, SeasonParticipant, Transaction } from '../../types/database'
 
 export function SeasonsPage() {
   const { profile, can } = useAuth()
   const canManage = can('seasons.manage')
 
   const [seasons, setSeasons] = useState<Season[]>([])
-  const [players, setPlayers] = useState<Player[]>([])
+  const [profileLinks, setProfileLinks] = useState<PlayerProfileLink[]>([])
   const [matchdays, setMatchdays] = useState<Matchday[]>([])
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [participants, setParticipants] = useState<SeasonParticipant[]>([])
@@ -28,15 +28,15 @@ export function SeasonsPage() {
   async function reload() {
     setLoading(true)
     try {
-      const [seasonData, playerData, matchdayData, transactionData, participantData] = await Promise.all([
+      const [seasonData, linkData, matchdayData, transactionData, participantData] = await Promise.all([
         listSeasons(),
-        listPlayers(),
+        listPlayerProfileLinks(),
         listAllMatchdays(),
         listAllTransactions(),
         listAllSeasonParticipants(),
       ])
       setSeasons(seasonData)
-      setPlayers(playerData)
+      setProfileLinks(linkData)
       setMatchdays(matchdayData)
       setTransactions(transactionData)
       setParticipants(participantData)
@@ -52,19 +52,23 @@ export function SeasonsPage() {
     reload()
   }, [])
 
-  const myPlayer = players.find((p) => p.profile_id === profile?.id)
+  // Ein Login kann mit mehreren Spielern verknüpft sein (z. B. Vater/Kind
+  // teilen sich einen Spieler-Eintrag oder ein Login tippt für mehrere
+  // Kicktipp-Profile) – daher wird hier über alle eigenen Spieler summiert.
+  const myPlayerIds = new Set(profileLinks.filter((l) => l.profile_id === profile?.id).map((l) => l.player_id))
 
   // Eigener Gesamtgewinn je Saison, analog zur Berechnung auf der
   // Saison-Detailseite: nur Spieltage mit Status "abgerechnet" zählen, dazu
   // die Gesamtwertung, sofern auch diese schon abgerechnet ist. Liefert
   // `undefined`, wenn der aktuelle User (typischerweise Admin/Spielleiter mit
-  // Blick auf fremde Saisons) dort gar kein Teilnehmer ist – das unterscheidet
-  // "kein Gewinn ausgewiesen" von "0,00 € Gewinn" (Teilnehmer ohne bisherige
-  // Auszahlung).
+  // Blick auf fremde Saisons) dort mit keinem eigenen Spieler Teilnehmer ist
+  // – das unterscheidet "kein Gewinn ausgewiesen" von "0,00 € Gewinn"
+  // (Teilnehmer ohne bisherige Auszahlung).
   function myGesamtgewinnForSeason(season: Season): number | undefined {
-    if (!myPlayer) return undefined
-    const isParticipant = participants.some((p) => p.season_id === season.id && p.player_id === myPlayer.id)
-    if (!isParticipant) return undefined
+    const ownParticipantIds = new Set(
+      participants.filter((p) => p.season_id === season.id && myPlayerIds.has(p.player_id)).map((p) => p.player_id),
+    )
+    if (ownParticipantIds.size === 0) return undefined
     const abgerechnetMatchdayIds = new Set(
       matchdays.filter((m) => m.season_id === season.id && m.status === 'abgerechnet').map((m) => m.id),
     )
@@ -73,15 +77,15 @@ export function SeasonsPage() {
         (t) =>
           t.season_id === season.id &&
           t.typ === 'gewinn_spieltag' &&
-          t.player_id === myPlayer.id &&
+          ownParticipantIds.has(t.player_id) &&
           abgerechnetMatchdayIds.has(t.matchday_id ?? ''),
       )
       .reduce((sum, t) => sum + t.betrag, 0)
     const gesamtwertungBetrag =
       season.gesamtwertung_status === 'abgerechnet'
-        ? (transactions.find(
-            (t) => t.season_id === season.id && t.typ === 'gewinn_gesamt' && t.player_id === myPlayer.id,
-          )?.betrag ?? 0)
+        ? transactions
+            .filter((t) => t.season_id === season.id && t.typ === 'gewinn_gesamt' && ownParticipantIds.has(t.player_id))
+            .reduce((sum, t) => sum + t.betrag, 0)
         : 0
     return spieltagSumme + gesamtwertungBetrag
   }
@@ -89,7 +93,7 @@ export function SeasonsPage() {
   return (
     <div className="p-4 sm:p-6">
       <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-slate-900">Saisons</h1>
+        <h1 className="text-xl font-semibold text-slate-900">Saison</h1>
         {canManage && <Button onClick={() => setShowForm(true)}>+ Saison</Button>}
       </div>
 

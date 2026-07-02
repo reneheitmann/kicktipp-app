@@ -18,6 +18,10 @@ interface SeasonParticipantsSectionProps {
     input: { gesamtsiegBetrag: number; spieltagsBetrag: number },
   ) => Promise<void>
   onRemove: (id: string) => Promise<void>
+  /** Als Favorit markierter Spieler (spieler-, nicht saisonübergreifend gemerkt) –
+   *  bestimmt die Standardauswahl in "Spieltage", siehe SeasonDetailPage.tsx. */
+  favoritePlayerId: string | null
+  onToggleFavorite: (playerId: string) => void
 }
 
 export function SeasonParticipantsSection({
@@ -28,6 +32,8 @@ export function SeasonParticipantsSection({
   onAdd,
   onUpdate,
   onRemove,
+  favoritePlayerId,
+  onToggleFavorite,
 }: SeasonParticipantsSectionProps) {
   const [showAddForm, setShowAddForm] = useState(false)
   const [editingParticipant, setEditingParticipant] = useState<SeasonParticipant | undefined>(undefined)
@@ -80,8 +86,26 @@ export function SeasonParticipantsSection({
             {filteredParticipants.map((participant) => (
               <li key={participant.id} className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium text-slate-900">
-                    {playersById.get(participant.player_id)?.name ?? 'Unbekannter Spieler'}
+                  <p className="flex min-w-0 items-center gap-1.5 font-medium text-slate-900">
+                    {participants.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => onToggleFavorite(participant.player_id)}
+                        aria-label={
+                          favoritePlayerId === participant.player_id
+                            ? 'Als Standardauswahl entfernen'
+                            : 'Als Standardauswahl für Spieltage markieren'
+                        }
+                        className={`shrink-0 text-base leading-none ${
+                          favoritePlayerId === participant.player_id
+                            ? 'text-amber-500'
+                            : 'text-slate-300 hover:text-amber-400'
+                        }`}
+                      >
+                        {favoritePlayerId === participant.player_id ? '★' : '☆'}
+                      </button>
+                    )}
+                    <span className="min-w-0 truncate">{playersById.get(participant.player_id)?.name ?? 'Unbekannter Spieler'}</span>
                   </p>
                   <p className="truncate text-sm text-slate-500">
                     Gesamtwertung: {currencyFormatter.format(participant.gesamtsieg_einsatz_betrag)} · Spieltag:{' '}
