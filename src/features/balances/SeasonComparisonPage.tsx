@@ -3,11 +3,13 @@ import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, X
 import { SearchInput } from '../../components/ui/SearchInput'
 import { SortableTh } from '../../components/ui/SortableTh'
 import { currencyFormatter } from '../../lib/format'
+import { useAuth } from '../auth/useAuth'
 import { listPlayers } from '../players/playersApi'
 import { listAllZahlungen } from '../players/zahlungenApi'
 import { listSeasons } from '../seasons/seasonsApi'
 import { listAllSeasonParticipants } from '../seasons/seasonParticipantsApi'
 import { listMatchdayCountsBySeasonId } from '../seasons/matchdaysApi'
+import { isSeasonVisibleAsUser } from '../seasons/seasonVisibility'
 import { listAllTransactions } from './balancesApi'
 import { computePlayerBalances } from './balanceCalculations'
 import type { Player, Season, SeasonParticipant, Transaction, Zahlung } from '../../types/database'
@@ -21,6 +23,7 @@ const lineColors = ['#0f172a', '#2563eb', '#16a34a', '#d97706', '#dc2626', '#7c3
 const DEFAULT_CHART_PLAYER_COUNT = 4
 
 export function SeasonComparisonPage() {
+  const { profile, viewAsUser } = useAuth()
   const [seasons, setSeasons] = useState<Season[]>([])
   const [players, setPlayers] = useState<Player[]>([])
   const [transactions, setTransactions] = useState<Transaction[]>([])
@@ -67,8 +70,18 @@ export function SeasonComparisonPage() {
       .finally(() => setLoading(false))
   }, [])
 
+  const myPlayer = players.find((p) => p.profile_id === profile?.id)
+
+  // Während der "Spieler-Vorschau" clientseitig nachbilden, was ein echter
+  // "user"-Account per RLS ohnehin nur zu sehen bekäme (nur Saisons mit
+  // eigener Teilnahme) – die echte DB-Session bleibt admin, RLS filtert hier
+  // also nicht automatisch mit.
+  const visibleSeasons = viewAsUser
+    ? seasons.filter((s) => isSeasonVisibleAsUser(s.id, myPlayer?.id, participants))
+    : seasons
+
   const perSeasonBalances = useMemo(() => {
-    return seasons.map((season) => ({
+    return visibleSeasons.map((season) => ({
       season,
       balances: computePlayerBalances(
         transactions.filter((t) => t.season_id === season.id),
@@ -78,7 +91,7 @@ export function SeasonComparisonPage() {
         zahlungen.filter((z) => z.season_id === season.id),
       ),
     }))
-  }, [seasons, players, transactions, participants, matchdayCounts, zahlungen])
+  }, [visibleSeasons, players, transactions, participants, matchdayCounts, zahlungen])
 
   // Eine Zeile je Spieler (statt einer Spalte) mit dem Saldo pro Saison sowie
   // dem Gesamt-Saldo über alle Saisons, absteigend sortiert – skaliert auch
@@ -164,8 +177,10 @@ export function SeasonComparisonPage() {
 
       {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
 
-      {seasons.length === 0 ? (
-        <p className="text-sm text-slate-500">Noch keine Saisons vorhanden.</p>
+      {visibleSeasons.length === 0 ? (
+        <p className="text-sm text-slate-500">
+          {seasons.length === 0 ? 'Noch keine Saisons vorhanden.' : 'Keine Saisons mit eigener Teilnahme.'}
+        </p>
       ) : (
         <>
           <div className="mb-3 flex flex-col gap-4 sm:flex-row">
@@ -250,7 +265,7 @@ export function SeasonComparisonPage() {
               <thead>
                 <tr className="border-b border-slate-200 text-slate-500">
                   <SortableTh columnKey="name" label="Spieler" activeKey={sortKey} direction={sortDirection} onSort={handleSort} />
-                  {seasons.map((season) => (
+                  {visibleSeasons.map((season) => (
                     <SortableTh
                       key={season.id}
                       columnKey={season.id}
@@ -268,7 +283,7 @@ export function SeasonComparisonPage() {
                 {sortedPlayerRows.map(({ player, bySeasonId, total }) => (
                   <tr key={player.id} className="border-b border-slate-100 last:border-0">
                     <td className="px-4 py-3 font-medium text-slate-900">{player.name}</td>
-                    {seasons.map((season) => (
+                    {visibleSeasons.map((season) => (
                       <td key={season.id} className="px-4 py-3 text-right text-slate-700">
                         {currencyFormatter.format(bySeasonId.get(season.id) ?? 0)}
                       </td>

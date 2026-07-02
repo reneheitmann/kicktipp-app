@@ -20,12 +20,16 @@ interface AdminStats {
 }
 
 export function DashboardPage() {
-  const { profile, can } = useAuth()
+  const { profile, can, viewAsUser } = useAuth()
   // Statistik ist eine finanzielle Gesamtübersicht -> gleiches Recht wie Konten.
   const canManage = can('accounts.manage')
 
   const [activeSeasons, setActiveSeasons] = useState<Season[]>([])
   const [myPlayer, setMyPlayer] = useState<Player | null>(null)
+  // Nur für die "Spieler-Vorschau": bildet clientseitig nach, welche Saisons
+  // ein echter "user"-Account per RLS sehen würde (nur eigene Teilnahme) –
+  // die echte DB-Session bleibt admin, RLS filtert hier also nicht mit.
+  const [myParticipantSeasonIds, setMyParticipantSeasonIds] = useState<Set<string>>(new Set())
   const [myBalance, setMyBalance] = useState<AccountBalance | null>(null)
   // Nur Saisons, an denen myPlayer tatsächlich teilnimmt, haben hier einen
   // Eintrag – so lässt sich "kein Gewinn ausgewiesen" (Admin/Spielleiter ohne
@@ -51,6 +55,7 @@ export function DashboardPage() {
             listAllMatchdays(),
           ])
           setMyBalance(computeAccountBalance(participants, matchdayCounts, zahlungen, transactions))
+          setMyParticipantSeasonIds(new Set(participants.map((p) => p.season_id)))
 
           // Eigener Gesamtgewinn je Saison, an der teilgenommen wird – analog zur
           // Berechnung auf der Saison-Detailseite/Saisons-Liste: nur Spieltage mit
@@ -108,6 +113,10 @@ export function DashboardPage() {
     return <p className="p-4 text-sm text-slate-500 sm:p-6">Lade...</p>
   }
 
+  const displayedActiveSeasons = viewAsUser
+    ? activeSeasons.filter((s) => myParticipantSeasonIds.has(s.id))
+    : activeSeasons
+
   return (
     <div className="p-4 sm:p-6">
       <h1 className="text-xl font-semibold text-slate-900">Willkommen, {profile?.name}</h1>
@@ -158,11 +167,11 @@ export function DashboardPage() {
       )}
 
       <h2 className="mb-3 text-base font-semibold text-slate-900">Aktive Saisons</h2>
-      {activeSeasons.length === 0 ? (
+      {displayedActiveSeasons.length === 0 ? (
         <p className="mb-6 text-sm text-slate-500">Keine aktive Saison.</p>
       ) : (
         <ul className="mb-6 divide-y divide-slate-200 overflow-hidden rounded-xl border border-slate-200 bg-white">
-          {activeSeasons.map((season) => {
+          {displayedActiveSeasons.map((season) => {
             const myGewinn = myGewinnBySeasonId.get(season.id)
             return (
               <li key={season.id}>
