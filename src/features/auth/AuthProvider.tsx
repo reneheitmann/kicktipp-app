@@ -36,7 +36,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [viewAsUser, setViewAsUserState] = useState(
     () => sessionStorage.getItem(VIEW_AS_USER_STORAGE_KEY) === 'true',
   )
+  // Rechte der Rolle "user", separat von den eigenen `permissions` geladen –
+  // can() während der Vorschau muss die TATSÄCHLICHE Konfiguration der Rolle
+  // "user" widerspiegeln (page.*.view steht z. B. standardmäßig auf true),
+  // nicht pauschal alles verweigern. Ein pauschales „immer false" hätte vor
+  // Einführung von page.*.view noch gepasst (Spieler hatten ohnehin nie
+  // *.manage-Rechte), blendet seit page.*.view aber auch Seiten aus, die ein
+  // echter Spieler-Account durchaus sehen würde (z. B. Übersicht/Saisons) –
+  // die Vorschau landete dadurch fälschlich auf /unauthorized.
+  const [userRolePermissions, setUserRolePermissions] = useState<Set<PermissionKey>>(new Set())
   const [passwordRecovery, setPasswordRecovery] = useState(false)
+
+  useEffect(() => {
+    if (viewAsUser) {
+      fetchPermissions('user').then(setUserRolePermissions)
+    }
+  }, [viewAsUser])
 
   useEffect(() => {
     let isMounted = true
@@ -120,7 +135,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   function can(key: PermissionKey): boolean {
-    return !viewAsUser && permissions.has(key)
+    return viewAsUser ? userRolePermissions.has(key) : permissions.has(key)
   }
 
   return (
