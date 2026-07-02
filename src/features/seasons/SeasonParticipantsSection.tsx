@@ -58,6 +58,7 @@ export function SeasonParticipantsSection({
       <CollapsibleSection
         title="Teilnehmer & Einsätze"
         count={participants.length}
+        defaultOpen={false}
         actions={
           canManage && availablePlayers.length > 0 ? (
             <Button onClick={() => setShowAddForm(true)}>+ Spieler</Button>
@@ -66,7 +67,7 @@ export function SeasonParticipantsSection({
       >
         {error && <p className="mb-2 text-sm text-red-600">{error}</p>}
 
-        {participants.length > 0 && (
+        {participants.length > 1 && (
           <SearchInput value={search} onChange={setSearch} placeholder="Spieler suchen..." className="mb-3 max-w-xs" />
         )}
 

@@ -168,8 +168,12 @@ export function SeasonComparisonPage() {
         <p className="text-sm text-slate-500">Noch keine Saisons vorhanden.</p>
       ) : (
         <>
+          <p className="mb-3 hidden text-sm text-slate-500 sm:block">
+            Die Grafik zeigt den Verlauf des Gesamtsaldos je ausgewähltem Spieler über alle Saisons hinweg – so
+            lässt sich auf einen Blick erkennen, wer über die Zeit im Plus oder Minus liegt.
+          </p>
           <div className="mb-3 flex flex-col gap-4 sm:flex-row">
-            <div className="h-72 w-full rounded-xl border border-slate-200 bg-white p-4 sm:flex-1">
+            <div className="hidden h-72 w-full rounded-xl border border-slate-200 bg-white p-4 sm:block sm:flex-1">
               {selectedPlayers.length === 0 ? (
                 <p className="flex h-full items-center justify-center text-sm text-slate-500">
                   Bitte mindestens einen Spieler rechts auswählen.
@@ -249,7 +253,14 @@ export function SeasonComparisonPage() {
             <table className="w-full min-w-[480px] text-sm">
               <thead>
                 <tr className="border-b border-slate-200 text-slate-500">
-                  <SortableTh columnKey="name" label="Spieler" activeKey={sortKey} direction={sortDirection} onSort={handleSort} />
+                  <SortableTh
+                    columnKey="name"
+                    label="Spieler"
+                    activeKey={sortKey}
+                    direction={sortDirection}
+                    onSort={handleSort}
+                    className="w-px whitespace-nowrap"
+                  />
                   {seasons.map((season) => (
                     <SortableTh
                       key={season.id}
@@ -267,7 +278,7 @@ export function SeasonComparisonPage() {
               <tbody>
                 {sortedPlayerRows.map(({ player, bySeasonId, total }) => (
                   <tr key={player.id} className="border-b border-slate-100 last:border-0">
-                    <td className="px-4 py-3 font-medium text-slate-900">{player.name}</td>
+                    <td className="whitespace-nowrap px-4 py-3 font-medium text-slate-900">{player.name}</td>
                     {seasons.map((season) => (
                       <td key={season.id} className="px-4 py-3 text-right text-slate-700">
                         {currencyFormatter.format(bySeasonId.get(season.id) ?? 0)}

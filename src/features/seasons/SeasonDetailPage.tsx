@@ -4,7 +4,7 @@ import { Button } from '../../components/ui/Button'
 import { Badge } from '../../components/ui/Badge'
 import { CollapsibleSection } from '../../components/ui/CollapsibleSection'
 import { SearchInput } from '../../components/ui/SearchInput'
-import { currencyFormatter } from '../../lib/format'
+import { currencyFormatter, formatGermanDate } from '../../lib/format'
 import { useAuth } from '../auth/useAuth'
 import { listPlayers } from '../players/playersApi'
 import { SeasonForm } from './SeasonForm'
@@ -197,6 +197,16 @@ export function SeasonDetailPage() {
           <p className="mt-1 text-sm text-slate-500">
             {season.start_date} – {season.end_date}
           </p>
+          {season.kicktipp_link && (
+            <a
+              href={season.kicktipp_link}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-1 inline-block text-sm text-[var(--color-primary)] hover:underline"
+            >
+              Zur Kicktipp-Spielrunde ↗
+            </a>
+          )}
         </div>
         <div className="flex flex-wrap gap-2 sm:justify-end">
           <Link to={`/seasons/${season.id}/guthaben`}>
@@ -250,7 +260,7 @@ export function SeasonDetailPage() {
         }}
       />
 
-      <CollapsibleSection title="Gewinnverteilung">
+      <CollapsibleSection title="Gewinnverteilung" defaultOpen={false}>
         <div className="grid gap-4 sm:grid-cols-2">
           <PayoutRulesEditor seasonId={season.id} typ="spieltag" title="Spieltag" canManage={canManagePayouts} />
           <PayoutRulesEditor seasonId={season.id} typ="gesamtsieg" title="Gesamtwertung" canManage={canManagePayouts} />
@@ -370,7 +380,9 @@ export function SeasonDetailPage() {
               <li key={matchday.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
                 <Link to={`/seasons/${season.id}/matchdays/${matchday.id}`} className="min-w-0 flex-1 hover:underline">
                   <p className="font-medium text-slate-900">Spieltag {matchday.nummer}</p>
-                  <p className="truncate text-sm text-slate-500">{matchday.datum ?? 'Kein Datum hinterlegt'}</p>
+                  <p className="truncate text-sm text-slate-500">
+                    {matchday.datum ? formatGermanDate(matchday.datum) : 'Kein Datum hinterlegt'}
+                  </p>
                   {myRanking && (
                     <p className="text-sm font-medium text-slate-700 sm:hidden">
                       Platz {myRanking.rang}

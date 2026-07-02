@@ -10,16 +10,44 @@ interface CollapsibleSectionProps {
   children: ReactNode
 }
 
+const STORAGE_PREFIX = 'kicktipp_collapsible_open_'
+
+// Global statt pro Saison gemerkt (Storage-Key hängt nur am Titel, nicht an
+// einer Saison-ID) – die Auf-/Zuklapp-Präferenz ("ich will Gewinnverteilung
+// nie sofort sehen") ist eine persönliche Vorliebe, keine saisonspezifische
+// Einstellung.
+function getStoredOpen(title: string, defaultOpen: boolean): boolean {
+  try {
+    const stored = localStorage.getItem(STORAGE_PREFIX + title)
+    return stored === null ? defaultOpen : stored === 'true'
+  } catch {
+    return defaultOpen
+  }
+}
+
 /** Auf-/zuklappbarer Abschnitt für die Saison-Detail-Seite, damit die Übersicht bei vielen Teilnehmern/Spieltagen nicht überladen wirkt. */
 export function CollapsibleSection({ title, count, actions, defaultOpen = true, children }: CollapsibleSectionProps) {
-  const [open, setOpen] = useState(defaultOpen)
+  const [open, setOpen] = useState(() => getStoredOpen(title, defaultOpen))
+
+  function toggle() {
+    setOpen((prev) => {
+      const next = !prev
+      try {
+        localStorage.setItem(STORAGE_PREFIX + title, String(next))
+      } catch {
+        // z. B. privates Fenster ohne Storage-Zugriff – Zustand bleibt dann
+        // nur für die aktuelle Sitzung erhalten, kein Absturz nötig.
+      }
+      return next
+    })
+  }
 
   return (
     <div className="mb-6">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <button
           type="button"
-          onClick={() => setOpen((o) => !o)}
+          onClick={toggle}
           aria-expanded={open}
           className="flex items-center gap-1.5 text-base font-semibold text-slate-900"
         >
