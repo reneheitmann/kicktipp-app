@@ -157,6 +157,12 @@ export function SeasonDetailPage() {
   async function handleToggleGesamtwertungStatus() {
     if (!season) return
     const next = season.gesamtwertung_status === 'offen' ? 'abgerechnet' : 'offen'
+    if (
+      next === 'offen' &&
+      !confirm('Gesamtwertung wieder öffnen? Ein bereits berechneter Gewinn für diese Saison wird dabei entfernt (Platzierungen bleiben erhalten).')
+    ) {
+      return
+    }
     try {
       await setGesamtwertungStatus(season.id, next)
       await reload()
@@ -167,6 +173,12 @@ export function SeasonDetailPage() {
 
   async function handleToggleMatchdayStatus(matchday: Matchday) {
     const next = matchday.status === 'offen' ? 'abgerechnet' : 'offen'
+    if (
+      next === 'offen' &&
+      !confirm('Spieltag wieder öffnen? Ein bereits berechneter Gewinn für diesen Spieltag wird dabei entfernt (Platzierungen bleiben erhalten).')
+    ) {
+      return
+    }
     try {
       await updateMatchday(matchday.id, { status: next })
       await reload()
