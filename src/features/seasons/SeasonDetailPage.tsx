@@ -252,8 +252,8 @@ export function SeasonDetailPage() {
 
       <CollapsibleSection title="Gewinnverteilung">
         <div className="grid gap-4 sm:grid-cols-2">
-          <PayoutRulesEditor seasonId={season.id} typ="gesamtsieg" title="Gesamtwertung" canManage={canManagePayouts} />
           <PayoutRulesEditor seasonId={season.id} typ="spieltag" title="Spieltag" canManage={canManagePayouts} />
+          <PayoutRulesEditor seasonId={season.id} typ="gesamtsieg" title="Gesamtwertung" canManage={canManagePayouts} />
         </div>
       </CollapsibleSection>
 
