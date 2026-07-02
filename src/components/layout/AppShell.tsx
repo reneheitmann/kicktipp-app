@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { useAuth } from '../../features/auth/useAuth'
 import { useAppBranding } from '../../features/app-settings/useAppBranding'
@@ -14,6 +14,7 @@ export function AppShell() {
   const { appName } = useAppBranding()
   const items = visibleNavItems(profile?.role, can)
   const [accountMenuOpen, setAccountMenuOpen] = useState(false)
+  const [navMenuOpen, setNavMenuOpen] = useState(false)
 
   return (
     <div className="flex h-full flex-col md:flex-row">
@@ -42,14 +43,24 @@ export function AppShell() {
       </aside>
 
       <div className="flex min-h-0 flex-1 flex-col">
-        {/* Mobile Top-Bar: nur noch ein Konto-Button statt drei nebeneinander
-            konkurrierender Text-Links – vermeidet, dass ein längerer App-Name
-            in zwei Zeilen umbricht und alles zusammenquetscht. */}
+        {/* Mobile Top-Bar: Hamburger öffnet die Navigation (ersetzt die
+            frühere Bottom-Nav), Konto-Button rechts wie bisher. */}
         <header className="flex items-center justify-between gap-2 border-b border-slate-200 bg-white px-4 py-3 md:hidden">
-          <span className="flex min-w-0 items-center gap-2">
-            <span className="truncate text-base font-semibold text-slate-900">{appName}</span>
-            <BetaBadge />
-          </span>
+          <div className="flex min-w-0 items-center gap-2">
+            <button
+              onClick={() => setNavMenuOpen(true)}
+              aria-label="Menü öffnen"
+              className="-ml-2 flex shrink-0 flex-col items-center justify-center gap-1 rounded-lg p-2 active:bg-slate-100"
+            >
+              <span className="h-0.5 w-5 rounded-full bg-slate-700" />
+              <span className="h-0.5 w-5 rounded-full bg-slate-700" />
+              <span className="h-0.5 w-5 rounded-full bg-slate-700" />
+            </button>
+            <span className="flex min-w-0 items-center gap-2">
+              <span className="truncate text-base font-semibold text-slate-900">{appName}</span>
+              <BetaBadge />
+            </span>
+          </div>
           <button
             onClick={() => setAccountMenuOpen(true)}
             aria-label="Konto-Menü öffnen"
@@ -60,6 +71,29 @@ export function AppShell() {
             </span>
           </button>
         </header>
+
+        {navMenuOpen && (
+          <Modal title="Menü" onClose={() => setNavMenuOpen(false)}>
+            <nav className="space-y-1">
+              {items.map((item) => (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  end={item.to === '/'}
+                  onClick={() => setNavMenuOpen(false)}
+                  className={({ isActive }) =>
+                    `flex items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium ${
+                      isActive ? linkActiveClasses : 'text-slate-700 hover:bg-slate-100'
+                    }`
+                  }
+                >
+                  <span>{item.label}</span>
+                  {viewAsUser && item.roles && <AdminOnlyBadge />}
+                </NavLink>
+              ))}
+            </nav>
+          </Modal>
+        )}
 
         {accountMenuOpen && (
           <Modal title={profile?.name ?? 'Konto'} onClose={() => setAccountMenuOpen(false)}>
@@ -107,12 +141,10 @@ export function AppShell() {
           </div>
         )}
 
-        <main className="flex-1 overflow-y-auto pb-20 md:pb-0">
+        <main className="flex-1 overflow-y-auto">
           <Outlet />
         </main>
       </div>
-
-      <MobileBottomNav items={items} viewAsUser={viewAsUser} />
     </div>
   )
 }
@@ -123,67 +155,6 @@ function getInitials(name?: string): string {
   const first = parts[0]?.[0] ?? ''
   const last = parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? '') : ''
   return (first + last).toUpperCase()
-}
-
-/** Mobile Bottom-Navigation: horizontal scrollbar statt Gleichverteilung,
- * damit Tabs bei vielen Einträgen (z. B. Admin-Rolle) nicht umbrechen/quetschen.
- * Ein rechtsseitiger Verlauf zeigt an, wenn weitere Einträge außerhalb des
- * sichtbaren Bereichs liegen und per Wischen erreichbar sind – ohne dieses
- * Signal war nicht erkennbar, dass z. B. "Passwort-Richtlinie" überhaupt
- * existiert, wenn sie erst nach mehrfachem Wischen sichtbar wird. */
-function MobileBottomNav({
-  items,
-  viewAsUser,
-}: {
-  items: ReturnType<typeof visibleNavItems>
-  viewAsUser: boolean
-}) {
-  const scrollRef = useRef<HTMLElement>(null)
-  const [canScrollMore, setCanScrollMore] = useState(false)
-
-  useEffect(() => {
-    const el = scrollRef.current
-    if (!el) return
-    const update = () => setCanScrollMore(el.scrollWidth - el.scrollLeft - el.clientWidth > 4)
-    update()
-    el.addEventListener('scroll', update, { passive: true })
-    window.addEventListener('resize', update)
-    return () => {
-      el.removeEventListener('scroll', update)
-      window.removeEventListener('resize', update)
-    }
-  }, [items.length])
-
-  return (
-    <div className="fixed inset-x-0 bottom-0 z-10 md:hidden">
-      <nav
-        ref={scrollRef}
-        className="flex overflow-x-auto border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom)]"
-      >
-        {items.map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            end={item.to === '/'}
-            className={({ isActive }) =>
-              `flex min-w-[4.5rem] shrink-0 flex-col items-center justify-center gap-0.5 px-2 py-2.5 text-xs font-medium ${
-                isActive ? 'text-slate-900' : 'text-slate-500'
-              }`
-            }
-          >
-            <span>{item.label}</span>
-            {viewAsUser && item.roles && <AdminOnlyBadge />}
-          </NavLink>
-        ))}
-      </nav>
-      {canScrollMore && (
-        <div
-          className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-white via-white/90 to-transparent"
-          style={{ bottom: 'env(safe-area-inset-bottom)' }}
-        />
-      )}
-    </div>
-  )
 }
 
 /** Zeigt "BETA" neben dem App-Namen, wenn dieser Build aus dem beta-Branch
