@@ -1,10 +1,13 @@
 import { useEffect, useState, type FormEvent } from 'react'
+import { Link } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { useAuth } from './useAuth'
 import { updateOwnName, updateOwnPassword } from './myAccountApi'
 import { getPasswordPolicy } from '../password-policy/passwordPolicyApi'
 import { describePasswordPolicy, validatePasswordAgainstPolicy } from '../../lib/passwordValidation'
-import type { PasswordPolicy } from '../../types/database'
+import { listPlayers } from '../players/playersApi'
+import { listPlayerProfileLinks } from '../players/playerProfileLinksApi'
+import type { PasswordPolicy, Player } from '../../types/database'
 
 const roleLabels = { admin: 'Administrator', spielleiter: 'Spielleiter', user: 'Spieler' } as const
 
@@ -51,6 +54,18 @@ export function MyAccountPage() {
         // für die client-seitige Vorab-Prüfung/Anzeige.
       })
   }, [])
+
+  const [linkedPlayers, setLinkedPlayers] = useState<Player[]>([])
+
+  useEffect(() => {
+    if (!profile) return
+    Promise.all([listPlayers(), listPlayerProfileLinks()])
+      .then(([players, links]) => {
+        const linkedPlayerIds = new Set(links.filter((l) => l.profile_id === profile.id).map((l) => l.player_id))
+        setLinkedPlayers(players.filter((p) => linkedPlayerIds.has(p.id)))
+      })
+      .catch(() => setLinkedPlayers([]))
+  }, [profile])
 
   async function handleNameSubmit(e: FormEvent) {
     e.preventDefault()
@@ -141,6 +156,22 @@ export function MyAccountPage() {
           </Button>
         </form>
       </div>
+
+      {linkedPlayers.length > 0 && (
+        <div className="mb-6 rounded-xl border border-slate-200 bg-white p-4">
+          <h2 className="mb-3 text-base font-semibold text-slate-900">Meine Spieler</h2>
+          <ul className="divide-y divide-slate-200 overflow-hidden rounded-xl border border-slate-200">
+            {linkedPlayers.map((player) => (
+              <li key={player.id}>
+                <Link to={`/players/${player.id}`} className="block px-4 py-3 hover:bg-slate-50">
+                  <p className="font-medium text-slate-900">{player.name}</p>
+                  <p className="text-sm text-slate-500">Kicktipp: {player.kicktipp_name || '—'}</p>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {(profile.role === 'admin' || profile.role === 'spielleiter') && !profile.base_role && (
         <div className="mb-6 rounded-xl border border-slate-200 bg-white p-4">
