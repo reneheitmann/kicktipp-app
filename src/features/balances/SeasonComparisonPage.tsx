@@ -253,7 +253,14 @@ export function SeasonComparisonPage() {
             <table className="w-full min-w-[480px] text-sm">
               <thead>
                 <tr className="border-b border-slate-200 text-slate-500">
-                  <SortableTh columnKey="name" label="Spieler" activeKey={sortKey} direction={sortDirection} onSort={handleSort} />
+                  <SortableTh
+                    columnKey="name"
+                    label="Spieler"
+                    activeKey={sortKey}
+                    direction={sortDirection}
+                    onSort={handleSort}
+                    className="w-px whitespace-nowrap"
+                  />
                   {seasons.map((season) => (
                     <SortableTh
                       key={season.id}
@@ -271,7 +278,7 @@ export function SeasonComparisonPage() {
               <tbody>
                 {sortedPlayerRows.map(({ player, bySeasonId, total }) => (
                   <tr key={player.id} className="border-b border-slate-100 last:border-0">
-                    <td className="px-4 py-3 font-medium text-slate-900">{player.name}</td>
+                    <td className="whitespace-nowrap px-4 py-3 font-medium text-slate-900">{player.name}</td>
                     {seasons.map((season) => (
                       <td key={season.id} className="px-4 py-3 text-right text-slate-700">
                         {currencyFormatter.format(bySeasonId.get(season.id) ?? 0)}
