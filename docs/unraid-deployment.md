@@ -100,7 +100,10 @@ ursprünglich angelegt wurde.
 Der Container läuft im custom `br0`-Netzwerk (Macvlan) und bekommt dadurch
 eine **eigene IP-Adresse im LAN** – wie ein separates physisches Gerät,
 statt über einen Port am Unraid-Host erreichbar zu sein. nginx im Container
-hört direkt auf Port 80 unter dieser eigenen IP.
+hört auf dem Port aus der Umgebungsvariable **`LISTEN_PORT`** (Default
+`8080`) unter dieser eigenen IP – kein Docker-Port-Mapping nötig/möglich bei
+Macvlan, dafür aber **über die Unraid-GUI individuell anpassbar** (siehe
+Schritt 6 unten), ganz ohne neuen Build.
 
 Zuerst eine **freie IP-Adresse** im eigenen LAN-Subnetz wählen (außerhalb
 des DHCP-Bereichs des Routers, damit sie nicht später doppelt vergeben
@@ -121,15 +124,21 @@ Dienst wird kurz neu gestartet).
 4. **Network Type**: `Custom: br0` auswählen
 5. Dadurch erscheint ein Feld **Fixed IP address**: die gewählte freie IP
    eintragen (z. B. `192.168.1.50`)
-6. **Icon URL**-Feld:
+6. Über **„Add another Path, Port, Variable, Label or Device“** →
+   **Variable** eine neue Umgebungsvariable hinzufügen:
+   **Key**: `LISTEN_PORT`, **Value**: gewünschter Port (z. B. `8080`,
+   frei wählbar – auch später jederzeit über **Edit** änderbar, ohne
+   neuen Build)
+7. **Icon URL**-Feld:
    `https://raw.githubusercontent.com/reneheitmann/kicktipp-app/main/public/icon.png`
    (**wichtig: PNG, kein SVG** – Unraid rendert SVG/WEBP für dieses Feld
    nicht zuverlässig, sondern zeigt weiterhin das Fragezeichen)
-7. **WebUI**-Feld (optional, für den Direktlink im Unraid-Dashboard):
-   `http://[IP]/`
-8. **Restart Policy**: `Unless stopped`/`Always` (Feld meist unter „Show
+8. **WebUI**-Feld (optional, für den Direktlink im Unraid-Dashboard):
+   `http://[IP]:8080/` (den Port an den in Schritt 6 gewählten Wert
+   anpassen)
+9. **Restart Policy**: `Unless stopped`/`Always` (Feld meist unter „Show
    more settings…“ bzw. „Extra Parameters“, je nach Unraid-Version)
-9. **Apply**
+10. **Apply**
 
 Der Container erscheint danach im Docker-Tab und lässt sich jederzeit über
 sein Icon → **Edit** mit genau diesen Feldern erneut anpassen.
@@ -148,6 +157,16 @@ gehen, die Felder trotzdem wie oben manuell setzen.
 **Icon URL** auf die PNG-Adresse oben ändern → **Apply**. Ein vorheriges
 `/favicon.svg` als Icon-URL funktioniert nicht (siehe Hinweis oben).
 
+**Bestehender Container (vor Einführung von `LISTEN_PORT`):** Nach dem
+Update auf ein neues Image ändert sich nichts von selbst – das Image bringt
+`LISTEN_PORT=8080` bereits als Default mit, die App bleibt also unter Port
+8080 erreichbar. Um den Port künftig **über die GUI** ändern zu können,
+einmalig Container → **Edit** → wie in Schritt 6 oben eine Variable
+`LISTEN_PORT` hinzufügen → **Apply**. Danach lässt sich der Port jederzeit
+über genau dieses Feld anpassen (Container wird beim Speichern automatisch
+neu gestartet). Bei einer Änderung zusätzlich das **WebUI**-Feld auf den
+neuen Port anpassen (wird nicht automatisch aktualisiert).
+
 #### Variante B: über die Konsole/SSH
 
 ```bash
@@ -156,13 +175,15 @@ docker run -d \
   --restart unless-stopped \
   --network br0 \
   --ip 192.168.1.50 \
+  -e LISTEN_PORT=8080 \
   ghcr.io/reneheitmann/kicktipp-app:latest
 ```
 
-`192.168.1.50` durch die gewählte freie IP ersetzen.
+`192.168.1.50` durch die gewählte freie IP ersetzen, `LISTEN_PORT` nach
+Bedarf anpassen (weglassen = Default `8080`).
 
-In beiden Fällen ist die App danach unter `http://192.168.1.50` erreichbar
-(Port 80, daher ohne `:Portnummer` in der URL).
+In beiden Fällen ist die App danach unter `http://192.168.1.50:8080`
+erreichbar (bzw. dem in `LISTEN_PORT` gewählten Port).
 
 **Bekannte Einschränkung von Macvlan (`br0`):** der Unraid-Host selbst kann
 den Container über diese IP in der Regel *nicht* erreichen (nur andere
@@ -202,12 +223,12 @@ Kommandozeile setzen.
 
 ### 2.3 Testen
 
-1. Im Browser `http://192.168.1.50` öffnen (eigene gewählte IP) – die
+1. Im Browser `http://192.168.1.50:8080` öffnen (eigene gewählte IP) – die
    Login-Seite der App sollte erscheinen.
 2. Mit einem bestehenden Account einloggen und prüfen, dass Daten aus
    Supabase geladen werden (z. B. Saisons-Übersicht).
 3. Eine Unterseite direkt per URL aufrufen und neu laden (z. B.
-   `http://192.168.1.50/seasons`) – muss funktionieren, nicht mit 404
+   `http://192.168.1.50:8080/seasons`) – muss funktionieren, nicht mit 404
    fehlschlagen (Test für die nginx-SPA-Konfiguration).
 
 ## Teil 3 – Ein Update auslösen (zum Ausprobieren)
@@ -218,7 +239,7 @@ Kommandozeile setzen.
 3. Nach Abschluss: bis zu `--interval`-Sekunden warten (siehe 2.2), dann
    `docker logs watchtower` auf Unraid prüfen – dort erscheint ein Eintrag,
    sobald das neue Image gezogen und der Container neu gestartet wurde.
-4. Die Änderung sollte danach unter `http://192.168.1.50` sichtbar sein.
+4. Die Änderung sollte danach unter `http://192.168.1.50:8080` sichtbar sein.
 
 ## Ausblick (nicht Teil dieser Anleitung)
 

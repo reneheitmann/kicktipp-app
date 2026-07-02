@@ -23,15 +23,22 @@ RUN npm run build
 
 FROM nginx:alpine AS runtime
 COPY --from=build /app/dist /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# .template statt direkt nach conf.d – das offizielle nginx-Image ersetzt
+# ${LISTEN_PORT} beim Container-Start automatisch per envsubst (siehe
+# nginx.conf.template). Default hier, überschreibbar per Umgebungsvariable
+# (z. B. über ein Unraid-GUI-Feld), ohne neuen Build.
+COPY nginx.conf.template /etc/nginx/templates/default.conf.template
+ENV LISTEN_PORT=8080
 
 # Von Unraids Docker-Manager gelesene Labels für Icon/WebUI-Link – nur PNG
 # wird von Unraid für das Icon-Label zuverlässig gerendert (SVG/WEBP nicht,
 # empirisch verifiziert). Greift zuverlässig bei Template-basiert erstellten
 # Containern (z. B. über "Add Container" in der WebUI); bei rein per
 # `docker run` erstellten Containern ggf. nicht, dann Icon-URL manuell im
-# Template-Feld setzen (siehe docs/unraid-deployment.md).
+# Template-Feld setzen (siehe docs/unraid-deployment.md). WebUI-Link zeigt
+# den Default-Port – bei geändertem LISTEN_PORT im Template-Feld anpassen.
 LABEL net.unraid.docker.icon="https://raw.githubusercontent.com/reneheitmann/kicktipp-app/main/public/icon.png"
-LABEL net.unraid.docker.webui="http://[IP]/"
+LABEL net.unraid.docker.webui="http://[IP]:8080/"
 
-EXPOSE 80
+EXPOSE 8080

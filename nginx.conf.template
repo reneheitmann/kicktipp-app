@@ -2,8 +2,15 @@
 # /seasons/123), diese Pfade existieren aber nicht als Datei – ohne
 # try_files würde nginx bei jedem Reload/Direktaufruf einer Unterseite
 # einen 404 liefern statt index.html auszuliefern.
+#
+# .template-Datei statt normaler .conf: das offizielle nginx-Image ersetzt
+# beim Start automatisch alle ${VAR}-Platzhalter per envsubst (Skript
+# 20-envsubst-on-templates.sh, kein eigenes Entrypoint nötig) und schreibt
+# das Ergebnis nach /etc/nginx/conf.d/default.conf – dadurch lässt sich der
+# Port über die LISTEN_PORT-Umgebungsvariable ändern (z. B. per Unraid-GUI-
+# Feld), ohne den Code/Docker-Image anzufassen.
 server {
-    listen 80;
+    listen ${LISTEN_PORT};
     server_name _;
     root /usr/share/nginx/html;
     index index.html;
