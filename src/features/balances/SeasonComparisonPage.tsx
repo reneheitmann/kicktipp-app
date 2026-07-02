@@ -168,8 +168,12 @@ export function SeasonComparisonPage() {
         <p className="text-sm text-slate-500">Noch keine Saisons vorhanden.</p>
       ) : (
         <>
+          <p className="mb-3 hidden text-sm text-slate-500 sm:block">
+            Die Grafik zeigt den Verlauf des Gesamtsaldos je ausgewähltem Spieler über alle Saisons hinweg – so
+            lässt sich auf einen Blick erkennen, wer über die Zeit im Plus oder Minus liegt.
+          </p>
           <div className="mb-3 flex flex-col gap-4 sm:flex-row">
-            <div className="h-72 w-full rounded-xl border border-slate-200 bg-white p-4 sm:flex-1">
+            <div className="hidden h-72 w-full rounded-xl border border-slate-200 bg-white p-4 sm:block sm:flex-1">
               {selectedPlayers.length === 0 ? (
                 <p className="flex h-full items-center justify-center text-sm text-slate-500">
                   Bitte mindestens einen Spieler rechts auswählen.

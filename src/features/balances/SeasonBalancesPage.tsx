@@ -132,7 +132,7 @@ export function SeasonBalancesPage() {
         <p className="text-sm text-slate-500">Noch keine Buchungen für diese Saison.</p>
       ) : (
         <>
-          <div className="mb-6 h-72 rounded-xl border border-slate-200 bg-white p-4">
+          <div className="mb-6 hidden h-72 rounded-xl border border-slate-200 bg-white p-4 sm:block">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" />

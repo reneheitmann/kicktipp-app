@@ -6,19 +6,20 @@ import type { Season } from '../../types/database'
 interface SeasonFormProps {
   season?: Season
   onClose: () => void
-  onSubmit: (input: { name: string; start_date: string; end_date: string }) => Promise<void>
+  onSubmit: (input: { name: string; start_date: string; end_date: string; kicktipp_link: string }) => Promise<void>
 }
 
 export function SeasonForm({ season, onClose, onSubmit }: SeasonFormProps) {
   const [name, setName] = useState(season?.name ?? '')
   const [startDate, setStartDate] = useState(season?.start_date ?? '')
   const [endDate, setEndDate] = useState(season?.end_date ?? '')
+  const [kicktippLink, setKicktippLink] = useState(season?.kicktipp_link ?? '')
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    if (!name.trim() || !startDate || !endDate) {
+    if (!name.trim() || !startDate || !endDate || !kicktippLink.trim()) {
       setError('Bitte alle Felder ausfüllen.')
       return
     }
@@ -29,7 +30,7 @@ export function SeasonForm({ season, onClose, onSubmit }: SeasonFormProps) {
     setSubmitting(true)
     setError(null)
     try {
-      await onSubmit({ name: name.trim(), start_date: startDate, end_date: endDate })
+      await onSubmit({ name: name.trim(), start_date: startDate, end_date: endDate, kicktipp_link: kicktippLink.trim() })
       onClose()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Speichern fehlgeschlagen.')
@@ -79,6 +80,20 @@ export function SeasonForm({ season, onClose, onSubmit }: SeasonFormProps) {
               className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base focus:border-slate-900 focus:outline-none"
             />
           </div>
+        </div>
+
+        <div>
+          <label htmlFor="season-kicktipp-link" className="mb-1 block text-sm font-medium text-slate-700">
+            Link zur Kicktipp-Spielrunde
+          </label>
+          <input
+            id="season-kicktipp-link"
+            type="url"
+            value={kicktippLink}
+            onChange={(e) => setKicktippLink(e.target.value)}
+            placeholder="https://www.kicktipp.de/..."
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base focus:border-slate-900 focus:outline-none"
+          />
         </div>
 
         {error && <p className="text-sm text-red-600">{error}</p>}

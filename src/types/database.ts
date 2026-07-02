@@ -79,6 +79,9 @@ export type Season = {
   end_date: string
   status: SeasonStatus
   gesamtwertung_status: GesamtwertungStatus
+  /** Link zur zugehörigen Kicktipp.de-Spielrunde – bei neuen Saisons per
+   *  Formular verpflichtend, bestehende Saisons können ihn noch nicht haben. */
+  kicktipp_link: string | null
   created_at: string
 }
 
@@ -327,6 +330,7 @@ export interface Database {
           end_date: string
           status?: SeasonStatus
           gesamtwertung_status?: GesamtwertungStatus
+          kicktipp_link?: string | null
           created_at?: string
         }
         Update: {
@@ -336,6 +340,7 @@ export interface Database {
           end_date?: string
           status?: SeasonStatus
           gesamtwertung_status?: GesamtwertungStatus
+          kicktipp_link?: string | null
           created_at?: string
         }
         Relationships: []

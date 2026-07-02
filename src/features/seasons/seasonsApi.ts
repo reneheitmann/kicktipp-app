@@ -21,6 +21,7 @@ export async function createSeason(input: {
   name: string
   start_date: string
   end_date: string
+  kicktipp_link: string
 }): Promise<Season> {
   const { data, error } = await supabase.from('seasons').insert(input).select().single()
   if (error) throw error
@@ -29,7 +30,7 @@ export async function createSeason(input: {
 
 export async function updateSeason(
   id: string,
-  input: Partial<{ name: string; start_date: string; end_date: string }>,
+  input: Partial<{ name: string; start_date: string; end_date: string; kicktipp_link: string }>,
 ): Promise<Season> {
   const { data, error } = await supabase.from('seasons').update(input).eq('id', id).select().single()
   if (error) throw error
