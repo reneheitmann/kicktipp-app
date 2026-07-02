@@ -14,6 +14,26 @@ function formatBuildDate(value: string | undefined): string {
   return buildDateFormatter.format(date)
 }
 
+interface ChangelogEntry {
+  version: string
+  changes: string[]
+}
+
+// Docker-Build-Arg ist base64-codiertes JSON (siehe
+// .github/scripts/generate-changelog.cjs) – naives atob() würde
+// Mehrbyte-UTF-8-Zeichen (z. B. Umlaute in Commit-Nachrichten) zerlegen,
+// daher der Umweg über Uint8Array + TextDecoder.
+function parseChangelog(encoded: string | undefined): ChangelogEntry[] {
+  if (!encoded) return []
+  try {
+    const bytes = Uint8Array.from(atob(encoded), (c) => c.charCodeAt(0))
+    const parsed = JSON.parse(new TextDecoder('utf-8').decode(bytes))
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
+
 interface DeviceInfo {
   userAgent: string
   platform: string
@@ -45,10 +65,8 @@ export function AboutPage() {
   const commitSha = import.meta.env.VITE_APP_COMMIT_SHA
   const buildDate = import.meta.env.VITE_APP_BUILD_DATE
   const channel = import.meta.env.VITE_APP_CHANNEL === 'beta' ? 'Beta' : 'Produktion'
-  const changelog = (import.meta.env.VITE_APP_CHANGELOG ?? '')
-    .split('\\n')
-    .map((line) => line.trim())
-    .filter(Boolean)
+  const changelog = parseChangelog(import.meta.env.VITE_APP_CHANGELOG)
+  const [changelogOpen, setChangelogOpen] = useState(true)
   const [device] = useState(getDeviceInfo)
   const [copied, setCopied] = useState(false)
 
@@ -111,12 +129,28 @@ export function AboutPage() {
 
       {changelog.length > 0 && (
         <div className="mb-6 rounded-xl border border-slate-200 bg-white p-4">
-          <h2 className="mb-3 text-base font-semibold text-slate-900">Änderungen im letzten Update</h2>
-          <ul className="list-disc space-y-1 pl-5 text-sm text-slate-700">
-            {changelog.map((line, i) => (
-              <li key={i}>{line}</li>
-            ))}
-          </ul>
+          <button
+            onClick={() => setChangelogOpen((open) => !open)}
+            className="flex w-full items-center justify-between text-left"
+            aria-expanded={changelogOpen}
+          >
+            <h2 className="text-base font-semibold text-slate-900">Änderungen</h2>
+            <span className="text-slate-400">{changelogOpen ? '▲' : '▼'}</span>
+          </button>
+          {changelogOpen && (
+            <div className="mt-3 space-y-4">
+              {changelog.map((entry) => (
+                <div key={entry.version}>
+                  <p className="mb-1 text-sm font-semibold text-slate-700">Version {entry.version}</p>
+                  <ul className="list-disc space-y-1 pl-5 text-sm text-slate-600">
+                    {entry.changes.map((line, i) => (
+                      <li key={i}>{line}</li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
