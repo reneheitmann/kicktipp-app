@@ -10,6 +10,10 @@ interface ImportMetaEnv {
   readonly VITE_APP_COMMIT_SHA?: string
   /** Build-Zeitpunkt (ISO 8601), ebenfalls per Docker-Build-Arg gesetzt. */
   readonly VITE_APP_BUILD_DATE?: string
+  /** "production" oder "beta", je nach Branch von GitHub Actions gesetzt
+   *  (siehe .github/workflows/docker-publish.yml). Lokal (ohne .env-Eintrag)
+   *  leer – AppShell zeigt dann keine BETA-Kennzeichnung an. */
+  readonly VITE_APP_CHANNEL?: string
 }
 
 interface ImportMeta {

@@ -27,6 +27,11 @@ ARG VITE_APP_BUILD_DATE
 ENV VITE_APP_COMMIT_SHA=$VITE_APP_COMMIT_SHA
 ENV VITE_APP_BUILD_DATE=$VITE_APP_BUILD_DATE
 
+# "production" oder "beta" – von GitHub Actions je nach Branch gesetzt (siehe
+# docker-publish.yml), zeigt eine BETA-Kennzeichnung in der App an.
+ARG VITE_APP_CHANNEL=production
+ENV VITE_APP_CHANNEL=$VITE_APP_CHANNEL
+
 RUN npm run build
 
 FROM nginx:alpine AS runtime

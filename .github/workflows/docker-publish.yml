@@ -82,6 +82,7 @@ jobs:
               echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"
               echo "EOF"
             } >> "$GITHUB_OUTPUT"
+            echo "channel=production" >> "$GITHUB_OUTPUT"
           else
             {
               echo "tags<<EOF"
@@ -89,6 +90,7 @@ jobs:
               echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:beta-${{ github.sha }}"
               echo "EOF"
             } >> "$GITHUB_OUTPUT"
+            echo "channel=beta" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Image bauen und veröffentlichen
@@ -102,6 +104,7 @@ jobs:
             VITE_SUPABASE_ANON_KEY=${{ secrets.VITE_SUPABASE_ANON_KEY }}
             VITE_APP_COMMIT_SHA=${{ steps.meta.outputs.commit_sha }}
             VITE_APP_BUILD_DATE=${{ steps.meta.outputs.build_date }}
+            VITE_APP_CHANNEL=${{ steps.tags.outputs.channel }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 

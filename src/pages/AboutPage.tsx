@@ -44,13 +44,14 @@ export function AboutPage() {
   const { appName, iconUrl } = useAppBranding()
   const commitSha = import.meta.env.VITE_APP_COMMIT_SHA
   const buildDate = import.meta.env.VITE_APP_BUILD_DATE
+  const channel = import.meta.env.VITE_APP_CHANNEL === 'beta' ? 'Beta' : 'Produktion'
   const [device] = useState(getDeviceInfo)
   const [copied, setCopied] = useState(false)
 
   async function handleCopy() {
     const text = [
       `${appName} – Diagnose-Info`,
-      `Version: ${__APP_VERSION__}`,
+      `Version: ${__APP_VERSION__} (${channel})`,
       `Build: ${commitSha || 'lokal'} (${formatBuildDate(buildDate)})`,
       `Browser: ${device.userAgent}`,
       `Plattform: ${device.platform}`,
@@ -88,6 +89,10 @@ export function AboutPage() {
           <div className="flex items-center justify-between gap-3">
             <dt className="text-slate-500">Version</dt>
             <dd className="font-medium text-slate-900">{__APP_VERSION__}</dd>
+          </div>
+          <div className="flex items-center justify-between gap-3">
+            <dt className="text-slate-500">Kanal</dt>
+            <dd className="font-medium text-slate-900">{channel}</dd>
           </div>
           <div className="flex items-center justify-between gap-3">
             <dt className="text-slate-500">Build</dt>

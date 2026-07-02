@@ -19,7 +19,10 @@ export function AppShell() {
     <div className="flex h-full flex-col md:flex-row">
       {/* Desktop-Sidebar */}
       <aside className="hidden w-60 shrink-0 flex-col overflow-y-auto border-r border-slate-200 bg-white p-4 md:flex">
-        <div className="mb-6 px-2 text-lg font-semibold text-slate-900">{appName}</div>
+        <div className="mb-6 flex items-center gap-2 px-2 text-lg font-semibold text-slate-900">
+          {appName}
+          <BetaBadge />
+        </div>
         <nav className="flex flex-1 flex-col gap-1">
           {items.map((item) => (
             <NavLink
@@ -43,7 +46,10 @@ export function AppShell() {
             konkurrierender Text-Links – vermeidet, dass ein längerer App-Name
             in zwei Zeilen umbricht und alles zusammenquetscht. */}
         <header className="flex items-center justify-between gap-2 border-b border-slate-200 bg-white px-4 py-3 md:hidden">
-          <span className="truncate text-base font-semibold text-slate-900">{appName}</span>
+          <span className="flex min-w-0 items-center gap-2">
+            <span className="truncate text-base font-semibold text-slate-900">{appName}</span>
+            <BetaBadge />
+          </span>
           <button
             onClick={() => setAccountMenuOpen(true)}
             aria-label="Konto-Menü öffnen"
@@ -177,6 +183,19 @@ function MobileBottomNav({
         />
       )}
     </div>
+  )
+}
+
+/** Zeigt "BETA" neben dem App-Namen, wenn dieser Build aus dem beta-Branch
+ * stammt (VITE_APP_CHANNEL per Docker-Build-Arg gesetzt, siehe
+ * docker-publish.yml) – damit auf einen Blick erkennbar ist, in welcher
+ * Umgebung man sich befindet, ohne extra auf die "Über"-Seite zu wechseln. */
+function BetaBadge() {
+  if (import.meta.env.VITE_APP_CHANNEL !== 'beta') return null
+  return (
+    <span className="shrink-0 rounded bg-violet-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-violet-800">
+      Beta
+    </span>
   )
 }
 
