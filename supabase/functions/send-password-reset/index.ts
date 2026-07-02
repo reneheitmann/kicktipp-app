@@ -97,6 +97,13 @@ async function handle(req: Request, supabaseUrl: string, serviceRoleKey: string)
   const actionLink = linkData?.properties?.action_link
   if (linkError || !actionLink) return
 
+  // Der Link enthält mehrere &-getrennte Query-Parameter (token, type,
+  // redirect_to) – roh in HTML eingesetzt interpretieren manche Mail-Clients
+  // "&xyz..." als (unvollständige) HTML-Entity und schneiden den Link genau
+  // dort ab oder verändern ihn. Sowohl im href-Attribut als auch im
+  // sichtbaren Linktext muss & als &amp; escaped werden.
+  const escapedActionLink = escapeHtml(actionLink)
+
   try {
     await sendSmtpMail(
       {
@@ -113,8 +120,8 @@ async function handle(req: Request, supabaseUrl: string, serviceRoleKey: string)
         subject: `Passwort zurücksetzen – ${appName}`,
         html: [
           '<p>Hallo,</p>',
-          `<p>über diesen Link kannst du dein Passwort für ${appName} zurücksetzen:</p>`,
-          `<p><a href="${actionLink}">${actionLink}</a></p>`,
+          `<p>über diesen Link kannst du dein Passwort für ${escapeHtml(appName)} zurücksetzen:</p>`,
+          `<p><a href="${escapedActionLink}">${escapedActionLink}</a></p>`,
           '<p>Falls du das nicht angefordert hast, kannst du diese E-Mail ignorieren.</p>',
         ].join('\n'),
       },
@@ -123,6 +130,10 @@ async function handle(req: Request, supabaseUrl: string, serviceRoleKey: string)
     const message = err instanceof SmtpError ? err.message : err instanceof Error ? err.message : String(err)
     await logAppError(supabaseUrl, serviceRoleKey, 'send-password-reset', message, { email })
   }
+}
+
+function escapeHtml(text: string): string {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 }
 
 async function logAppError(
