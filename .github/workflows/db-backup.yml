@@ -1,0 +1,68 @@
+name: Datenbank-Backup
+
+# Manuell auslösbarer Workflow, der vor einer riskanten Migration
+# (`supabase db push --linked`) ein Backup der Produktions-Datenbank zieht.
+# main und beta teilen sich ein Supabase-Projekt – es gibt keine automatische
+# Snapshot-Funktion, dieses Backup ist die einzige Absicherung gegen eine
+# fehlerhafte Migration.
+#
+# Läuft bewusst in GitHub Actions statt lokal: `supabase db dump` braucht
+# Docker (für pg_dump in der passenden Postgres-Version), das auf den
+# GitHub-Runnern schon vorinstalliert ist, lokal aber nicht überall.
+#
+# Da dieses Repo öffentlich ist, würde ein unverschlüsseltes Backup als
+# Workflow-Artifact für jeden mit GitHub-Account herunterladbar sein (enthält
+# echte Namen, Zahlungen, Kontostände) – daher wird vor dem Upload per GPG
+# symmetrisch verschlüsselt (Secret BACKUP_ENCRYPTION_PASSPHRASE).
+#
+# Voraussetzung (einmalig in den Repo-Secrets hinterlegen):
+#   SUPABASE_ACCESS_TOKEN        – Personal Access Token, siehe
+#                                   https://supabase.com/dashboard/account/tokens
+#   BACKUP_ENCRYPTION_PASSPHRASE – frei gewähltes, starkes Passwort; wird auch
+#                                   zum lokalen Entschlüsseln gebraucht, also
+#                                   sicher aufbewahren (z. B. Passwortmanager)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Code auschecken
+        uses: actions/checkout@v4
+
+      - name: Supabase CLI einrichten
+        uses: supabase/setup-cli@v2
+        with:
+          version: latest
+          github-token: ${{ github.token }}
+
+      - name: Projekt verlinken
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: supabase link --project-ref rmfvzbmxcwccnezqqnen
+
+      - name: Schema + Daten sichern
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          mkdir -p backup
+          supabase db dump --linked -f backup/schema.sql
+          supabase db dump --linked --data-only -f backup/data.sql
+
+      - name: Backup verschlüsseln
+        env:
+          BACKUP_ENCRYPTION_PASSPHRASE: ${{ secrets.BACKUP_ENCRYPTION_PASSPHRASE }}
+        run: |
+          tar -czf backup.tar.gz -C backup schema.sql data.sql
+          gpg --batch --yes --passphrase "$BACKUP_ENCRYPTION_PASSPHRASE" \
+            --symmetric --cipher-algo AES256 -o backup.tar.gz.gpg backup.tar.gz
+          rm -rf backup backup.tar.gz
+
+      - name: Verschlüsseltes Backup als Artifact hochladen
+        uses: actions/upload-artifact@v4
+        with:
+          name: db-backup-${{ github.run_id }}
+          path: backup.tar.gz.gpg
+          retention-days: 30

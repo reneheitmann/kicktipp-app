@@ -292,6 +292,44 @@ Kommandozeilen-Argument `kicktipp-app-beta` hinter `kicktipp-app` ergänzen
    baut `:latest` neu, Watchtower aktualisiert danach `kicktipp-app`
    (Produktion) unter `http://192.168.1.50:8080`.
 
+## Teil 4 – Datenbank-Backup vor Migrationen
+
+`main` und `beta` teilen sich ein Supabase-Projekt (keine getrennten
+Datenbanken, siehe Projekt-Notizen) – vor jeder Migration
+(`supabase db push --linked`) sollte daher ein Backup gezogen werden. Das
+läuft über einen manuell auslösbaren GitHub-Actions-Workflow
+(`.github/workflows/db-backup.yml`), nicht lokal, da `supabase db dump`
+Docker braucht (auf GitHub-Runnern vorinstalliert).
+
+**Einmalige Einrichtung** (zwei Repo-Secrets, jeweils selbst im eigenen
+Terminal setzen, nicht über eine KI-Sitzung – beides sind Zugangsdaten):
+
+1. Personal Access Token unter
+   https://supabase.com/dashboard/account/tokens erstellen, dann:
+   `gh secret set SUPABASE_ACCESS_TOKEN --repo reneheitmann/kicktipp-app`
+2. Ein starkes, zufälliges Passwort erzeugen (z. B. `openssl rand -base64 32`)
+   und sicher aufbewahren (Passwortmanager – wird auch zum Entschlüsseln
+   gebraucht), dann:
+   `gh secret set BACKUP_ENCRYPTION_PASSPHRASE --repo reneheitmann/kicktipp-app`
+
+**Vor einer Migration:**
+
+1. `gh workflow run db-backup.yml --repo reneheitmann/kicktipp-app` (oder im
+   GitHub-Repo unter **Actions → Datenbank-Backup → Run workflow**).
+2. Lauf abwarten, dann im Actions-Tab des Laufs das Artifact
+   `db-backup-<run-id>` herunterladen (verschlüsselte Datei
+   `backup.tar.gz.gpg` – das Repo ist öffentlich, daher unverschlüsselt
+   *nicht* direkt als Artifact ablegbar).
+3. Erst danach `supabase db push --linked` ausführen.
+
+**Im Ernstfall entschlüsseln:**
+
+```bash
+gpg --batch --yes --passphrase "<BACKUP_ENCRYPTION_PASSPHRASE>" \
+  --decrypt -o backup.tar.gz backup.tar.gz.gpg
+tar -xzf backup.tar.gz   # ergibt schema.sql und data.sql
+```
+
 ## Ausblick (nicht Teil dieser Anleitung)
 
 - **Zugriff von außerhalb des Heimnetzes**: dafür wäre ein Reverse Proxy

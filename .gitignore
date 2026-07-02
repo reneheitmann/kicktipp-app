@@ -18,6 +18,10 @@ dist-ssr
 # Lokaler Supabase-CLI-Cache (Projekt-Link, Pooler-URL etc.)
 supabase/.temp
 
+# Entschlüsselte DB-Backups (siehe .github/workflows/db-backup.yml) –
+# landen hier nur temporär beim lokalen Entschlüsseln, nie eingecheckt.
+/backup
+
 # Claude Code lokale Einstellungen (können Secrets aus vergangenen
 # Tool-Aufrufen enthalten, z. B. in Permission-Regeln mitgeloggte curl-Befehle)
 .claude/settings.local.json
