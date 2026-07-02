@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { useAuth } from '../auth/useAuth'
 import { listPlayers, createPlayer, updatePlayer, describePlayerSaveError } from '../players/playersApi'
-import { listProfiles, sendPasswordReset } from '../admin-users/profilesApi'
+import { listProfiles } from '../admin-users/profilesApi'
+import { requestPasswordReset } from '../auth/passwordResetApi'
 import { adminCreateUser } from '../admin-users/adminCreateUser'
 import { generateRandomPassword } from '../../lib/randomPassword'
 import { guessEmailColumn, guessNameColumn, parseCsv, type ParsedCsv } from './csvParser'
@@ -119,9 +120,10 @@ export function TipperImportPage() {
             email: entry.row.email,
             password: generateRandomPassword(),
             role: 'user',
+            isGeneratedPlaceholder: true,
           })
           if (sendInviteEmails) {
-            await sendPasswordReset(entry.row.email)
+            await requestPasswordReset(entry.row.email)
           }
           if (playerId) {
             await updatePlayer(playerId, { profile_id: createdUser.id })

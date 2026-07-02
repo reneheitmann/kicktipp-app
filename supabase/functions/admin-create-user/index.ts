@@ -68,17 +68,17 @@ async function handle(req: Request, supabaseUrl: string, serviceRoleKey: string)
     return jsonResponse({ error: 'Nur aktive Administratoren dürfen Benutzer anlegen.' }, 403)
   }
 
-  let body: { name?: string; email?: string; password?: string; role?: string }
+  let body: { name?: string; email?: string; password?: string; role?: string; isGeneratedPlaceholder?: boolean }
   try {
     body = await req.json()
   } catch {
     return jsonResponse({ error: 'Ungültiger Request-Body' }, 400)
   }
 
-  const { name, email, password, role } = body
+  const { name, email, password, role, isGeneratedPlaceholder } = body
 
-  if (!name?.trim() || !email?.trim() || !password || password.length < 8) {
-    return jsonResponse({ error: 'Name, E-Mail und Passwort (mind. 8 Zeichen) sind erforderlich.' }, 400)
+  if (!name?.trim() || !email?.trim() || !password) {
+    return jsonResponse({ error: 'Name, E-Mail und Passwort sind erforderlich.' }, 400)
   }
   if (!role || !ALLOWED_ROLES.includes(role)) {
     return jsonResponse({ error: 'Ungültige Rolle.' }, 400)
@@ -86,6 +86,28 @@ async function handle(req: Request, supabaseUrl: string, serviceRoleKey: string)
 
   // Admin-Client mit service_role, um den eigentlichen Auth-User anzulegen.
   const adminClient = createClient(supabaseUrl, serviceRoleKey)
+
+  // Die Passwort-Richtlinie gilt nicht für den bei "Per E-Mail einladen"
+  // clientseitig zufällig generierten Platzhalter (generateRandomPassword()):
+  // der wird dem User nie angezeigt und sofort durch das per Reset-Link
+  // selbst gewählte Passwort ersetzt – siehe CreateUserForm.tsx.
+  if (!isGeneratedPlaceholder) {
+    const { data: policy } = await adminClient.from('password_policy').select('*').limit(1).maybeSingle()
+    const minLength = policy?.min_length ?? 8
+    const minClasses = policy?.min_character_classes ?? 3
+
+    if (password.length < minLength) {
+      return jsonResponse({ error: `Passwort muss mindestens ${minLength} Zeichen lang sein.` }, 400)
+    }
+    if (countCharacterClasses(password) < minClasses) {
+      return jsonResponse(
+        {
+          error: `Passwort muss mindestens ${minClasses} von 4 Zeichenarten enthalten (Großbuchstaben, Kleinbuchstaben, Zahlen, Sonderzeichen).`,
+        },
+        400,
+      )
+    }
+  }
 
   const { data: created, error: createError } = await adminClient.auth.admin.createUser({
     email: email.trim(),
@@ -101,7 +123,28 @@ async function handle(req: Request, supabaseUrl: string, serviceRoleKey: string)
   // Der DB-Trigger handle_new_user() legt die profiles-Zeile automatisch an
   // (inkl. name/role aus user_metadata). Kein zusätzlicher Insert nötig.
 
+  if (!isGeneratedPlaceholder) {
+    const { error: historyError } = await adminClient.rpc('record_password_history', {
+      p_user_id: created.user.id,
+      p_password: password,
+    })
+    if (historyError) {
+      await logAppError(supabaseUrl, serviceRoleKey, 'admin-create-user', historyError.message, {
+        context: 'record_password_history',
+      })
+    }
+  }
+
   return jsonResponse({ id: created.user.id })
+}
+
+function countCharacterClasses(password: string): number {
+  let classes = 0
+  if (/[A-Z]/.test(password)) classes++
+  if (/[a-z]/.test(password)) classes++
+  if (/[0-9]/.test(password)) classes++
+  if (/[^A-Za-z0-9]/.test(password)) classes++
+  return classes
 }
 
 async function logAppError(

@@ -15,9 +15,3 @@ export async function setProfileActive(id: string, is_active: boolean): Promise<
   const { error } = await supabase.from('profiles').update({ is_active }).eq('id', id)
   if (error) throw error
 }
-
-export async function sendPasswordReset(email: string): Promise<void> {
-  const redirectTo = `${window.location.origin}/login`
-  const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo })
-  if (error) throw error
-}

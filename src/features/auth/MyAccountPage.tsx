@@ -1,7 +1,10 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { Button } from '../../components/ui/Button'
 import { useAuth } from './useAuth'
 import { updateOwnName, updateOwnPassword } from './myAccountApi'
+import { getPasswordPolicy } from '../password-policy/passwordPolicyApi'
+import { describePasswordPolicy, validatePasswordAgainstPolicy } from '../../lib/passwordValidation'
+import type { PasswordPolicy } from '../../types/database'
 
 export function MyAccountPage() {
   const { profile, refreshProfile, viewAsUser, setViewAsUser } = useAuth()
@@ -11,11 +14,22 @@ export function MyAccountPage() {
   const [nameSuccess, setNameSuccess] = useState<string | null>(null)
   const [savingName, setSavingName] = useState(false)
 
+  const [passwordPolicy, setPasswordPolicy] = useState<PasswordPolicy | null>(null)
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [passwordError, setPasswordError] = useState<string | null>(null)
   const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null)
   const [savingPassword, setSavingPassword] = useState(false)
+
+  useEffect(() => {
+    getPasswordPolicy()
+      .then(setPasswordPolicy)
+      .catch(() => {
+        // Ohne geladene Richtlinie greift serverseitig trotzdem der
+        // dortige Default (siehe update-own-password) – hier nur relevant
+        // für die client-seitige Vorab-Prüfung/Anzeige.
+      })
+  }, [])
 
   async function handleNameSubmit(e: FormEvent) {
     e.preventDefault()
@@ -40,9 +54,12 @@ export function MyAccountPage() {
 
   async function handlePasswordSubmit(e: FormEvent) {
     e.preventDefault()
-    if (newPassword.length < 8) {
-      setPasswordError('Passwort muss mindestens 8 Zeichen lang sein.')
-      return
+    if (passwordPolicy) {
+      const policyError = validatePasswordAgainstPolicy(newPassword, passwordPolicy)
+      if (policyError) {
+        setPasswordError(policyError)
+        return
+      }
     }
     if (newPassword !== confirmPassword) {
       setPasswordError('Passwörter stimmen nicht überein.')
@@ -121,7 +138,10 @@ export function MyAccountPage() {
       )}
 
       <div className="rounded-xl border border-slate-200 bg-white p-4">
-        <h2 className="mb-3 text-base font-semibold text-slate-900">Passwort ändern</h2>
+        <h2 className="mb-1 text-base font-semibold text-slate-900">Passwort ändern</h2>
+        {passwordPolicy && (
+          <p className="mb-3 text-xs text-slate-400">{describePasswordPolicy(passwordPolicy)}</p>
+        )}
         <form className="space-y-4" onSubmit={handlePasswordSubmit}>
           <div>
             <label htmlFor="account-new-password" className="mb-1 block text-sm font-medium text-slate-700">

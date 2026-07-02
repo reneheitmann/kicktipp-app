@@ -25,6 +25,7 @@ export const navItems: NavItem[] = [
   { to: '/admin/roles', label: 'Rollen & Berechtigungen', roles: ['admin'] },
   { to: '/admin/branding', label: 'Erscheinungsbild', roles: ['admin'] },
   { to: '/admin/logs', label: 'Logs & Diagnose', roles: ['admin'] },
+  { to: '/admin/password-policy', label: 'Passwort-Richtlinie', roles: ['admin'] },
 ]
 
 export function visibleNavItems(role: UserRole | undefined, can: (key: PermissionKey) => boolean) {

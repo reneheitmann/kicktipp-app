@@ -3,7 +3,8 @@ import { Button } from '../../components/ui/Button'
 import { SearchInput } from '../../components/ui/SearchInput'
 import { CreateUserForm } from './CreateUserForm'
 import { EditUserForm } from './EditUserForm'
-import { listProfiles, sendPasswordReset, setProfileActive, updateProfileRole } from './profilesApi'
+import { listProfiles, setProfileActive, updateProfileRole } from './profilesApi'
+import { requestPasswordReset } from '../auth/passwordResetApi'
 import type { Profile, UserRole } from '../../types/database'
 
 export function AdminUsersPage() {
@@ -52,7 +53,7 @@ export function AdminUsersPage() {
   async function handlePasswordReset(profileRow: Profile) {
     if (!profileRow.email) return
     try {
-      await sendPasswordReset(profileRow.email)
+      await requestPasswordReset(profileRow.email)
       setInfo(`Passwort-Reset-E-Mail an ${profileRow.email} gesendet.`)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Reset-E-Mail konnte nicht gesendet werden.')

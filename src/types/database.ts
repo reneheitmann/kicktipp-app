@@ -212,6 +212,19 @@ export type AppSettings = {
   updated_by: string | null
 }
 
+// Konfigurierbare Passwort-Richtlinie, siehe
+// supabase/migrations/0032_password_policy.sql und src/lib/passwordValidation.ts
+// (dort die eigentliche Prüf-Logik, geteilt zwischen Frontend und den
+// Edge Functions, die Passwörter setzen).
+export type PasswordPolicy = {
+  id: string
+  min_length: number
+  min_character_classes: number
+  reuse_days: number
+  updated_at: string
+  updated_by: string | null
+}
+
 // Fehler-/Ereignis-Log für Supportzwecke (unbehandelte Frontend-Fehler +
 // Backend-Fehler aus Edge Functions), siehe supabase/migrations/0030_app_logs.sql
 // und src/lib/logging.ts. INSERT ist bewusst für jeden offen (auch anon),
@@ -551,6 +564,26 @@ export interface Database {
           app_name?: string
           icon_url?: string | null
           primary_color?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      password_policy: {
+        Row: PasswordPolicy
+        Insert: {
+          id?: string
+          min_length?: number
+          min_character_classes?: number
+          reuse_days?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          id?: string
+          min_length?: number
+          min_character_classes?: number
+          reuse_days?: number
           updated_at?: string
           updated_by?: string | null
         }

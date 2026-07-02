@@ -11,6 +11,16 @@ export interface AuthContextValue {
   /** Rein clientseitiger Vorschau-Modus: simuliert die Rolle "user", ändert profiles.role nie. */
   viewAsUser: boolean
   setViewAsUser: (value: boolean) => void
+  /**
+   * true, sobald Supabase beim Öffnen eines Passwort-Reset-Links (Self-Service
+   * auf der Login-Seite ODER vom Admin ausgelöst) das PASSWORD_RECOVERY-Event
+   * feuert. App.tsx zeigt währenddessen unabhängig von Route/restlicher
+   * Session ResetPasswordPage statt der normalen App, damit die per Link
+   * automatisch entstehende Session nicht einfach direkt einloggt, ohne dass
+   * ein neues Passwort gesetzt wurde.
+   */
+  passwordRecovery: boolean
+  clearPasswordRecovery: () => void
   /** Einzige Stelle, die für UI-Gating genutzt werden soll – berücksichtigt viewAsUser automatisch. */
   can: (key: PermissionKey) => boolean
   signIn: (email: string, password: string) => Promise<{ error: string | null }>

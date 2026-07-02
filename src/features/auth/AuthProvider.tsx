@@ -36,6 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [viewAsUser, setViewAsUserState] = useState(
     () => sessionStorage.getItem(VIEW_AS_USER_STORAGE_KEY) === 'true',
   )
+  const [passwordRecovery, setPasswordRecovery] = useState(false)
 
   useEffect(() => {
     let isMounted = true
@@ -51,7 +52,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false)
     })
 
-    const { data: subscription } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
+    const { data: subscription } = supabase.auth.onAuthStateChange(async (event, newSession) => {
+      // Supabase erkennt den Recovery-Link automatisch (detectSessionInUrl)
+      // und würde ohne diese Unterscheidung denselben SIGNED_IN-artigen Ablauf
+      // wie ein normaler Login auslösen – die App landet dann direkt im
+      // Hauptbereich, ohne dass der User ein neues Passwort gesetzt hat.
+      if (event === 'PASSWORD_RECOVERY') {
+        setPasswordRecovery(true)
+      }
       setSession(newSession)
       if (newSession) {
         // `loading` war nach dem allerersten getSession()-Check (oben) bereits
@@ -107,6 +115,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setViewAsUserState(value)
   }
 
+  function clearPasswordRecovery() {
+    setPasswordRecovery(false)
+  }
+
   function can(key: PermissionKey): boolean {
     return !viewAsUser && permissions.has(key)
   }
@@ -120,6 +132,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         permissions,
         viewAsUser,
         setViewAsUser,
+        passwordRecovery,
+        clearPasswordRecovery,
         can,
         signIn,
         signOut,

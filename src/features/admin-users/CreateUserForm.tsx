@@ -1,10 +1,12 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { Modal } from '../../components/ui/Modal'
 import { Button } from '../../components/ui/Button'
 import { generateRandomPassword } from '../../lib/randomPassword'
 import { adminCreateUser } from './adminCreateUser'
-import { sendPasswordReset } from './profilesApi'
-import type { UserRole } from '../../types/database'
+import { requestPasswordReset } from '../auth/passwordResetApi'
+import { getPasswordPolicy } from '../password-policy/passwordPolicyApi'
+import { describePasswordPolicy, validatePasswordAgainstPolicy } from '../../lib/passwordValidation'
+import type { PasswordPolicy, UserRole } from '../../types/database'
 
 export function CreateUserForm({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
   const [name, setName] = useState('')
@@ -12,22 +14,42 @@ export function CreateUserForm({ onClose, onCreated }: { onClose: () => void; on
   const [password, setPassword] = useState('')
   const [role, setRole] = useState<UserRole>('user')
   const [inviteByEmail, setInviteByEmail] = useState(false)
+  const [passwordPolicy, setPasswordPolicy] = useState<PasswordPolicy | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
+  useEffect(() => {
+    getPasswordPolicy()
+      .then(setPasswordPolicy)
+      .catch(() => {
+        // Ohne geladene Richtlinie greift serverseitig trotzdem der dortige
+        // Default (siehe admin-create-user) – hier nur relevant für die
+        // client-seitige Vorab-Prüfung/Anzeige.
+      })
+  }, [])
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    if (!inviteByEmail && password.length < 8) {
-      setError('Passwort muss mindestens 8 Zeichen lang sein.')
-      return
+    if (!inviteByEmail && passwordPolicy) {
+      const policyError = validatePasswordAgainstPolicy(password, passwordPolicy)
+      if (policyError) {
+        setError(policyError)
+        return
+      }
     }
     setSubmitting(true)
     setError(null)
     try {
       const usedPassword = inviteByEmail ? generateRandomPassword() : password
-      await adminCreateUser({ name: name.trim(), email: email.trim(), password: usedPassword, role })
+      await adminCreateUser({
+        name: name.trim(),
+        email: email.trim(),
+        password: usedPassword,
+        role,
+        isGeneratedPlaceholder: inviteByEmail,
+      })
       if (inviteByEmail) {
-        await sendPasswordReset(email.trim())
+        await requestPasswordReset(email.trim())
       }
       onCreated()
       onClose()
@@ -107,7 +129,10 @@ export function CreateUserForm({ onClose, onCreated }: { onClose: () => void; on
               className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base focus:border-slate-900 focus:outline-none"
             />
             <p className="mt-1 text-xs text-slate-400">
-              Mind. 8 Zeichen. Der Nutzer sollte es nach dem ersten Login ändern.
+              {passwordPolicy
+                ? describePasswordPolicy({ ...passwordPolicy, reuse_days: 0 })
+                : 'Mind. 8 Zeichen.'}{' '}
+              Der Nutzer sollte es nach dem ersten Login ändern.
             </p>
           </div>
         )}
