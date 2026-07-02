@@ -6,7 +6,7 @@ import { useAuth } from '../features/auth/useAuth'
 import { listSeasons } from '../features/seasons/seasonsApi'
 import { listPlayers } from '../features/players/playersApi'
 import { listSeasonParticipantsForPlayer, listAllSeasonParticipants } from '../features/seasons/seasonParticipantsApi'
-import { listMatchdayCountsBySeasonId } from '../features/seasons/matchdaysApi'
+import { listAllMatchdays, listMatchdayCountsBySeasonId } from '../features/seasons/matchdaysApi'
 import { listZahlungen, listAllZahlungen } from '../features/players/zahlungenApi'
 import { listPlayerTransactions, listAllTransactions } from '../features/balances/balancesApi'
 import { computeAccountBalance, computeTotalOutstanding, type AccountBalance } from '../features/players/accountBalance'
@@ -27,6 +27,11 @@ export function DashboardPage() {
   const [activeSeasons, setActiveSeasons] = useState<Season[]>([])
   const [myPlayer, setMyPlayer] = useState<Player | null>(null)
   const [myBalance, setMyBalance] = useState<AccountBalance | null>(null)
+  // Nur Saisons, an denen myPlayer tatsächlich teilnimmt, haben hier einen
+  // Eintrag – so lässt sich "kein Gewinn ausgewiesen" (Admin/Spielleiter ohne
+  // eigene Teilnahme) von "0,00 € Gewinn" (Teilnehmer ohne bisherige
+  // Auszahlung) unterscheiden.
+  const [myGewinnBySeasonId, setMyGewinnBySeasonId] = useState<Map<string, number>>(new Map())
   const [stats, setStats] = useState<AdminStats | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -39,12 +44,40 @@ export function DashboardPage() {
         const linked = players.find((p) => p.profile_id === profile.id) ?? null
         setMyPlayer(linked)
         if (linked) {
-          const [participants, zahlungen, transactions] = await Promise.all([
+          const [participants, zahlungen, transactions, matchdays] = await Promise.all([
             listSeasonParticipantsForPlayer(linked.id),
             listZahlungen(linked.id),
             listPlayerTransactions(linked.id),
+            listAllMatchdays(),
           ])
           setMyBalance(computeAccountBalance(participants, matchdayCounts, zahlungen, transactions))
+
+          // Eigener Gesamtgewinn je Saison, an der teilgenommen wird – analog zur
+          // Berechnung auf der Saison-Detailseite/Saisons-Liste: nur Spieltage mit
+          // Status "abgerechnet" zählen, dazu die Gesamtwertung, sofern auch diese
+          // schon abgerechnet ist.
+          const abgerechnetMatchdayIds = new Set(
+            matchdays.filter((m) => m.status === 'abgerechnet').map((m) => m.id),
+          )
+          const gewinnMap = new Map<string, number>()
+          for (const participant of participants) {
+            const spieltagSumme = transactions
+              .filter(
+                (t) =>
+                  t.season_id === participant.season_id &&
+                  t.typ === 'gewinn_spieltag' &&
+                  abgerechnetMatchdayIds.has(t.matchday_id ?? ''),
+              )
+              .reduce((sum, t) => sum + t.betrag, 0)
+            const season = seasons.find((s) => s.id === participant.season_id)
+            const gesamtwertungBetrag =
+              season?.gesamtwertung_status === 'abgerechnet'
+                ? (transactions.find((t) => t.season_id === participant.season_id && t.typ === 'gewinn_gesamt')
+                    ?.betrag ?? 0)
+                : 0
+            gewinnMap.set(participant.season_id, spieltagSumme + gesamtwertungBetrag)
+          }
+          setMyGewinnBySeasonId(gewinnMap)
         }
 
         if (canManage) {
@@ -129,17 +162,25 @@ export function DashboardPage() {
         <p className="mb-6 text-sm text-slate-500">Keine aktive Saison.</p>
       ) : (
         <ul className="mb-6 divide-y divide-slate-200 overflow-hidden rounded-xl border border-slate-200 bg-white">
-          {activeSeasons.map((season) => (
-            <li key={season.id}>
-              <Link
-                to={`/seasons/${season.id}`}
-                className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-slate-50"
-              >
-                <span className="font-medium text-slate-900">{season.name}</span>
-                <Badge tone="positive">{season.status}</Badge>
-              </Link>
-            </li>
-          ))}
+          {activeSeasons.map((season) => {
+            const myGewinn = myGewinnBySeasonId.get(season.id)
+            return (
+              <li key={season.id}>
+                <Link
+                  to={`/seasons/${season.id}`}
+                  className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-slate-50"
+                >
+                  <span className="font-medium text-slate-900">{season.name}</span>
+                  <div className="flex items-center gap-3">
+                    {myGewinn !== undefined && (
+                      <span className="text-sm font-medium text-emerald-600">{currencyFormatter.format(myGewinn)}</span>
+                    )}
+                    <Badge tone="positive">{season.status}</Badge>
+                  </div>
+                </Link>
+              </li>
+            )
+          })}
         </ul>
       )}
 

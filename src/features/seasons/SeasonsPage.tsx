@@ -9,7 +9,8 @@ import { listAllTransactions } from '../balances/balancesApi'
 import { SeasonForm } from './SeasonForm'
 import { createSeason, listSeasons } from './seasonsApi'
 import { listAllMatchdays } from './matchdaysApi'
-import type { Matchday, Player, Season, Transaction } from '../../types/database'
+import { listAllSeasonParticipants } from './seasonParticipantsApi'
+import type { Matchday, Player, Season, SeasonParticipant, Transaction } from '../../types/database'
 
 export function SeasonsPage() {
   const { profile, can } = useAuth()
@@ -19,6 +20,7 @@ export function SeasonsPage() {
   const [players, setPlayers] = useState<Player[]>([])
   const [matchdays, setMatchdays] = useState<Matchday[]>([])
   const [transactions, setTransactions] = useState<Transaction[]>([])
+  const [participants, setParticipants] = useState<SeasonParticipant[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showForm, setShowForm] = useState(false)
@@ -26,16 +28,18 @@ export function SeasonsPage() {
   async function reload() {
     setLoading(true)
     try {
-      const [seasonData, playerData, matchdayData, transactionData] = await Promise.all([
+      const [seasonData, playerData, matchdayData, transactionData, participantData] = await Promise.all([
         listSeasons(),
         listPlayers(),
         listAllMatchdays(),
         listAllTransactions(),
+        listAllSeasonParticipants(),
       ])
       setSeasons(seasonData)
       setPlayers(playerData)
       setMatchdays(matchdayData)
       setTransactions(transactionData)
+      setParticipants(participantData)
       setError(null)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Saisons konnten nicht geladen werden.')
@@ -52,9 +56,15 @@ export function SeasonsPage() {
 
   // Eigener Gesamtgewinn je Saison, analog zur Berechnung auf der
   // Saison-Detailseite: nur Spieltage mit Status "abgerechnet" zählen, dazu
-  // die Gesamtwertung, sofern auch diese schon abgerechnet ist.
-  function myGesamtgewinnForSeason(season: Season): number {
-    if (!myPlayer) return 0
+  // die Gesamtwertung, sofern auch diese schon abgerechnet ist. Liefert
+  // `undefined`, wenn der aktuelle User (typischerweise Admin/Spielleiter mit
+  // Blick auf fremde Saisons) dort gar kein Teilnehmer ist – das unterscheidet
+  // "kein Gewinn ausgewiesen" von "0,00 € Gewinn" (Teilnehmer ohne bisherige
+  // Auszahlung).
+  function myGesamtgewinnForSeason(season: Season): number | undefined {
+    if (!myPlayer) return undefined
+    const isParticipant = participants.some((p) => p.season_id === season.id && p.player_id === myPlayer.id)
+    if (!isParticipant) return undefined
     const abgerechnetMatchdayIds = new Set(
       matchdays.filter((m) => m.season_id === season.id && m.status === 'abgerechnet').map((m) => m.id),
     )
@@ -91,25 +101,30 @@ export function SeasonsPage() {
         <p className="text-sm text-slate-500">Noch keine Saisons angelegt.</p>
       ) : (
         <ul className="divide-y divide-slate-200 overflow-hidden rounded-xl border border-slate-200 bg-white">
-          {seasons.map((season) => (
-            <li key={season.id}>
-              <Link
-                to={`/seasons/${season.id}`}
-                className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-slate-50"
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium text-slate-900">{season.name}</p>
-                  <p className="truncate text-sm text-slate-500">
-                    {season.start_date} – {season.end_date}
-                  </p>
-                </div>
-                <span className="shrink-0 text-right text-sm font-medium text-emerald-600">
-                  {currencyFormatter.format(myGesamtgewinnForSeason(season))}
-                </span>
-                <Badge tone={season.status === 'aktiv' ? 'positive' : 'neutral'}>{season.status}</Badge>
-              </Link>
-            </li>
-          ))}
+          {seasons.map((season) => {
+            const myGewinn = myGesamtgewinnForSeason(season)
+            return (
+              <li key={season.id}>
+                <Link
+                  to={`/seasons/${season.id}`}
+                  className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-slate-50"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-medium text-slate-900">{season.name}</p>
+                    <p className="truncate text-sm text-slate-500">
+                      {season.start_date} – {season.end_date}
+                    </p>
+                  </div>
+                  {myGewinn !== undefined && (
+                    <span className="shrink-0 text-right text-sm font-medium text-emerald-600">
+                      {currencyFormatter.format(myGewinn)}
+                    </span>
+                  )}
+                  <Badge tone={season.status === 'aktiv' ? 'positive' : 'neutral'}>{season.status}</Badge>
+                </Link>
+              </li>
+            )
+          })}
         </ul>
       )}
 
