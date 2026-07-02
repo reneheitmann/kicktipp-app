@@ -45,8 +45,13 @@ export function AppShell() {
 
       <div className="flex min-h-0 flex-1 flex-col">
         {/* Mobile Top-Bar: Hamburger öffnet die Navigation (ersetzt die
-            frühere Bottom-Nav), Konto-Button rechts wie bisher. */}
-        <header className="flex items-center justify-between gap-2 border-b border-slate-200 bg-white px-4 py-3 md:hidden">
+            frühere Bottom-Nav), Konto-Button rechts wie bisher. "relative",
+            damit das Dropdown darunter direkt an der Hamburger-Ecke andockt
+            statt (wie das gemeinsame Modal) unten am Bildschirmrand
+            aufzuklappen – ein Menü, das von einem oben-links sitzenden
+            Button ausgeht, wird sonst leicht als "woanders herkommend"
+            wahrgenommen. */}
+        <header className="relative flex items-center justify-between gap-2 border-b border-slate-200 bg-white px-4 py-3 md:hidden">
           <div className="flex min-w-0 items-center gap-2">
             <button
               onClick={() => setNavMenuOpen(true)}
@@ -79,29 +84,33 @@ export function AppShell() {
               )}
             </span>
           </button>
-        </header>
 
-        {navMenuOpen && (
-          <Modal title="Menü" onClose={() => setNavMenuOpen(false)}>
-            <nav className="space-y-1">
-              {items.map((item) => (
-                <NavLink
-                  key={item.to}
-                  to={item.to}
-                  end={item.to === '/'}
-                  onClick={() => setNavMenuOpen(false)}
-                  className={({ isActive }) =>
-                    `flex items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium ${
-                      isActive ? linkActiveClasses : 'text-slate-700 hover:bg-slate-100'
-                    }`
-                  }
-                >
-                  <span>{item.label}</span>
-                </NavLink>
-              ))}
-            </nav>
-          </Modal>
-        )}
+          {navMenuOpen && (
+            <>
+              {/* Unsichtbarer Vollflächen-Layer statt eines abgedunkelten
+                  Modal-Backdrops: das Dropdown soll wie ein Menü wirken,
+                  nicht wie ein Dialog – Klick daneben schließt es trotzdem. */}
+              <div className="fixed inset-0 z-20" onClick={() => setNavMenuOpen(false)} />
+              <nav className="absolute left-4 top-full z-30 mt-1 w-64 max-w-[calc(100vw-2rem)] space-y-1 rounded-xl border border-slate-200 bg-white p-2 shadow-lg">
+                {items.map((item) => (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    end={item.to === '/'}
+                    onClick={() => setNavMenuOpen(false)}
+                    className={({ isActive }) =>
+                      `flex items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium ${
+                        isActive ? linkActiveClasses : 'text-slate-700 hover:bg-slate-100'
+                      }`
+                    }
+                  >
+                    <span>{item.label}</span>
+                  </NavLink>
+                ))}
+              </nav>
+            </>
+          )}
+        </header>
 
         {accountMenuOpen && (
           <Modal title={profile?.name ?? 'Konto'} onClose={() => setAccountMenuOpen(false)}>
