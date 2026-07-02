@@ -116,6 +116,10 @@ jobs:
             # Gesamtzahl der Commits auf beta als "hochzählende" Versionszahl,
             # da package.json hier nie gebumpt wird (siehe vite.config.ts).
             echo "beta_build_number=$(git rev-list --count HEAD)" >> "$GITHUB_OUTPUT"
+            # Zuletzt tatsächlich veröffentlichte Version aus origin/mains
+            # package.json (NICHT dem lokalen, das auf beta nie aktualisiert
+            # wird) – Basis für die "_beta.<n>"-Anzeige, siehe vite.config.ts.
+            echo "beta_base_version=$(git show origin/main:package.json | node -e "process.stdin.on('data',d=>console.log(JSON.parse(d).version))")" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Image bauen und veröffentlichen
@@ -132,6 +136,7 @@ jobs:
             VITE_APP_CHANNEL=${{ steps.tags.outputs.channel }}
             VITE_APP_CHANGELOG=${{ steps.changelog.outputs.changelog }}
             VITE_APP_BETA_BUILD_NUMBER=${{ steps.tags.outputs.beta_build_number }}
+            VITE_APP_BETA_BASE_VERSION=${{ steps.tags.outputs.beta_base_version }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 

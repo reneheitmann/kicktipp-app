@@ -1,5 +1,7 @@
-// Baut die Änderungsliste für die "Über"-Seite: die letzten 10 Versionen
-// samt der Commit-Betreffzeilen, die zu jeder Version geführt haben.
+// Baut die Änderungsliste für die "Über"-Seite: alle Versionen der aktuellen
+// Minor-Version (z. B. alle 1.1.x, sobald 1.2.0 kommt fängt die Liste bei
+// 1.2.0 neu an) samt der Commit-Betreffzeilen, die zu jeder Version geführt
+// haben.
 //
 // Versions-Historie kommt IMMER aus origin/main (dort passiert der einzige
 // automatische Versions-Bump, siehe docker-publish.yml) – auch wenn dieser
@@ -65,11 +67,20 @@ entries.push({
   changes: commitSubjects(bumps[0] ? bumps[0].hash : null, 'HEAD'),
 })
 
-for (let i = 0; i < bumps.length && entries.length < 10; i++) {
+// Auf main ist die aktuell gebaute (pendingVersion) die verlässliche
+// Referenz für die Minor-Version; auf beta ist pendingVersion nur ein
+// Platzhalter-Label, daher dort stattdessen die zuletzt tatsächlich
+// veröffentlichte (bumps[0]) als Referenz.
+const referenceVersion = branch === 'main' ? pendingVersion : bumps[0]?.version
+const majorMinorMatch = referenceVersion ? referenceVersion.match(/^(\d+\.\d+)\./) : null
+const majorMinor = majorMinorMatch ? majorMinorMatch[1] : null
+
+for (let i = 0; i < bumps.length; i++) {
+  if (majorMinor && !bumps[i].version.startsWith(`${majorMinor}.`)) break
   const sinceHash = bumps[i + 1] ? bumps[i + 1].hash : null
   entries.push({ version: bumps[i].version, changes: commitSubjects(sinceHash, bumps[i].hash) })
 }
 
-const result = entries.filter((e) => e.changes.length > 0).slice(0, 10)
+const result = entries.filter((e) => e.changes.length > 0)
 
 process.stdout.write(JSON.stringify(result))

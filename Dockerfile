@@ -43,6 +43,13 @@ ENV VITE_APP_CHANNEL=$VITE_APP_CHANNEL
 ARG VITE_APP_BETA_BUILD_NUMBER
 ENV VITE_APP_BETA_BUILD_NUMBER=$VITE_APP_BETA_BUILD_NUMBER
 
+# Ebenfalls nur auf beta: die zuletzt tatsächlich von main veröffentlichte
+# Versionsnummer (aus origin/mains package.json gelesen, siehe
+# docker-publish.yml) – NICHT das lokale package.json, das auf beta nie
+# aktualisiert wird und sonst dauerhaft eine veraltete Zahl zeigen würde.
+ARG VITE_APP_BETA_BASE_VERSION
+ENV VITE_APP_BETA_BASE_VERSION=$VITE_APP_BETA_BASE_VERSION
+
 RUN npm run build
 
 FROM nginx:alpine AS runtime
