@@ -1,20 +1,24 @@
 name: Docker Image bauen und veröffentlichen
 
-# Baut bei jedem Push nach main automatisch ein neues Docker-Image und lädt
-# es zur GitHub Container Registry hoch. Auf Unraid zieht Watchtower dieses
-# Image periodisch und startet den Container neu, sobald ein neues Image
-# verfügbar ist – kein manueller Schritt auf dem Server nötig.
+# Baut bei jedem Push nach main ODER beta automatisch ein neues Docker-Image
+# und lädt es zur GitHub Container Registry hoch:
+#   main -> Tags :latest und :<sha>       (Produktion, Watchtower zieht :latest)
+#   beta -> Tags :beta und :beta-<sha>    (zweiter Unraid-Container zum Testen)
+# Auf Unraid zieht Watchtower das jeweilige Image periodisch und startet den
+# Container neu, sobald ein neues verfügbar ist – kein manueller Schritt nötig.
 #
-# Erhöht dabei automatisch die Patch-Version in package.json (z. B. 1.1.0 ->
-# 1.1.1), außer package.json wurde im selben Push bereits selbst geändert
-# (z. B. um bewusst auf eine neue Minor-/Major-Version zu springen, wie den
-# Sprung auf 1.1.0) – dann bleibt die manuell gesetzte Version unangetastet.
-# Der Versions-Bump wird mit "[skip ci]" zurückcommitted, damit das keinen
-# weiteren Workflow-Lauf auslöst (von GitHub Actions nativ unterstützt).
+# Nur auf main wird zusätzlich automatisch die Patch-Version in package.json
+# erhöht (z. B. 1.1.0 -> 1.1.1), außer package.json wurde im selben Push
+# bereits selbst geändert (z. B. um bewusst auf eine neue Minor-/Major-Version
+# zu springen) – dann bleibt die manuell gesetzte Version unangetastet. Beta-
+# Builds lassen die Versionsnummer unverändert (Commit-SHA im Image-Tag reicht
+# zur Unterscheidung); der Versions-Bump wird mit "[skip ci]" zurückcommitted,
+# damit das keinen weiteren Workflow-Lauf auslöst (von GitHub Actions nativ
+# unterstützt).
 
 on:
   push:
-    branches: [main]
+    branches: [main, beta]
   workflow_dispatch:
 
 env:
@@ -34,8 +38,9 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Patch-Version automatisch erhöhen
+      - name: Patch-Version automatisch erhöhen (nur main)
         id: bump
+        if: github.ref == 'refs/heads/main'
         run: |
           if [ -n "${{ github.event.before }}" ] \
             && git cat-file -e "${{ github.event.before }}" 2>/dev/null \
@@ -67,14 +72,31 @@ jobs:
           echo "commit_sha=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
           echo "build_date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
 
+      - name: Image-Tags bestimmen
+        id: tags
+        run: |
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            {
+              echo "tags<<EOF"
+              echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
+              echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"
+              echo "EOF"
+            } >> "$GITHUB_OUTPUT"
+          else
+            {
+              echo "tags<<EOF"
+              echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:beta"
+              echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:beta-${{ github.sha }}"
+              echo "EOF"
+            } >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Image bauen und veröffentlichen
         uses: docker/build-push-action@v6
         with:
           context: .
           push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          tags: ${{ steps.tags.outputs.tags }}
           build-args: |
             VITE_SUPABASE_URL=${{ secrets.VITE_SUPABASE_URL }}
             VITE_SUPABASE_ANON_KEY=${{ secrets.VITE_SUPABASE_ANON_KEY }}
@@ -84,7 +106,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Versions-Bump zurück ins Repo committen
-        if: steps.bump.outputs.bumped == 'true'
+        if: github.ref == 'refs/heads/main' && steps.bump.outputs.bumped == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"

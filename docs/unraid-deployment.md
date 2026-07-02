@@ -9,21 +9,31 @@ separat angegangen werden.
 
 ## Funktionsweise
 
-1. Bei jedem Push nach `main` baut **GitHub Actions** automatisch ein
-   Docker-Image (statischer React-Build, ausgeliefert über nginx) und lädt es
-   in die **GitHub Container Registry** (`ghcr.io`) hoch.
-2. Auf Unraid läuft der Container einmalig eingerichtet dauerhaft.
+1. Bei jedem Push nach `main` **oder `beta`** baut **GitHub Actions**
+   automatisch ein Docker-Image (statischer React-Build, ausgeliefert über
+   nginx) und lädt es in die **GitHub Container Registry** (`ghcr.io`) hoch –
+   `main` als `:latest`, `beta` als `:beta` (jeweils zusätzlich mit dem
+   Commit-Hash als eigenem Tag).
+2. Auf Unraid laufen **zwei** Container dauerhaft: `kicktipp-app` (Produktion,
+   zieht `:latest`) und `kicktipp-app-beta` (zum Testen, zieht `:beta`) –
+   Einrichtung für den zweiten Container siehe 2.1b.
 3. **Watchtower** (ein weiterer, kleiner Container auf Unraid) prüft
-   regelmäßig, ob ein neues Image verfügbar ist, zieht es automatisch und
-   startet den App-Container neu – ganz ohne manuellen Schritt auf dem
+   regelmäßig, ob eines der beiden Images neu ist, zieht es automatisch und
+   startet den jeweiligen Container neu – ganz ohne manuellen Schritt auf dem
    Server.
 
 ```
-Code-Änderung → git push → GitHub Actions baut Image → ghcr.io
-                                                            │
-                                                    Watchtower zieht neues Image
-                                                            │
-                                                    Unraid-Container neu gestartet
+Code-Änderung (lokal) → git push nach beta → GitHub Actions baut :beta → ghcr.io
+                                                                             │
+                                                          Watchtower aktualisiert kicktipp-app-beta
+                                                                             │
+                                                              (auf beta testen)
+                                                                             │
+                                          "auf Prod übernehmen" → beta wird nach main gemerged
+                                                                             │
+                                              GitHub Actions baut :latest → ghcr.io
+                                                                             │
+                                                            Watchtower aktualisiert kicktipp-app
 ```
 
 ## Teil 1 – Einmalige Einrichtung in GitHub
@@ -191,6 +201,35 @@ Geräte im Netzwerk können). Für den Zugriff per Browser von einem PC/Handy
 im selben WLAN/LAN ist das unerheblich – nur ein `curl` direkt vom
 Unraid-Server aus auf die Container-IP würde nicht funktionieren.
 
+### 2.1b Beta-Container (optional, zum Testen vor Prod)
+
+Läuft parallel zum Produktions-Container, genau nach demselben Muster wie
+2.1 – nur mit anderem Namen, eigener IP und dem `:beta`-Tag statt `:latest`.
+So lassen sich Änderungen auf `beta` erst live ausprobieren, bevor sie nach
+`main` übernommen werden.
+
+**Über die WebGUI**: wie in 2.1 Variante A, aber:
+- **Name**: `kicktipp-app-beta`
+- **Repository**: `ghcr.io/reneheitmann/kicktipp-app:beta`
+- **Fixed IP address**: eine *andere* freie IP als der Prod-Container (z. B.
+  `192.168.1.51`)
+- `LISTEN_PORT` und Icon URL wie in 2.1 Schritt 6/7
+
+**Über die Konsole/SSH**:
+```bash
+docker run -d \
+  --name kicktipp-app-beta \
+  --restart unless-stopped \
+  --network br0 \
+  --ip 192.168.1.51 \
+  -e LISTEN_PORT=8080 \
+  ghcr.io/reneheitmann/kicktipp-app:beta
+```
+
+Beide Container zeigen auf dasselbe Supabase-Backend (dieselbe Datenbank) –
+für getrennte Testdaten wäre ein eigenes Supabase-Projekt nötig, das ist
+nicht Teil dieser Einrichtung.
+
 ### 2.2 Watchtower für automatische Updates installieren
 
 ```bash
@@ -201,16 +240,18 @@ docker run -d \
   containrrr/watchtower \
   --interval 300 \
   --cleanup \
-  kicktipp-app
+  kicktipp-app kicktipp-app-beta
 ```
 
 - `--interval 300` prüft alle 5 Minuten auf ein neues Image (nach Bedarf
   anpassen, z. B. `3600` für stündlich).
 - `--cleanup` löscht alte, nicht mehr genutzte Images automatisch, damit
   der Unraid-Speicher nicht vollläuft.
-- Der Container-Name `kicktipp-app` am Ende sorgt dafür, dass Watchtower
-  **ausschließlich** diesen Container überwacht – andere, unabhängig auf
-  Unraid laufende Container bleiben unangetastet.
+- Die Container-Namen `kicktipp-app kicktipp-app-beta` am Ende sorgen dafür,
+  dass Watchtower **ausschließlich** diese beiden Container überwacht –
+  andere, unabhängig auf Unraid laufende Container bleiben unangetastet.
+  Läuft nur der Prod-Container (kein Beta-Container eingerichtet), einfach
+  `kicktipp-app-beta` weglassen.
 - Watchtower selbst bleibt bewusst im normalen Docker-Netzwerk (kein
   `--network br0`) – er braucht nur Zugriff auf den Docker-Socket, um
   Images zu ziehen und Container neu zu starten, keine eigene Erreichbarkeit
@@ -220,6 +261,11 @@ docker run -d \
 **Community Applications** (Apps-Tab in Unraid, dort nach „Watchtower“
 suchen) – dort lassen sich dieselben Optionen über Eingabefelder statt der
 Kommandozeile setzen.
+
+**Bereits laufende Watchtower-Instanz um den Beta-Container erweitern:**
+Container `watchtower` → **Edit** → im Feld mit den Extra-Parametern/dem
+Kommandozeilen-Argument `kicktipp-app-beta` hinter `kicktipp-app` ergänzen
+→ **Apply** (Container wird neu gestartet, überwacht danach beide).
 
 ### 2.3 Testen
 
@@ -233,13 +279,18 @@ Kommandozeile setzen.
 
 ## Teil 3 – Ein Update auslösen (zum Ausprobieren)
 
-1. Eine kleine Änderung im Code machen, committen, `git push`.
+1. Eine kleine Änderung im Code machen, committen, `git push` **nach `beta`**.
 2. Im GitHub-Repo unter **Actions** den Workflow-Lauf beobachten (dauert je
-   nach Build ca. 1–3 Minuten).
+   nach Build ca. 1–3 Minuten) – baut `:beta`.
 3. Nach Abschluss: bis zu `--interval`-Sekunden warten (siehe 2.2), dann
    `docker logs watchtower` auf Unraid prüfen – dort erscheint ein Eintrag,
-   sobald das neue Image gezogen und der Container neu gestartet wurde.
-4. Die Änderung sollte danach unter `http://192.168.1.50:8080` sichtbar sein.
+   sobald das neue Image gezogen und `kicktipp-app-beta` neu gestartet wurde.
+4. Die Änderung sollte danach unter `http://192.168.1.51:8080` (Beta-IP)
+   sichtbar sein.
+5. Passt alles: `beta` nach `main` mergen und pushen (z. B.
+   `git checkout main && git merge beta && git push origin main`) – das
+   baut `:latest` neu, Watchtower aktualisiert danach `kicktipp-app`
+   (Produktion) unter `http://192.168.1.50:8080`.
 
 ## Ausblick (nicht Teil dieser Anleitung)
 
