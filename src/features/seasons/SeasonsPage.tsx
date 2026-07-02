@@ -10,11 +10,10 @@ import { SeasonForm } from './SeasonForm'
 import { createSeason, listSeasons } from './seasonsApi'
 import { listAllMatchdays } from './matchdaysApi'
 import { listAllSeasonParticipants } from './seasonParticipantsApi'
-import { isSeasonVisibleAsUser } from './seasonVisibility'
 import type { Matchday, Player, Season, SeasonParticipant, Transaction } from '../../types/database'
 
 export function SeasonsPage() {
-  const { profile, can, viewAsUser } = useAuth()
+  const { profile, can } = useAuth()
   const canManage = can('seasons.manage')
 
   const [seasons, setSeasons] = useState<Season[]>([])
@@ -54,14 +53,6 @@ export function SeasonsPage() {
   }, [])
 
   const myPlayer = players.find((p) => p.profile_id === profile?.id)
-
-  // Während der "Spieler-Vorschau" clientseitig nachbilden, was ein echter
-  // "user"-Account per RLS ohnehin nur zu sehen bekäme (nur Saisons mit
-  // eigener Teilnahme) – die echte DB-Session bleibt admin, RLS filtert hier
-  // also nicht automatisch mit.
-  const visibleSeasons = viewAsUser
-    ? seasons.filter((s) => isSeasonVisibleAsUser(s.id, myPlayer?.id, participants))
-    : seasons
 
   // Eigener Gesamtgewinn je Saison, analog zur Berechnung auf der
   // Saison-Detailseite: nur Spieltage mit Status "abgerechnet" zählen, dazu
@@ -106,13 +97,11 @@ export function SeasonsPage() {
 
       {loading ? (
         <p className="text-sm text-slate-500">Lade...</p>
-      ) : visibleSeasons.length === 0 ? (
-        <p className="text-sm text-slate-500">
-          {seasons.length === 0 ? 'Noch keine Saisons angelegt.' : 'Keine Saisons mit eigener Teilnahme.'}
-        </p>
+      ) : seasons.length === 0 ? (
+        <p className="text-sm text-slate-500">Noch keine Saisons angelegt.</p>
       ) : (
         <ul className="divide-y divide-slate-200 overflow-hidden rounded-xl border border-slate-200 bg-white">
-          {visibleSeasons.map((season) => {
+          {seasons.map((season) => {
             const myGewinn = myGesamtgewinnForSeason(season)
             return (
               <li key={season.id}>
