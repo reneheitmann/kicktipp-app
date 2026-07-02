@@ -12,21 +12,11 @@ const linkInactiveClasses = 'text-slate-600 hover:bg-slate-100'
 const roleLabels = { admin: 'Administrator', spielleiter: 'Spielleiter', user: 'Spieler' } as const
 
 export function AppShell() {
-  const { profile, signOut, can, switchBackToBaseRole } = useAuth()
+  const { profile, signOut, can } = useAuth()
   const { appName } = useAppBranding()
   const items = visibleNavItems(profile?.role, can)
   const [accountMenuOpen, setAccountMenuOpen] = useState(false)
   const [navMenuOpen, setNavMenuOpen] = useState(false)
-  const [switchingBack, setSwitchingBack] = useState(false)
-  const [switchBackError, setSwitchBackError] = useState<string | null>(null)
-
-  async function handleSwitchBack() {
-    setSwitchingBack(true)
-    setSwitchBackError(null)
-    const { error } = await switchBackToBaseRole()
-    if (error) setSwitchBackError(error)
-    setSwitchingBack(false)
-  }
 
   return (
     <div className="flex h-full flex-col md:flex-row">
@@ -77,8 +67,16 @@ export function AppShell() {
             aria-label="Konto-Menü öffnen"
             className="flex shrink-0 items-center gap-2 rounded-full py-1 pl-1 pr-2.5 active:bg-slate-100"
           >
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-200 text-xs font-semibold text-slate-700">
+            <span className="relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-200 text-xs font-semibold text-slate-700">
               {getInitials(profile?.name)}
+              {profile?.base_role && (
+                <span
+                  title={`Du agierst als Spieler (eigentliche Rolle: ${roleLabels[profile.base_role]})`}
+                  className="absolute -right-1 -top-1 text-[11px] leading-none text-amber-500"
+                >
+                  ★
+                </span>
+              )}
             </span>
           </button>
         </header>
@@ -139,22 +137,6 @@ export function AppShell() {
           </Modal>
         )}
 
-        {profile?.base_role && (
-          <div className="flex flex-col gap-2 border-b border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800 sm:flex-row sm:items-center sm:justify-between">
-            <span>
-              Du agierst aktuell als Spieler (eigentliche Rolle: {roleLabels[profile.base_role]})
-              {switchBackError && <span className="block text-red-600 sm:inline sm:ml-2">{switchBackError}</span>}
-            </span>
-            <button
-              onClick={handleSwitchBack}
-              disabled={switchingBack}
-              className="shrink-0 self-start rounded-lg bg-amber-100 px-3 py-1.5 text-xs font-medium hover:bg-amber-200 disabled:opacity-60 sm:self-auto"
-            >
-              {switchingBack ? 'Wechsle zurück...' : `Zurück zu ${roleLabels[profile.base_role]}`}
-            </button>
-          </div>
-        )}
-
         <main className="flex-1 overflow-y-auto">
           <Outlet />
         </main>
@@ -198,11 +180,15 @@ function UserFooter({
   return (
     <div className="mt-4 border-t border-slate-200 pt-4">
       <NavLink to="/profil" className="block rounded-lg px-2 py-1.5 hover:bg-slate-100">
-        <p className="text-sm font-medium text-slate-900">{name}</p>
-        <p className="text-xs text-slate-500">
-          {role && roleLabels[role]}
-          {baseRole && ` (eigentliche Rolle: ${roleLabels[baseRole]})`}
+        <p className="flex items-center gap-1 text-sm font-medium text-slate-900">
+          {name}
+          {baseRole && (
+            <span title={`Du agierst als Spieler (eigentliche Rolle: ${roleLabels[baseRole]})`} className="text-amber-500">
+              ★
+            </span>
+          )}
         </p>
+        <p className="text-xs text-slate-500">{role && roleLabels[role]}</p>
       </NavLink>
       <NavLink
         to="/ueber"
