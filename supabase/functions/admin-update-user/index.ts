@@ -63,23 +63,25 @@ async function handle(req: Request, supabaseUrl: string, serviceRoleKey: string)
     return jsonResponse({ error: 'Nur aktive Administratoren dürfen Benutzer bearbeiten.' }, 403)
   }
 
-  let body: { userId?: string; name?: string; email?: string }
+  let body: { userId?: string; name?: string; vorname?: string; nachname?: string; email?: string }
   try {
     body = await req.json()
   } catch {
     return jsonResponse({ error: 'Ungültiger Request-Body' }, 400)
   }
 
-  const { userId, name, email } = body
+  const { userId, name, vorname, nachname, email } = body
   if (!userId?.trim() || !name?.trim() || !email?.trim()) {
     return jsonResponse({ error: 'Benutzer, Name und E-Mail sind erforderlich.' }, 400)
   }
 
   const adminClient = createClient(supabaseUrl, serviceRoleKey)
+  const trimmedVorname = vorname?.trim() || null
+  const trimmedNachname = nachname?.trim() || null
 
   const { error: updateAuthError } = await adminClient.auth.admin.updateUserById(userId, {
     email: email.trim(),
-    user_metadata: { name: name.trim() },
+    user_metadata: { name: name.trim(), vorname: trimmedVorname, nachname: trimmedNachname },
   })
   if (updateAuthError) {
     return jsonResponse({ error: updateAuthError.message }, 400)
@@ -89,7 +91,7 @@ async function handle(req: Request, supabaseUrl: string, serviceRoleKey: string)
   // einer späteren Änderung – daher hier explizit auch profiles aktualisieren.
   const { error: updateProfileError } = await adminClient
     .from('profiles')
-    .update({ name: name.trim(), email: email.trim() })
+    .update({ name: name.trim(), vorname: trimmedVorname, nachname: trimmedNachname, email: email.trim() })
     .eq('id', userId)
   if (updateProfileError) {
     return jsonResponse({ error: updateProfileError.message }, 400)

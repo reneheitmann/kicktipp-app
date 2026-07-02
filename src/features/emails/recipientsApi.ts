@@ -10,12 +10,16 @@ import { listSeasonParticipants } from '../seasons/seasonParticipantsApi'
 import type { Player, Profile } from '../../types/database'
 
 export type PlayerWithProfile = Player & {
-  profile: Pick<Profile, 'id' | 'name' | 'email' | 'is_active'> | null
+  profile: Pick<Profile, 'id' | 'name' | 'vorname' | 'nachname' | 'email' | 'is_active'> | null
 }
 
 export async function listPlayersWithProfiles(): Promise<PlayerWithProfile[]> {
   const data = await fetchAllRows<unknown>((from, to) =>
-    supabase.from('players').select('*, profile:profiles(id, name, email, is_active)').order('name').range(from, to),
+    supabase
+      .from('players')
+      .select('*, profile:profiles(id, name, vorname, nachname, email, is_active)')
+      .order('name')
+      .range(from, to),
   )
   return data as PlayerWithProfile[]
 }

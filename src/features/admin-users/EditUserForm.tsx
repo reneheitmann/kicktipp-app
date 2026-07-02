@@ -14,6 +14,8 @@ export function EditUserForm({
   onSaved: () => void
 }) {
   const [name, setName] = useState(profile.name)
+  const [vorname, setVorname] = useState(profile.vorname ?? '')
+  const [nachname, setNachname] = useState(profile.nachname ?? '')
   const [email, setEmail] = useState(profile.email ?? '')
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -29,7 +31,13 @@ export function EditUserForm({
     setSubmitting(true)
     setError(null)
     try {
-      await adminUpdateUser({ userId: profile.id, name: trimmedName, email: trimmedEmail })
+      await adminUpdateUser({
+        userId: profile.id,
+        name: trimmedName,
+        vorname: vorname.trim() || undefined,
+        nachname: nachname.trim() || undefined,
+        email: trimmedEmail,
+      })
       onSaved()
       onClose()
     } catch (err) {
@@ -54,6 +62,34 @@ export function EditUserForm({
             className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base focus:border-slate-900 focus:outline-none"
           />
         </div>
+
+        <div className="flex gap-3">
+          <div className="flex-1">
+            <label htmlFor="edit-user-vorname" className="mb-1 block text-sm font-medium text-slate-700">
+              Vorname
+            </label>
+            <input
+              id="edit-user-vorname"
+              value={vorname}
+              onChange={(e) => setVorname(e.target.value)}
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base focus:border-slate-900 focus:outline-none"
+            />
+          </div>
+          <div className="flex-1">
+            <label htmlFor="edit-user-nachname" className="mb-1 block text-sm font-medium text-slate-700">
+              Nachname
+            </label>
+            <input
+              id="edit-user-nachname"
+              value={nachname}
+              onChange={(e) => setNachname(e.target.value)}
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base focus:border-slate-900 focus:outline-none"
+            />
+          </div>
+        </div>
+        <p className="-mt-2 text-xs text-slate-400">
+          Optional – wird für die Personalisierung von E-Mails genutzt (Variablen {'{{Vorname}}'}/{'{{Nachname}}'}).
+        </p>
 
         <div>
           <label htmlFor="edit-user-email" className="mb-1 block text-sm font-medium text-slate-700">

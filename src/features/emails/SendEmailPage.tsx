@@ -35,6 +35,8 @@ const modeLabels: Record<RecipientMode, string> = {
 function recipientVariablesFor(player: PlayerWithProfile, balance: PlayerSeasonBalance): RecipientVariables {
   return {
     Spielername: player.name,
+    Vorname: player.profile?.vorname ?? '',
+    Nachname: player.profile?.nachname ?? '',
     Kicktippname: player.kicktipp_name ?? '',
     EMailadresse: player.profile?.email ?? '',
     OffenePosten: currencyFormatter.format(balance.offen),

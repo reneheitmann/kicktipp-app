@@ -4,6 +4,8 @@ import { supabase } from '../../lib/supabaseClient'
 interface UpdateUserInput {
   userId: string
   name: string
+  vorname?: string
+  nachname?: string
   email: string
 }
 

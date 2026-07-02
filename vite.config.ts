@@ -16,9 +16,16 @@ const pkg = JSON.parse(readFileSync(fileURLToPath(new URL('./package.json', impo
 // package.json selbst bumpt dort nie (würde bei jedem Merge mit main zu
 // Versions-Konflikten führen), sonst bliebe die angezeigte Version dauerhaft
 // bei der zuletzt von main gemergten Zahl stehen.
+//
+// Als Basis-Version dabei bewusst NICHT das lokale package.json verwenden
+// (das ist auf beta dauerhaft veraltet, siehe oben) – docker-publish.yml
+// liest stattdessen origin/mains package.json aus und reicht das als
+// VITE_APP_BETA_BASE_VERSION durch, damit hier immer die zuletzt tatsächlich
+// veröffentlichte Versionsnummer als Präfix steht.
 const betaBuildNumber = process.env.VITE_APP_BETA_BUILD_NUMBER
+const betaBaseVersion = process.env.VITE_APP_BETA_BASE_VERSION || pkg.version
 const displayVersion =
-  process.env.VITE_APP_CHANNEL === 'beta' && betaBuildNumber ? `${pkg.version}_beta.${betaBuildNumber}` : pkg.version
+  process.env.VITE_APP_CHANNEL === 'beta' && betaBuildNumber ? `${betaBaseVersion}_beta.${betaBuildNumber}` : pkg.version
 
 // https://vite.dev/config/
 export default defineConfig({
