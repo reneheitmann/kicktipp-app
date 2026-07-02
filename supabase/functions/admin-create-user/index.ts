@@ -26,13 +26,23 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: 'Method not allowed' }, 405)
   }
 
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+
+  try {
+    return await handle(req, supabaseUrl, serviceRoleKey)
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    await logAppError(supabaseUrl, serviceRoleKey, 'admin-create-user', message)
+    return jsonResponse({ error: `Unerwarteter Fehler: ${message}` }, 500)
+  }
+})
+
+async function handle(req: Request, supabaseUrl: string, serviceRoleKey: string): Promise<Response> {
   const authHeader = req.headers.get('Authorization')
   if (!authHeader) {
     return jsonResponse({ error: 'Nicht angemeldet' }, 401)
   }
-
-  const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
   // Client im Namen des Aufrufers, um dessen Identität/Rolle zu verifizieren.
   const callerClient = createClient(supabaseUrl, serviceRoleKey, {
@@ -92,7 +102,22 @@ Deno.serve(async (req) => {
   // (inkl. name/role aus user_metadata). Kein zusätzlicher Insert nötig.
 
   return jsonResponse({ id: created.user.id })
-})
+}
+
+async function logAppError(
+  supabaseUrl: string,
+  serviceRoleKey: string,
+  source: string,
+  message: string,
+  details?: Record<string, unknown>,
+) {
+  try {
+    const client = createClient(supabaseUrl, serviceRoleKey)
+    await client.from('app_logs').insert({ level: 'error', source, message, details: details ?? null })
+  } catch {
+    // Logging darf den eigentlichen Response-Pfad nicht zusätzlich zum Absturz bringen.
+  }
+}
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {

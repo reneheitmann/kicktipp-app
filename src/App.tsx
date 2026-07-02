@@ -16,6 +16,7 @@ import { AccountsOverviewPage } from './features/players/AccountsOverviewPage'
 import { AdminUsersPage } from './features/admin-users/AdminUsersPage'
 import { EmailSettingsPage } from './features/email-settings/EmailSettingsPage'
 import { RolesPermissionsPage } from './features/permissions/RolesPermissionsPage'
+import { LogsPage } from './features/logs/LogsPage'
 import { SeasonsPage } from './features/seasons/SeasonsPage'
 import { SeasonDetailPage } from './features/seasons/SeasonDetailPage'
 import { SeasonRankingPage } from './features/seasons/SeasonRankingPage'
@@ -111,6 +112,7 @@ export default function App() {
                   <Route path="/admin/email" element={<EmailSettingsPage />} />
                   <Route path="/admin/roles" element={<RolesPermissionsPage />} />
                   <Route path="/admin/branding" element={<AppSettingsPage />} />
+                  <Route path="/admin/logs" element={<LogsPage />} />
                 </Route>
               </Route>
             </Route>

@@ -212,6 +212,23 @@ export type AppSettings = {
   updated_by: string | null
 }
 
+// Fehler-/Ereignis-Log für Supportzwecke (unbehandelte Frontend-Fehler +
+// Backend-Fehler aus Edge Functions), siehe supabase/migrations/0030_app_logs.sql
+// und src/lib/logging.ts. INSERT ist bewusst für jeden offen (auch anon),
+// SELECT/DELETE hart admin-only.
+export type LogLevel = 'info' | 'warn' | 'error'
+
+export type AppLog = {
+  id: string
+  level: LogLevel
+  source: string
+  message: string
+  details: Record<string, unknown> | null
+  url: string | null
+  user_id: string | null
+  created_at: string
+}
+
 export type SmtpEncryption = 'none' | 'starttls' | 'tls'
 
 export type EmailSettings = {
@@ -536,6 +553,30 @@ export interface Database {
           primary_color?: string
           updated_at?: string
           updated_by?: string | null
+        }
+        Relationships: []
+      }
+      app_logs: {
+        Row: AppLog
+        Insert: {
+          id?: string
+          level: LogLevel
+          source: string
+          message: string
+          details?: Record<string, unknown> | null
+          url?: string | null
+          user_id?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          level?: LogLevel
+          source?: string
+          message?: string
+          details?: Record<string, unknown> | null
+          url?: string | null
+          user_id?: string | null
+          created_at?: string
         }
         Relationships: []
       }

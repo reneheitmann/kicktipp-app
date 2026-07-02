@@ -1,11 +1,12 @@
 import type { ReactNode } from 'react'
 
-type Tone = 'neutral' | 'positive' | 'warning'
+type Tone = 'neutral' | 'positive' | 'warning' | 'negative'
 
 const toneClasses: Record<Tone, string> = {
   neutral: 'bg-slate-100 text-slate-700',
   positive: 'bg-emerald-50 text-emerald-700',
   warning: 'bg-amber-50 text-amber-700',
+  negative: 'bg-red-50 text-red-700',
 }
 
 export function Badge({ tone = 'neutral', children }: { tone?: Tone; children: ReactNode }) {

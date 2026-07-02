@@ -26,13 +26,27 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: 'Method not allowed' }, 405)
   }
 
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+
+  // Unerwartete Ausnahmen (z. B. ein Netzwerkfehler beim Auth-Check) landen
+  // sonst als nackter 500er ohne CORS-Header beim Client – hier stattdessen
+  // geloggt und mit einer auswertbaren Fehlermeldung beantwortet, siehe
+  // Kommentar in smtp.ts zu genau diesem Absturzverhalten bei Edge Functions.
+  try {
+    return await handle(req, supabaseUrl, serviceRoleKey)
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    await logAppError(supabaseUrl, serviceRoleKey, 'send-email', message)
+    return jsonResponse({ error: `Unerwarteter Fehler: ${message}` }, 500)
+  }
+})
+
+async function handle(req: Request, supabaseUrl: string, serviceRoleKey: string): Promise<Response> {
   const authHeader = req.headers.get('Authorization')
   if (!authHeader) {
     return jsonResponse({ error: 'Nicht angemeldet' }, 401)
   }
-
-  const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
   const callerClient = createClient(supabaseUrl, serviceRoleKey, {
     global: { headers: { Authorization: authHeader } },
@@ -99,11 +113,33 @@ Deno.serve(async (req) => {
     )
   } catch (err) {
     const message = err instanceof SmtpError ? err.message : err instanceof Error ? err.message : String(err)
+    await logAppError(supabaseUrl, serviceRoleKey, 'send-email', message, {
+      to,
+      subject,
+      smtp_host: settings.smtp_host,
+      smtp_port: settings.smtp_port,
+      smtp_encryption: settings.smtp_encryption,
+    })
     return jsonResponse({ error: `SMTP-Fehler: ${message}` }, 502)
   }
 
   return jsonResponse({ ok: true })
-})
+}
+
+async function logAppError(
+  supabaseUrl: string,
+  serviceRoleKey: string,
+  source: string,
+  message: string,
+  details?: Record<string, unknown>,
+) {
+  try {
+    const client = createClient(supabaseUrl, serviceRoleKey)
+    await client.from('app_logs').insert({ level: 'error', source, message, details: details ?? null })
+  } catch {
+    // Logging darf den eigentlichen Response-Pfad nicht zusätzlich zum Absturz bringen.
+  }
+}
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
