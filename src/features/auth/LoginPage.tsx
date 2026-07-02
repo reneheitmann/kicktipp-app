@@ -1,9 +1,11 @@
 import { useState, type FormEvent } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from './useAuth'
+import { useAppBranding } from '../app-settings/useAppBranding'
 
 export function LoginPage() {
   const { session, signIn } = useAuth()
+  const { appName } = useAppBranding()
   const location = useLocation()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -30,7 +32,7 @@ export function LoginPage() {
   return (
     <div className="flex min-h-full items-center justify-center bg-slate-50 px-4 py-12">
       <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200 sm:p-8">
-        <h1 className="mb-1 text-xl font-semibold text-slate-900">Kicktipp Spielrunde</h1>
+        <h1 className="mb-1 text-xl font-semibold text-slate-900">{appName}</h1>
         <p className="mb-6 text-sm text-slate-500">Bitte melde dich mit deinen Zugangsdaten an.</p>
 
         {disabledHint && (
@@ -74,7 +76,7 @@ export function LoginPage() {
           <button
             type="submit"
             disabled={submitting}
-            className="w-full rounded-lg bg-slate-900 px-4 py-2.5 text-base font-medium text-white transition active:scale-[0.99] disabled:opacity-50"
+            className="w-full rounded-lg bg-[var(--color-primary)] px-4 py-2.5 text-base font-medium text-white transition active:scale-[0.99] disabled:opacity-50"
           >
             {submitting ? 'Anmelden...' : 'Anmelden'}
           </button>

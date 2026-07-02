@@ -185,6 +185,19 @@ export type EmailTemplate = {
   created_by: string | null
 }
 
+// Zur Laufzeit änderbares App-Branding (Anzeigename, Icon, Primärfarbe),
+// siehe src/features/app-settings/. Anders als alle anderen Settings-
+// Tabellen per RLS öffentlich lesbar (auch vor dem Login), da LoginPage.tsx
+// Name/Icon schon vor der Anmeldung anzeigt.
+export type AppSettings = {
+  id: string
+  app_name: string
+  icon_url: string | null
+  primary_color: string
+  updated_at: string
+  updated_by: string | null
+}
+
 export type SmtpEncryption = 'none' | 'starttls' | 'tls'
 
 export type EmailSettings = {
@@ -487,6 +500,26 @@ export interface Database {
           smtp_encryption?: SmtpEncryption
           sender_email?: string
           sender_name?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      app_settings: {
+        Row: AppSettings
+        Insert: {
+          id?: string
+          app_name?: string
+          icon_url?: string | null
+          primary_color?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          id?: string
+          app_name?: string
+          icon_url?: string | null
+          primary_color?: string
           updated_at?: string
           updated_by?: string | null
         }

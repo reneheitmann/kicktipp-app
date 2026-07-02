@@ -263,7 +263,9 @@ export function SendEmailPage() {
                   type="button"
                   onClick={() => setRecipientMode(mode)}
                   className={`rounded-full px-3 py-1.5 text-xs font-medium ${
-                    recipientMode === mode ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    recipientMode === mode
+                      ? 'bg-[var(--color-primary)] text-white'
+                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                   }`}
                 >
                   {modeLabels[mode]}

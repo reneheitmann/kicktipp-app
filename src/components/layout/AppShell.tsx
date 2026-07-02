@@ -1,20 +1,22 @@
 import { NavLink, Outlet } from 'react-router-dom'
 import { useAuth } from '../../features/auth/useAuth'
+import { useAppBranding } from '../../features/app-settings/useAppBranding'
 import { visibleNavItems } from './navItems'
 
 const linkBaseClasses = 'flex items-center rounded-lg px-3 py-2.5 text-sm font-medium transition'
-const linkActiveClasses = 'bg-slate-900 text-white'
+const linkActiveClasses = 'bg-[var(--color-primary)] text-white'
 const linkInactiveClasses = 'text-slate-600 hover:bg-slate-100'
 
 export function AppShell() {
   const { profile, signOut, can, viewAsUser, setViewAsUser } = useAuth()
+  const { appName } = useAppBranding()
   const items = visibleNavItems(profile?.role, can)
 
   return (
     <div className="flex h-full flex-col md:flex-row">
       {/* Desktop-Sidebar */}
       <aside className="hidden w-60 shrink-0 flex-col overflow-y-auto border-r border-slate-200 bg-white p-4 md:flex">
-        <div className="mb-6 px-2 text-lg font-semibold text-slate-900">Kicktipp Spielrunde</div>
+        <div className="mb-6 px-2 text-lg font-semibold text-slate-900">{appName}</div>
         <nav className="flex flex-1 flex-col gap-1">
           {items.map((item) => (
             <NavLink
@@ -36,7 +38,7 @@ export function AppShell() {
       <div className="flex min-h-0 flex-1 flex-col">
         {/* Mobile Top-Bar */}
         <header className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 md:hidden">
-          <span className="text-base font-semibold text-slate-900">Kicktipp Spielrunde</span>
+          <span className="text-base font-semibold text-slate-900">{appName}</span>
           <div className="flex items-center gap-1">
             <NavLink
               to="/profil"

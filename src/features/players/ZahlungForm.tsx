@@ -58,7 +58,7 @@ export function ZahlungForm({ playerName, seasons, initialSeasonId, onClose, onS
               onClick={() => setTyp('einzahlung')}
               className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium ${
                 typ === 'einzahlung'
-                  ? 'border-slate-900 bg-slate-900 text-white'
+                  ? 'border-[var(--color-primary)] bg-[var(--color-primary)] text-white'
                   : 'border-slate-300 text-slate-700'
               }`}
             >
@@ -69,7 +69,7 @@ export function ZahlungForm({ playerName, seasons, initialSeasonId, onClose, onS
               onClick={() => setTyp('auszahlung')}
               className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium ${
                 typ === 'auszahlung'
-                  ? 'border-slate-900 bg-slate-900 text-white'
+                  ? 'border-[var(--color-primary)] bg-[var(--color-primary)] text-white'
                   : 'border-slate-300 text-slate-700'
               }`}
             >

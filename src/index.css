@@ -6,6 +6,11 @@
 
 :root {
   color-scheme: light;
+  /* Laufzeit-konfigurierbare Primärfarbe (siehe AppBrandingProvider), Default
+     entspricht dem bisherigen slate-900/800 – ändert am Ist-Zustand nichts,
+     bis ein Admin unter "Erscheinungsbild" etwas anderes einstellt. */
+  --color-primary: #0f172a;
+  --color-primary-hover: #1e293b;
 }
 
 html,
