@@ -25,4 +25,13 @@ FROM nginx:alpine AS runtime
 COPY --from=build /app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
+# Von Unraids Docker-Manager gelesene Labels für Icon/WebUI-Link – nur PNG
+# wird von Unraid für das Icon-Label zuverlässig gerendert (SVG/WEBP nicht,
+# empirisch verifiziert). Greift zuverlässig bei Template-basiert erstellten
+# Containern (z. B. über "Add Container" in der WebUI); bei rein per
+# `docker run` erstellten Containern ggf. nicht, dann Icon-URL manuell im
+# Template-Feld setzen (siehe docs/unraid-deployment.md).
+LABEL net.unraid.docker.icon="https://raw.githubusercontent.com/reneheitmann/kicktipp-app/main/public/icon.png"
+LABEL net.unraid.docker.webui="http://[IP]/"
+
 EXPOSE 80

@@ -80,25 +80,95 @@ Konsole). Für den Einstieg wird die öffentliche Variante empfohlen.
 
 ## Teil 2 – Container auf Unraid einrichten
 
-Am einfachsten über die Unraid-Konsole (Unraid-WebUI → oben rechts das
-Terminal-Symbol) oder per SSH. Alternativ lassen sich dieselben Angaben auch
-über **Docker → Add Container** in der Unraid-WebUI eintragen (Repository =
-Image-Name, Port-Zuordnung wie unten) – die Befehle hier sind aber
-1:1 übertragbar und am robustesten unabhängig von der Unraid-Version.
+Zwei gleichwertige Wege, die denselben laufenden Container erzeugen:
 
-### 2.1 App-Container starten
+- **Über die Unraid-WebUI** (empfohlen): Unraid legt dabei automatisch ein
+  **Template** an, sodass der Container danach jederzeit über den Docker-Tab
+  mit **„Edit“** bequem über Eingabefelder angepasst werden kann (IP, Name,
+  Neustart-Richtlinie, …) – inklusive eigenem Icon/Direktlink im Dashboard.
+- **Über die Unraid-Konsole/SSH** (`docker run`): schneller zum Abtippen,
+  aber ohne Template – der Container läuft identisch, lässt sich im
+  Docker-Tab starten/stoppen/Logs ansehen, aber nicht komfortabel über eine
+  Formular-Maske bearbeiten.
+
+Watchtower (Abschnitt 2.2) funktioniert in beiden Fällen identisch, da es
+direkt mit dem Docker-Daemon spricht, unabhängig davon, wie der Container
+ursprünglich angelegt wurde.
+
+### 2.1 App-Container starten (Netzwerk: br0, eigene IP statt Port-Mapping)
+
+Der Container läuft im custom `br0`-Netzwerk (Macvlan) und bekommt dadurch
+eine **eigene IP-Adresse im LAN** – wie ein separates physisches Gerät,
+statt über einen Port am Unraid-Host erreichbar zu sein. nginx im Container
+hört direkt auf Port 80 unter dieser eigenen IP.
+
+Zuerst eine **freie IP-Adresse** im eigenen LAN-Subnetz wählen (außerhalb
+des DHCP-Bereichs des Routers, damit sie nicht später doppelt vergeben
+wird) – z. B. `192.168.1.50`, je nach eigenem Subnetz anpassen. Das Subnetz
+selbst steht in Unraid unter **Settings → Network Settings** (Feld
+„IPv4 address“/„Subnet mask“ von `eth0`).
+
+**Voraussetzung:** `br0` muss in Unraid als Netzwerk existieren – Standard,
+sobald unter **Settings → Docker → „Host access to custom networks“**
+aktiviert ist. Ist das nicht der Fall, dort einmalig aktivieren (Docker-
+Dienst wird kurz neu gestartet).
+
+#### Variante A: über die WebGUI (empfohlen, später über „Edit“ änderbar)
+
+1. **Docker**-Tab → unten **Add Container**
+2. **Name**: `kicktipp-app`
+3. **Repository**: `ghcr.io/reneheitmann/kicktipp-app:latest`
+4. **Network Type**: `Custom: br0` auswählen
+5. Dadurch erscheint ein Feld **Fixed IP address**: die gewählte freie IP
+   eintragen (z. B. `192.168.1.50`)
+6. **Icon URL**-Feld:
+   `https://raw.githubusercontent.com/reneheitmann/kicktipp-app/main/public/icon.png`
+   (**wichtig: PNG, kein SVG** – Unraid rendert SVG/WEBP für dieses Feld
+   nicht zuverlässig, sondern zeigt weiterhin das Fragezeichen)
+7. **WebUI**-Feld (optional, für den Direktlink im Unraid-Dashboard):
+   `http://[IP]/`
+8. **Restart Policy**: `Unless stopped`/`Always` (Feld meist unter „Show
+   more settings…“ bzw. „Extra Parameters“, je nach Unraid-Version)
+9. **Apply**
+
+Der Container erscheint danach im Docker-Tab und lässt sich jederzeit über
+sein Icon → **Edit** mit genau diesen Feldern erneut anpassen.
+
+**Icon/WebUI automatisch aus dem Image übernehmen:** Das Docker-Image
+enthält bereits die Labels `net.unraid.docker.icon` und
+`net.unraid.docker.webui` (siehe `Dockerfile`) – Unraid kann Icon und
+WebUI-Link daraus automatisch übernehmen, sodass Feld 6/7 oben theoretisch
+entfallen könnten. Das greift zuverlässig bei Containern, die – wie hier
+beschrieben – über **Add Container** (also template-basiert) erstellt
+wurden; bei reinen `docker run`-Containern (Variante B) wird das Icon-Label
+laut Unraid-Community teils nicht ausgewertet. Um auf Nummer sicher zu
+gehen, die Felder trotzdem wie oben manuell setzen.
+
+**Bereits laufenden Container korrigieren:** Container → **Edit** → Feld
+**Icon URL** auf die PNG-Adresse oben ändern → **Apply**. Ein vorheriges
+`/favicon.svg` als Icon-URL funktioniert nicht (siehe Hinweis oben).
+
+#### Variante B: über die Konsole/SSH
 
 ```bash
 docker run -d \
   --name kicktipp-app \
   --restart unless-stopped \
-  -p 8091:80 \
+  --network br0 \
+  --ip 192.168.1.50 \
   ghcr.io/reneheitmann/kicktipp-app:latest
 ```
 
-`8091` ist der Port, über den die App im lokalen Netzwerk erreichbar ist
-(`http://<unraid-ip>:8091`) – bei Bedarf einen anderen freien Port wählen,
-falls 8091 bereits belegt ist.
+`192.168.1.50` durch die gewählte freie IP ersetzen.
+
+In beiden Fällen ist die App danach unter `http://192.168.1.50` erreichbar
+(Port 80, daher ohne `:Portnummer` in der URL).
+
+**Bekannte Einschränkung von Macvlan (`br0`):** der Unraid-Host selbst kann
+den Container über diese IP in der Regel *nicht* erreichen (nur andere
+Geräte im Netzwerk können). Für den Zugriff per Browser von einem PC/Handy
+im selben WLAN/LAN ist das unerheblich – nur ein `curl` direkt vom
+Unraid-Server aus auf die Container-IP würde nicht funktionieren.
 
 ### 2.2 Watchtower für automatische Updates installieren
 
@@ -120,6 +190,10 @@ docker run -d \
 - Der Container-Name `kicktipp-app` am Ende sorgt dafür, dass Watchtower
   **ausschließlich** diesen Container überwacht – andere, unabhängig auf
   Unraid laufende Container bleiben unangetastet.
+- Watchtower selbst bleibt bewusst im normalen Docker-Netzwerk (kein
+  `--network br0`) – er braucht nur Zugriff auf den Docker-Socket, um
+  Images zu ziehen und Container neu zu starten, keine eigene Erreichbarkeit
+  im LAN.
 
 *Alternative:* Watchtower gibt es auch als fertiges Template in den
 **Community Applications** (Apps-Tab in Unraid, dort nach „Watchtower“
@@ -128,12 +202,12 @@ Kommandozeile setzen.
 
 ### 2.3 Testen
 
-1. Im Browser `http://<unraid-ip>:8091` öffnen – die Login-Seite der App
-   sollte erscheinen.
+1. Im Browser `http://192.168.1.50` öffnen (eigene gewählte IP) – die
+   Login-Seite der App sollte erscheinen.
 2. Mit einem bestehenden Account einloggen und prüfen, dass Daten aus
    Supabase geladen werden (z. B. Saisons-Übersicht).
 3. Eine Unterseite direkt per URL aufrufen und neu laden (z. B.
-   `http://<unraid-ip>:8091/seasons`) – muss funktionieren, nicht mit 404
+   `http://192.168.1.50/seasons`) – muss funktionieren, nicht mit 404
    fehlschlagen (Test für die nginx-SPA-Konfiguration).
 
 ## Teil 3 – Ein Update auslösen (zum Ausprobieren)
@@ -144,7 +218,7 @@ Kommandozeile setzen.
 3. Nach Abschluss: bis zu `--interval`-Sekunden warten (siehe 2.2), dann
    `docker logs watchtower` auf Unraid prüfen – dort erscheint ein Eintrag,
    sobald das neue Image gezogen und der Container neu gestartet wurde.
-4. Die Änderung sollte danach unter `http://<unraid-ip>:8091` sichtbar sein.
+4. Die Änderung sollte danach unter `http://192.168.1.50` sichtbar sein.
 
 ## Ausblick (nicht Teil dieser Anleitung)
 
