@@ -139,6 +139,11 @@ Dienst wird kurz neu gestartet).
    **Key**: `LISTEN_PORT`, **Value**: gewünschter Port (z. B. `8080`,
    frei wählbar – auch später jederzeit über **Edit** änderbar, ohne
    neuen Build)
+   Das Image bringt außerdem **`TZ=Europe/Berlin`** bereits als Default mit
+   (Container-interne Zeitstempel wie nginx-Logs/`docker logs` – hat keinen
+   Einfluss auf Datums-/Zeitangaben in der App selbst, die nutzt die
+   Zeitzone des jeweiligen Browsers). Nur nötig, eine eigene `TZ`-Variable
+   zu setzen, falls eine andere Zone gewünscht ist.
 7. **Icon URL**-Feld:
    `https://raw.githubusercontent.com/reneheitmann/kicktipp-app/main/public/icon.png`
    (**wichtig: PNG, kein SVG** – Unraid rendert SVG/WEBP für dieses Feld

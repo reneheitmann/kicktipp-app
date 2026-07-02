@@ -35,6 +35,16 @@ ENV VITE_APP_CHANNEL=$VITE_APP_CHANNEL
 RUN npm run build
 
 FROM nginx:alpine AS runtime
+
+# Zeitzone für Container-interne Zeitstempel (z. B. nginx-Access-Logs,
+# `docker logs`) – hat KEINEN Einfluss auf Datums-/Zeitangaben innerhalb der
+# App selbst, die werden clientseitig im Browser mit dessen Zeitzone
+# formatiert. tzdata bringt die Zonendaten mit, die musl-libc (Alpine) braucht,
+# um den TZ-Wert überhaupt aufzulösen. Default hier, überschreibbar per
+# Umgebungsvariable (z. B. über ein Unraid-GUI-Feld), ohne neuen Build.
+RUN apk add --no-cache tzdata
+ENV TZ=Europe/Berlin
+
 COPY --from=build /app/dist /usr/share/nginx/html
 
 # .template statt direkt nach conf.d – das offizielle nginx-Image ersetzt
