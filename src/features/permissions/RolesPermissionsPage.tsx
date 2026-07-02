@@ -78,6 +78,7 @@ export function RolesPermissionsPage() {
         {pages.map((page) => (
           <div key={page} className="rounded-xl border border-slate-200 bg-white p-4">
             <h2 className="mb-3 text-sm font-semibold text-slate-900">Seite: {page}</h2>
+            <p className="mb-2 text-xs text-slate-400 sm:hidden">→ Tabelle nach links wischen für weitere Rollen</p>
             <div className="overflow-x-auto">
               <table className="w-full min-w-[480px] text-sm">
                 <thead>

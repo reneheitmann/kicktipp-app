@@ -188,7 +188,7 @@ export function SeasonDetailPage() {
         ← Alle Saisons
       </Link>
 
-      <div className="mb-6 flex items-start justify-between gap-3">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-xl font-semibold text-slate-900">{season.name}</h1>
@@ -198,7 +198,7 @@ export function SeasonDetailPage() {
             {season.start_date} – {season.end_date}
           </p>
         </div>
-        <div className="flex shrink-0 flex-wrap justify-end gap-2">
+        <div className="flex flex-wrap gap-2 sm:justify-end">
           <Link to={`/seasons/${season.id}/guthaben`}>
             <Button variant="secondary">Guthaben</Button>
           </Link>

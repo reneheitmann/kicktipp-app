@@ -1,6 +1,8 @@
+import { useEffect, useRef, useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { useAuth } from '../../features/auth/useAuth'
 import { useAppBranding } from '../../features/app-settings/useAppBranding'
+import { Modal } from '../ui/Modal'
 import { visibleNavItems } from './navItems'
 
 const linkBaseClasses = 'flex items-center rounded-lg px-3 py-2.5 text-sm font-medium transition'
@@ -11,6 +13,7 @@ export function AppShell() {
   const { profile, signOut, can, viewAsUser, setViewAsUser } = useAuth()
   const { appName } = useAppBranding()
   const items = visibleNavItems(profile?.role, can)
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false)
 
   return (
     <div className="flex h-full flex-col md:flex-row">
@@ -36,34 +39,55 @@ export function AppShell() {
       </aside>
 
       <div className="flex min-h-0 flex-1 flex-col">
-        {/* Mobile Top-Bar */}
-        <header className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 md:hidden">
-          <span className="text-base font-semibold text-slate-900">{appName}</span>
-          <div className="flex items-center gap-1">
-            <NavLink
-              to="/profil"
-              className={({ isActive }) =>
-                `rounded-lg px-3 py-2 text-sm font-medium ${isActive ? 'text-slate-900' : 'text-slate-600'} active:bg-slate-100`
-              }
-            >
-              Profil
-            </NavLink>
-            <NavLink
-              to="/ueber"
-              className={({ isActive }) =>
-                `rounded-lg px-3 py-2 text-sm font-medium ${isActive ? 'text-slate-900' : 'text-slate-600'} active:bg-slate-100`
-              }
-            >
-              Über
-            </NavLink>
-            <button
-              onClick={signOut}
-              className="rounded-lg px-3 py-2 text-sm font-medium text-slate-600 active:bg-slate-100"
-            >
-              Abmelden
-            </button>
-          </div>
+        {/* Mobile Top-Bar: nur noch ein Konto-Button statt drei nebeneinander
+            konkurrierender Text-Links – vermeidet, dass ein längerer App-Name
+            in zwei Zeilen umbricht und alles zusammenquetscht. */}
+        <header className="flex items-center justify-between gap-2 border-b border-slate-200 bg-white px-4 py-3 md:hidden">
+          <span className="truncate text-base font-semibold text-slate-900">{appName}</span>
+          <button
+            onClick={() => setAccountMenuOpen(true)}
+            aria-label="Konto-Menü öffnen"
+            className="flex shrink-0 items-center gap-2 rounded-full py-1 pl-1 pr-2.5 active:bg-slate-100"
+          >
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-200 text-xs font-semibold text-slate-700">
+              {getInitials(profile?.name)}
+            </span>
+          </button>
         </header>
+
+        {accountMenuOpen && (
+          <Modal title={profile?.name ?? 'Konto'} onClose={() => setAccountMenuOpen(false)}>
+            <p className="mb-3 text-xs text-slate-500">
+              {profile?.role}
+              {viewAsUser && ' (Vorschau: Spieler)'}
+            </p>
+            <div className="space-y-1">
+              <NavLink
+                to="/profil"
+                onClick={() => setAccountMenuOpen(false)}
+                className="block rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-100"
+              >
+                Mein Profil
+              </NavLink>
+              <NavLink
+                to="/ueber"
+                onClick={() => setAccountMenuOpen(false)}
+                className="block rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-100"
+              >
+                Über diese App
+              </NavLink>
+              <button
+                onClick={() => {
+                  setAccountMenuOpen(false)
+                  signOut()
+                }}
+                className="block w-full rounded-lg px-3 py-2.5 text-left text-sm font-medium text-red-600 hover:bg-red-50"
+              >
+                Abmelden
+              </button>
+            </div>
+          </Modal>
+        )}
 
         {viewAsUser && (
           <div className="flex items-center justify-between gap-3 border-b border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800">
@@ -82,9 +106,54 @@ export function AppShell() {
         </main>
       </div>
 
-      {/* Mobile Bottom-Navigation: horizontal scrollbar statt Gleichverteilung,
-          damit Tabs bei vielen Einträgen (z. B. Admin-Rolle) nicht umbrechen/quetschen. */}
-      <nav className="fixed inset-x-0 bottom-0 z-10 flex overflow-x-auto border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom)] md:hidden">
+      <MobileBottomNav items={items} viewAsUser={viewAsUser} />
+    </div>
+  )
+}
+
+function getInitials(name?: string): string {
+  if (!name) return '?'
+  const parts = name.trim().split(/\s+/)
+  const first = parts[0]?.[0] ?? ''
+  const last = parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? '') : ''
+  return (first + last).toUpperCase()
+}
+
+/** Mobile Bottom-Navigation: horizontal scrollbar statt Gleichverteilung,
+ * damit Tabs bei vielen Einträgen (z. B. Admin-Rolle) nicht umbrechen/quetschen.
+ * Ein rechtsseitiger Verlauf zeigt an, wenn weitere Einträge außerhalb des
+ * sichtbaren Bereichs liegen und per Wischen erreichbar sind – ohne dieses
+ * Signal war nicht erkennbar, dass z. B. "Passwort-Richtlinie" überhaupt
+ * existiert, wenn sie erst nach mehrfachem Wischen sichtbar wird. */
+function MobileBottomNav({
+  items,
+  viewAsUser,
+}: {
+  items: ReturnType<typeof visibleNavItems>
+  viewAsUser: boolean
+}) {
+  const scrollRef = useRef<HTMLElement>(null)
+  const [canScrollMore, setCanScrollMore] = useState(false)
+
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    const update = () => setCanScrollMore(el.scrollWidth - el.scrollLeft - el.clientWidth > 4)
+    update()
+    el.addEventListener('scroll', update, { passive: true })
+    window.addEventListener('resize', update)
+    return () => {
+      el.removeEventListener('scroll', update)
+      window.removeEventListener('resize', update)
+    }
+  }, [items.length])
+
+  return (
+    <div className="fixed inset-x-0 bottom-0 z-10 md:hidden">
+      <nav
+        ref={scrollRef}
+        className="flex overflow-x-auto border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom)]"
+      >
         {items.map((item) => (
           <NavLink
             key={item.to}
@@ -101,6 +170,12 @@ export function AppShell() {
           </NavLink>
         ))}
       </nav>
+      {canScrollMore && (
+        <div
+          className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-white via-white/90 to-transparent"
+          style={{ bottom: 'env(safe-area-inset-bottom)' }}
+        />
+      )}
     </div>
   )
 }

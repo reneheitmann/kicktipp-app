@@ -76,14 +76,14 @@ export function PlayersPage() {
       ) : (
         <ul className="divide-y divide-slate-200 overflow-hidden rounded-xl border border-slate-200 bg-white">
           {filteredPlayers.map((player) => (
-            <li key={player.id} className="flex items-center justify-between gap-3 px-4 py-3">
+            <li key={player.id} className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
               <Link to={`/players/${player.id}`} className="min-w-0 hover:underline">
                 <p className="truncate font-medium text-slate-900">{player.name}</p>
                 <p className="truncate text-sm text-slate-500">
                   Kicktipp: {player.kicktipp_name || '—'}
                 </p>
               </Link>
-              <div className="flex shrink-0 gap-2">
+              <div className="flex flex-wrap gap-2">
                 <Button variant="secondary" onClick={() => openEdit(player)}>
                   Bearbeiten
                 </Button>

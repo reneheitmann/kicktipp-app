@@ -77,7 +77,7 @@ export function SeasonParticipantsSection({
         ) : (
           <ul className="divide-y divide-slate-200 overflow-hidden rounded-xl border border-slate-200 bg-white">
             {filteredParticipants.map((participant) => (
-              <li key={participant.id} className="flex items-center justify-between gap-3 px-4 py-3">
+              <li key={participant.id} className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium text-slate-900">
                     {playersById.get(participant.player_id)?.name ?? 'Unbekannter Spieler'}
@@ -88,24 +88,26 @@ export function SeasonParticipantsSection({
                     {currencyFormatter.format(matchdayCount * participant.spieltags_einsatz_betrag)}
                   </p>
                 </div>
-                <div className="shrink-0 text-right">
-                  <p className="text-xs text-slate-400">Gesamteinsatz</p>
-                  <p className="text-sm font-semibold text-slate-900">
-                    {currencyFormatter.format(
-                      participant.gesamtsieg_einsatz_betrag + participant.spieltags_einsatz_betrag * matchdayCount,
-                    )}
-                  </p>
-                </div>
-                {canManage && (
-                  <div className="flex shrink-0 items-center gap-2">
-                    <Button variant="secondary" onClick={() => setEditingParticipant(participant)}>
-                      Bearbeiten
-                    </Button>
-                    <Button variant="danger" onClick={() => handleRemove(participant)}>
-                      Entfernen
-                    </Button>
+                <div className="flex flex-wrap items-center justify-between gap-3 sm:justify-end sm:gap-4">
+                  <div className="shrink-0 text-right">
+                    <p className="text-xs text-slate-400">Gesamteinsatz</p>
+                    <p className="text-sm font-semibold text-slate-900">
+                      {currencyFormatter.format(
+                        participant.gesamtsieg_einsatz_betrag + participant.spieltags_einsatz_betrag * matchdayCount,
+                      )}
+                    </p>
                   </div>
-                )}
+                  {canManage && (
+                    <div className="flex shrink-0 flex-wrap items-center gap-2">
+                      <Button variant="secondary" onClick={() => setEditingParticipant(participant)}>
+                        Bearbeiten
+                      </Button>
+                      <Button variant="danger" onClick={() => handleRemove(participant)}>
+                        Entfernen
+                      </Button>
+                    </div>
+                  )}
+                </div>
               </li>
             ))}
           </ul>

@@ -123,8 +123,10 @@ export function AccountsOverviewPage() {
           {players.length === 0 ? 'Noch keine Spieler angelegt.' : 'Keine Treffer für die Suche.'}
         </p>
       ) : (
-        <div className="max-h-[70vh] overflow-auto rounded-xl border border-slate-200 bg-white">
-          <table className="w-full min-w-[720px] text-sm">
+        <>
+          <p className="mb-2 text-xs text-slate-400 sm:hidden">→ Tabelle nach links wischen für weitere Spalten</p>
+          <div className="max-h-[70vh] overflow-auto rounded-xl border border-slate-200 bg-white">
+            <table className="w-full min-w-[720px] text-sm">
             <thead>
               <tr className="border-b border-slate-200 text-slate-500">
                 <SortableTh columnKey="name" label="Spieler" activeKey={sortColumn} direction={sortDirection} onSort={handleSort} />
@@ -204,8 +206,9 @@ export function AccountsOverviewPage() {
                 </tr>
               ))}
             </tbody>
-          </table>
-        </div>
+            </table>
+          </div>
+        </>
       )}
 
       {zahlungFor && (
