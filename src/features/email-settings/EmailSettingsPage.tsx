@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Button } from '../../components/ui/Button'
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { useAuth } from '../auth/useAuth'
 import { getEmailSettings, saveEmailSettings, sendTestEmail } from './emailSettingsApi'
 import type { SmtpEncryption } from '../../types/database'
@@ -26,6 +27,7 @@ export function EmailSettingsPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [info, setInfo] = useState<string | null>(null)
+  const [confirmingSave, setConfirmingSave] = useState(false)
 
   const [testEmail, setTestEmail] = useState('')
   const [sendingTest, setSendingTest] = useState(false)
@@ -50,8 +52,12 @@ export function EmailSettingsPage() {
       .finally(() => setLoading(false))
   }, [])
 
-  async function handleSubmit(e: FormEvent) {
+  function handleSubmit(e: FormEvent) {
     e.preventDefault()
+    setConfirmingSave(true)
+  }
+
+  async function confirmSave() {
     if (!profile) return
     setSaving(true)
     setError(null)
@@ -101,7 +107,7 @@ export function EmailSettingsPage() {
       <h1 className="mb-6 text-xl font-semibold text-slate-900">E-Mail-Versand</h1>
 
       <form className="mb-6 max-w-xl space-y-4 rounded-xl border border-slate-200 bg-white p-4" onSubmit={handleSubmit}>
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
         {info && <p className="text-sm text-emerald-700">{info}</p>}
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -216,7 +222,7 @@ export function EmailSettingsPage() {
       <div className="max-w-xl space-y-3 rounded-xl border border-slate-200 bg-white p-4">
         <h2 className="text-base font-semibold text-slate-900">Test-E-Mail senden</h2>
         <p className="text-sm text-slate-500">Prüft die gespeicherte Konfiguration mit einer echten Test-E-Mail.</p>
-        {testError && <p className="text-sm text-red-600">{testError}</p>}
+        {testError && <p role="alert" className="text-sm text-red-600">{testError}</p>}
         {testInfo && <p className="text-sm text-emerald-700">{testInfo}</p>}
         <div className="flex flex-col gap-2 sm:flex-row">
           <input
@@ -231,6 +237,16 @@ export function EmailSettingsPage() {
           </Button>
         </div>
       </div>
+
+      {confirmingSave && (
+        <ConfirmDialog
+          title="SMTP-Einstellungen speichern?"
+          message="Der E-Mail-Versand der gesamten App nutzt danach sofort diese Konfiguration. Bei einem Fehler kommen ab jetzt keine E-Mails mehr an."
+          confirmLabel="Speichern"
+          onConfirm={confirmSave}
+          onClose={() => setConfirmingSave(false)}
+        />
+      )}
     </div>
   )
 }

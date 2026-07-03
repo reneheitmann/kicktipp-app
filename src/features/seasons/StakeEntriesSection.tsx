@@ -58,18 +58,18 @@ export function StakeEntriesSection({
         )}
       </div>
 
-      {error && <p className="mb-2 text-sm text-red-600">{error}</p>}
+      {error && <p role="alert" className="mb-2 text-sm text-red-600">{error}</p>}
 
       {entries.length === 0 ? (
         <p className="text-sm text-slate-500">Noch keine Einträge.</p>
       ) : (
         <ul className="divide-y divide-slate-200 overflow-hidden rounded-xl border border-slate-200 bg-white">
           {entries.map((entry) => (
-            <li key={entry.id} className="flex items-center justify-between gap-3 px-4 py-3">
-              <p className="truncate font-medium text-slate-900">
+            <li key={entry.id} className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="min-w-0 flex-1 truncate font-medium text-slate-900">
                 {playersById.get(entry.player_id)?.name ?? 'Unbekannter Spieler'}
               </p>
-              <div className="flex shrink-0 items-center gap-2">
+              <div className="flex shrink-0 flex-wrap items-center gap-2">
                 <span className="text-sm text-slate-700">{currencyFormatter.format(entry.betrag)}</span>
                 {canManage && (
                   <>

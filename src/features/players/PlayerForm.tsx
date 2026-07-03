@@ -148,7 +148,7 @@ export function PlayerForm({ player, existingPlayers, existingLinks, onClose, on
                 <p className="px-2 py-2 text-sm text-slate-500">Keine Treffer.</p>
               ) : (
                 filteredProfiles.map((p) => (
-                  <label key={p.id} className="flex items-center gap-2 px-2 py-1.5 text-sm">
+                  <label key={p.id} className="flex items-center gap-2 px-2 py-3 text-sm">
                     <input
                       type="checkbox"
                       checked={profileIds.has(p.id)}
@@ -165,7 +165,7 @@ export function PlayerForm({ player, existingPlayers, existingLinks, onClose, on
           </div>
         )}
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
 
         <div className="flex gap-2 pt-2">
           <Button type="button" variant="secondary" className="flex-1" onClick={onClose}>

@@ -162,17 +162,17 @@ export function SeasonComparisonPage() {
     <div className="p-4 sm:p-6">
       <h1 className="mb-6 text-xl font-semibold text-slate-900">Saisonvergleich</h1>
 
-      {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
+      {error && <p role="alert" className="mb-4 text-sm text-red-600">{error}</p>}
 
       {seasons.length === 0 ? (
         <p className="text-sm text-slate-500">Noch keine Saisons vorhanden.</p>
       ) : (
         <>
-          <p className="mb-3 hidden text-sm text-slate-500 sm:block">
+          <p className="mb-3 text-sm text-slate-500">
             Die Grafik zeigt den Verlauf des Gesamtsaldos je ausgewähltem Spieler über alle Saisons hinweg – so
             lässt sich auf einen Blick erkennen, wer über die Zeit im Plus oder Minus liegt.
           </p>
-          <div className="mb-3 hidden gap-4 sm:flex">
+          <div className="mb-3 flex flex-col gap-4 sm:flex-row">
             <div className="h-72 w-full rounded-xl border border-slate-200 bg-white p-4 sm:flex-1">
               {selectedPlayers.length === 0 ? (
                 <p className="flex h-full items-center justify-center text-sm text-slate-500">
@@ -235,9 +235,9 @@ export function SeasonComparisonPage() {
               </div>
             </div>
           </div>
-          <p className="mb-6 hidden text-xs text-slate-500 sm:block">
+          <p className="mb-6 text-xs text-slate-500">
             Vorausgewählt sind die größten Gewinner und Verlierer über alle Saisons – weitere Spieler lassen sich
-            links über die Suche gezielt hinzufügen.
+            oben über die Suche gezielt hinzufügen.
           </p>
 
           <SearchInput

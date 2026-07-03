@@ -1,13 +1,18 @@
 import { useEffect, useState } from 'react'
 import { Button } from '../../components/ui/Button'
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { SearchInput } from '../../components/ui/SearchInput'
 import { CreateUserForm } from './CreateUserForm'
 import { EditUserForm } from './EditUserForm'
 import { listProfiles, setProfileActive, updateProfileRole } from './profilesApi'
 import { requestPasswordReset } from '../auth/passwordResetApi'
+import { useAuth } from '../auth/useAuth'
 import type { Profile, UserRole } from '../../types/database'
 
+const roleLabels: Record<UserRole, string> = { admin: 'Administrator', spielleiter: 'Spielleiter', user: 'Spieler' }
+
 export function AdminUsersPage() {
+  const { profile: ownProfile } = useAuth()
   const [profiles, setProfiles] = useState<Profile[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -15,6 +20,8 @@ export function AdminUsersPage() {
   const [showCreate, setShowCreate] = useState(false)
   const [editingProfile, setEditingProfile] = useState<Profile | null>(null)
   const [search, setSearch] = useState('')
+  const [pendingRoleChange, setPendingRoleChange] = useState<{ profile: Profile; role: UserRole } | null>(null)
+  const [pendingToggle, setPendingToggle] = useState<Profile | null>(null)
 
   async function reload() {
     setLoading(true)
@@ -32,18 +39,39 @@ export function AdminUsersPage() {
     reload()
   }, [])
 
-  async function handleRoleChange(profileRow: Profile, role: UserRole) {
+  const activeAdminCount = profiles.filter((p) => p.role === 'admin' && p.is_active).length
+  const isLastActiveAdmin = (p: Profile) => p.role === 'admin' && p.is_active && activeAdminCount <= 1
+
+  function requestRoleChange(profileRow: Profile, role: UserRole) {
+    if (role !== 'admin' && isLastActiveAdmin(profileRow)) {
+      setError('Der letzte aktive Administrator kann nicht in eine andere Rolle geändert werden.')
+      return
+    }
+    setPendingRoleChange({ profile: profileRow, role })
+  }
+
+  function requestToggleActive(profileRow: Profile) {
+    if (profileRow.is_active && isLastActiveAdmin(profileRow)) {
+      setError('Der letzte aktive Administrator kann nicht gesperrt werden.')
+      return
+    }
+    setPendingToggle(profileRow)
+  }
+
+  async function confirmRoleChange() {
+    if (!pendingRoleChange) return
     try {
-      await updateProfileRole(profileRow.id, role)
+      await updateProfileRole(pendingRoleChange.profile.id, pendingRoleChange.role)
       await reload()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Rolle konnte nicht geändert werden.')
     }
   }
 
-  async function handleToggleActive(profileRow: Profile) {
+  async function confirmToggleActive() {
+    if (!pendingToggle) return
     try {
-      await setProfileActive(profileRow.id, !profileRow.is_active)
+      await setProfileActive(pendingToggle.id, !pendingToggle.is_active)
       await reload()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Status konnte nicht geändert werden.')
@@ -75,7 +103,7 @@ export function AdminUsersPage() {
 
       <SearchInput value={search} onChange={setSearch} placeholder="Benutzer suchen..." className="mb-4 max-w-xs" />
 
-      {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
+      {error && <p role="alert" className="mb-4 text-sm text-red-600">{error}</p>}
       {info && <p className="mb-4 text-sm text-emerald-700">{info}</p>}
 
       {loading ? (
@@ -103,7 +131,7 @@ export function AdminUsersPage() {
               <div className="flex flex-wrap items-center gap-2">
                 <select
                   value={p.role}
-                  onChange={(e) => handleRoleChange(p, e.target.value as UserRole)}
+                  onChange={(e) => requestRoleChange(p, e.target.value as UserRole)}
                   className="rounded-lg border border-slate-300 px-2 py-2 text-sm focus:border-slate-900 focus:outline-none"
                 >
                   <option value="user">Spieler</option>
@@ -116,7 +144,7 @@ export function AdminUsersPage() {
                 <Button variant="secondary" onClick={() => handlePasswordReset(p)}>
                   Passwort-Reset
                 </Button>
-                <Button variant={p.is_active ? 'danger' : 'secondary'} onClick={() => handleToggleActive(p)}>
+                <Button variant={p.is_active ? 'danger' : 'secondary'} onClick={() => requestToggleActive(p)}>
                   {p.is_active ? 'Sperren' : 'Entsperren'}
                 </Button>
               </div>
@@ -129,6 +157,35 @@ export function AdminUsersPage() {
 
       {editingProfile && (
         <EditUserForm profile={editingProfile} onClose={() => setEditingProfile(null)} onSaved={reload} />
+      )}
+
+      {pendingRoleChange && (
+        <ConfirmDialog
+          title="Rolle ändern?"
+          message={
+            pendingRoleChange.profile.id === ownProfile?.id
+              ? `Dies ist dein eigenes Konto. Deine Rolle wird von "${roleLabels[pendingRoleChange.profile.role]}" auf "${roleLabels[pendingRoleChange.role]}" geändert.`
+              : `${pendingRoleChange.profile.name} erhält die Rolle "${roleLabels[pendingRoleChange.role]}" (bisher "${roleLabels[pendingRoleChange.profile.role]}").`
+          }
+          confirmLabel="Ändern"
+          onConfirm={confirmRoleChange}
+          onClose={() => setPendingRoleChange(null)}
+        />
+      )}
+
+      {pendingToggle && (
+        <ConfirmDialog
+          title={pendingToggle.is_active ? 'Benutzer sperren?' : 'Benutzer entsperren?'}
+          message={
+            pendingToggle.id === ownProfile?.id
+              ? 'Dies ist dein eigenes Konto. Du wirst dich danach nicht mehr anmelden können.'
+              : `${pendingToggle.name} wird ${pendingToggle.is_active ? 'gesperrt und kann sich nicht mehr anmelden' : 'wieder entsperrt'}.`
+          }
+          confirmLabel={pendingToggle.is_active ? 'Sperren' : 'Entsperren'}
+          danger={pendingToggle.is_active}
+          onConfirm={confirmToggleActive}
+          onClose={() => setPendingToggle(null)}
+        />
       )}
     </div>
   )

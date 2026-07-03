@@ -126,7 +126,7 @@ export function SeasonBalancesPage() {
         )}
       </div>
 
-      {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
+      {error && <p role="alert" className="mb-4 text-sm text-red-600">{error}</p>}
 
       {balances.length === 0 ? (
         <p className="text-sm text-slate-500">Noch keine Buchungen für diese Saison.</p>

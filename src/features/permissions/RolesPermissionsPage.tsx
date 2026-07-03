@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { useAuth } from '../auth/useAuth'
 import { permissionCatalog } from './permissionCatalog'
 import { listRolePermissions, setRolePermission } from './permissionsApi'
@@ -20,6 +21,11 @@ export function RolesPermissionsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [savingKey, setSavingKey] = useState<string | null>(null)
+  const [pendingAdminToggle, setPendingAdminToggle] = useState<{
+    key: PermissionKey
+    label: string
+    checked: boolean
+  } | null>(null)
 
   async function reload() {
     setLoading(true)
@@ -56,6 +62,14 @@ export function RolesPermissionsPage() {
     }
   }
 
+  function requestToggle(role: UserRole, key: PermissionKey, label: string, checked: boolean) {
+    if (role === 'admin') {
+      setPendingAdminToggle({ key, label, checked })
+      return
+    }
+    handleToggle(role, key, checked)
+  }
+
   if (loading) {
     return <p className="p-4 text-sm text-slate-500 sm:p-6">Lade...</p>
   }
@@ -72,7 +86,7 @@ export function RolesPermissionsPage() {
         Erscheinungsbild und dieses Modul selbst sind bewusst fest auf Admin beschränkt und hier nicht änderbar.
       </p>
 
-      {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
+      {error && <p role="alert" className="mb-4 text-sm text-red-600">{error}</p>}
 
       <div className="space-y-6">
         {pages.map((page) => (
@@ -108,7 +122,7 @@ export function RolesPermissionsPage() {
                                 type="checkbox"
                                 checked={grants.get(gk) ?? false}
                                 disabled={savingKey === gk}
-                                onChange={(e) => handleToggle(c.role, entry.key, e.target.checked)}
+                                onChange={(e) => requestToggle(c.role, entry.key, entry.label, e.target.checked)}
                                 className="h-5 w-5"
                               />
                             </td>
@@ -122,6 +136,19 @@ export function RolesPermissionsPage() {
           </div>
         ))}
       </div>
+
+      {pendingAdminToggle && (
+        <ConfirmDialog
+          title={pendingAdminToggle.checked ? 'Admin-Recht gewähren?' : 'Admin-Recht entziehen?'}
+          message={`"${pendingAdminToggle.label}" wird für die Rolle Administrator ${
+            pendingAdminToggle.checked ? 'aktiviert' : 'deaktiviert'
+          } — das betrifft auch dein eigenes Konto.`}
+          confirmLabel={pendingAdminToggle.checked ? 'Aktivieren' : 'Deaktivieren'}
+          danger={!pendingAdminToggle.checked}
+          onConfirm={() => handleToggle('admin', pendingAdminToggle.key, pendingAdminToggle.checked)}
+          onClose={() => setPendingAdminToggle(null)}
+        />
+      )}
     </div>
   )
 }

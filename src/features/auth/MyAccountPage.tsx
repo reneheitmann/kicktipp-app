@@ -148,7 +148,7 @@ export function MyAccountPage() {
             </p>
           </div>
 
-          {nameError && <p className="text-sm text-red-600">{nameError}</p>}
+          {nameError && <p role="alert" className="text-sm text-red-600">{nameError}</p>}
           {nameSuccess && <p className="text-sm text-emerald-700">{nameSuccess}</p>}
 
           <Button type="submit" disabled={savingName}>
@@ -180,7 +180,7 @@ export function MyAccountPage() {
             Wechselt deine Rolle tatsächlich auf „Spieler" – Admin-/Spielleiter-Funktionen sind währenddessen
             wirklich nicht mehr nutzbar (kein Vorschau-Modus). Jederzeit über diese Seite rückgängig zu machen.
           </p>
-          {switchError && <p className="mb-3 text-sm text-red-600">{switchError}</p>}
+          {switchError && <p role="alert" className="mb-3 text-sm text-red-600">{switchError}</p>}
           <Button variant="secondary" onClick={handleSwitchToUser} disabled={switching}>
             {switching ? 'Wechsle...' : 'Als Spieler agieren'}
           </Button>
@@ -194,7 +194,7 @@ export function MyAccountPage() {
             Eigentliche Rolle: {roleLabels[profile.base_role]}. Admin-/Spielleiter-Funktionen sind bis zum
             Zurückwechseln nicht sichtbar.
           </p>
-          {switchError && <p className="mb-3 text-sm text-red-600">{switchError}</p>}
+          {switchError && <p role="alert" className="mb-3 text-sm text-red-600">{switchError}</p>}
           <Button onClick={handleSwitchBack} disabled={switching}>
             {switching ? 'Wechsle zurück...' : `Zurück zu ${roleLabels[profile.base_role]}`}
           </Button>
@@ -232,7 +232,7 @@ export function MyAccountPage() {
             />
           </div>
 
-          {passwordError && <p className="text-sm text-red-600">{passwordError}</p>}
+          {passwordError && <p role="alert" className="text-sm text-red-600">{passwordError}</p>}
           {passwordSuccess && <p className="text-sm text-emerald-700">{passwordSuccess}</p>}
 
           <Button type="submit" disabled={savingPassword}>

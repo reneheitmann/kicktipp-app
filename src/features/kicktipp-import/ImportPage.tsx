@@ -458,14 +458,17 @@ export function ImportPage() {
                       row.included && invalid ? 'bg-red-50' : !row.eligible ? 'bg-slate-50' : ''
                     }`}
                   >
-                    <input
-                      type="checkbox"
-                      checked={row.included}
-                      onChange={(e) => updateRow(index, { included: e.target.checked })}
-                      disabled={submitting}
-                      className="h-5 w-5 shrink-0"
-                    />
-                    <span className="w-40 shrink-0 truncate text-sm text-slate-900">{row.rawName || '(leer)'}</span>
+                    <label className="flex shrink-0 items-center gap-2 py-2">
+                      <input
+                        type="checkbox"
+                        checked={row.included}
+                        onChange={(e) => updateRow(index, { included: e.target.checked })}
+                        disabled={submitting}
+                        aria-label={`${row.rawName || 'Zeile ' + (index + 1)} übernehmen`}
+                        className="h-5 w-5 shrink-0"
+                      />
+                      <span className="w-40 truncate text-sm text-slate-900">{row.rawName || '(leer)'}</span>
+                    </label>
                     <span className="w-20 shrink-0 text-sm text-slate-500">
                       {row.parsedRang !== null ? `Platz ${row.parsedRang}` : `"${row.rawRang}" ungültig`}
                     </span>

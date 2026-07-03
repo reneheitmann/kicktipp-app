@@ -128,7 +128,7 @@ export function RankingsSection({
         </p>
       )}
 
-      {error && <p className="mb-2 text-sm text-red-600">{error}</p>}
+      {error && <p role="alert" className="mb-2 text-sm text-red-600">{error}</p>}
 
       {sortedPlayerIds.length === 0 ? (
         <p className="text-sm text-slate-500">Noch keine Teilnehmer.</p>
