@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Button } from '../../components/ui/Button'
 import { CollapsibleSection } from '../../components/ui/CollapsibleSection'
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { SearchInput } from '../../components/ui/SearchInput'
 import { SeasonParticipantForm } from './SeasonParticipantForm'
 import { currencyFormatter } from '../../lib/format'
@@ -37,6 +38,7 @@ export function SeasonParticipantsSection({
 }: SeasonParticipantsSectionProps) {
   const [showAddForm, setShowAddForm] = useState(false)
   const [editingParticipant, setEditingParticipant] = useState<SeasonParticipant | undefined>(undefined)
+  const [removingParticipant, setRemovingParticipant] = useState<SeasonParticipant | undefined>(undefined)
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
 
@@ -49,11 +51,10 @@ export function SeasonParticipantsSection({
     return (playersById.get(participant.player_id)?.name ?? '').toLowerCase().includes(term)
   })
 
-  async function handleRemove(participant: SeasonParticipant) {
-    const playerName = playersById.get(participant.player_id)?.name ?? 'Spieler'
-    if (!confirm(`Teilnehmer "${playerName}" wirklich entfernen?`)) return
+  async function confirmRemove() {
+    if (!removingParticipant) return
     try {
-      await onRemove(participant.id)
+      await onRemove(removingParticipant.id)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Entfernen fehlgeschlagen.')
     }
@@ -99,7 +100,7 @@ export function SeasonParticipantsSection({
                         className={`flex min-w-11 shrink-0 items-center justify-center text-base leading-none ${
                           favoritePlayerId === participant.player_id
                             ? 'text-amber-500'
-                            : 'text-slate-300 hover:text-amber-400'
+                            : 'text-slate-400 hover:text-amber-400'
                         }`}
                       >
                         {favoritePlayerId === participant.player_id ? '★' : '☆'}
@@ -127,7 +128,7 @@ export function SeasonParticipantsSection({
                       <Button variant="secondary" onClick={() => setEditingParticipant(participant)}>
                         Bearbeiten
                       </Button>
-                      <Button variant="danger" onClick={() => handleRemove(participant)}>
+                      <Button variant="danger" onClick={() => setRemovingParticipant(participant)}>
                         Entfernen
                       </Button>
                     </div>
@@ -157,6 +158,17 @@ export function SeasonParticipantsSection({
           onSubmit={async ({ gesamtsiegBetrag, spieltagsBetrag }) =>
             onUpdate(editingParticipant.id, { gesamtsiegBetrag, spieltagsBetrag })
           }
+        />
+      )}
+
+      {removingParticipant && (
+        <ConfirmDialog
+          title="Teilnehmer entfernen?"
+          message={`Teilnehmer "${playersById.get(removingParticipant.player_id)?.name ?? 'Spieler'}" wird aus dieser Saison entfernt.`}
+          confirmLabel="Entfernen"
+          danger
+          onConfirm={confirmRemove}
+          onClose={() => setRemovingParticipant(undefined)}
         />
       )}
     </>
