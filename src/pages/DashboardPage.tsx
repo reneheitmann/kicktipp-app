@@ -192,7 +192,7 @@ export function DashboardPage() {
       )}
 
       {linkedPlayers.length === 1 && myBalance && (
-        <PlayerBalanceCard player={linkedPlayers[0]} balance={myBalance} title="Mein Konto" className="mb-6" />
+        <PlayerBalanceCard player={linkedPlayers[0]} balance={myBalance} title="Mein Konto" className="mb-6 shadow-md" />
       )}
 
       {linkedPlayers.length > 1 && linkedPlayers.length < COMPACT_PLAYER_LIST_THRESHOLD && myBalance && (
@@ -324,10 +324,12 @@ function describeBalance(balance: AccountBalance): string {
   return 'Ausgeglichen'
 }
 
-/** Reine Saldo-Anzeige ohne Link – für die Gesamtsumme über mehrere verknüpfte Spieler, die zu keiner einzelnen Spieler-Detailseite führt. */
+/** Reine Saldo-Anzeige ohne Link – für die Gesamtsumme über mehrere verknüpfte Spieler, die zu keiner einzelnen Spieler-Detailseite führt.
+ * Bekommt die "Betont"-Schatten-Stufe (siehe DESIGN.md), da hier immer "Mein Konto" gemeint ist – anders als bei PlayerBalanceCard,
+ * die auch für die flachen Nebenkarten der einzelnen Spieler wiederverwendet wird. */
 function PlayerBalanceSummary({ balance, title }: { balance: AccountBalance; title: string }) {
   return (
-    <div className="block rounded-xl border border-slate-200 bg-white p-4">
+    <div className="block rounded-xl border border-slate-200 bg-white p-4 shadow-md">
       <h2 className="text-sm text-slate-500">{title}</h2>
       <BalanceHeadline balance={balance} />
       <BalanceBreakdown balance={balance} />

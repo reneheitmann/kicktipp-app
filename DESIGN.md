@@ -193,30 +193,30 @@ heischendes Brand-Erlebnis sein soll, sondern ein Arbeitswerkzeug.
 
 ## 4. Elevation
 
-Das System ist heute bewusst flach: Karten und Listen grenzen sich über
+Das System ist bewusst flach: Karten und Listen grenzen sich über
 `border` + `bg-white` gegen den `slate-50`-Seitenhintergrund ab, nicht über
-Schatten. Die einzige Ausnahme ist das Modal (`shadow-xl`), weil es
-tatsächlich über anderem Inhalt schwebt. Zwei Erweiterungen sind als
-nächste Schritte vorgesehen (siehe Do's unten): ein leichter Hover-Schatten
-auf Karten war eine Option, stattdessen priorisiert das Team eine stärkere
-Schatten-Hierarchie für zentrale Elemente (z. B. Salden-Karten), um sie
-gegenüber Nebeninhalten abzuheben.
+Schatten. Zwei Ausnahmen davon sind gezielt eingesetzt: das Modal
+(`shadow-xl`), weil es tatsächlich über anderem Inhalt schwebt, und die
+"Betont"-Stufe (`shadow-md`) für einzelne Elemente mit hoher Priorität, um
+sie gegenüber gleich aussehenden Nebenkarten abzuheben.
 
 ### Shadow Vocabulary
 - **Overlay** (`box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)`,
   Tailwind `shadow-xl`): einzig für das Modal, das tatsächlich über anderem
   Inhalt liegt.
-- **Betont** (geplant, noch nicht implementiert): ein sichtbar stärkerer
-  Schatten für Elemente mit hoher Priorität (z. B. die "Mein Konto"-Karte
-  auf dem Dashboard), um sie klar von gleich aussehenden Nebenkarten
-  abzuheben, ohne die grundsätzliche Flachheit des restlichen Systems
-  aufzugeben.
+- **Betont** (`box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)`,
+  Tailwind `shadow-md`): ein sichtbar stärkerer Schatten für Elemente mit
+  hoher Priorität, ohne die grundsätzliche Flachheit des restlichen Systems
+  aufzugeben. Aktuell einzig auf der "Mein Konto"-Karte auf dem Dashboard
+  (`src/pages/DashboardPage.tsx`, `PlayerBalanceSummary` bzw. die
+  `PlayerBalanceCard`-Instanz mit `title="Mein Konto"`) – bewusst nicht auf
+  den regulären Spieler-Nebenkarten, die dieselbe Komponente wiederverwenden.
 
 ### Named Rules
 **The Flat-By-Default Rule.** Flächen sind im Ruhezustand schattenlos.
 Schatten sind die Ausnahme für Elemente, die entweder wirklich schweben
 (Modal) oder bewusst gegenüber Nebeninhalt hervorgehoben werden sollen
-(geplante "Betont"-Stufe), nicht die Standard-Behandlung jeder Karte.
+("Betont"-Stufe), nicht die Standard-Behandlung jeder Karte.
 
 ## 5. Components
 
