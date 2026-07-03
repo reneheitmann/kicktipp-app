@@ -159,7 +159,7 @@ export function AppShell() {
           </Modal>
         )}
 
-        <main id="main-content" tabIndex={-1} className="flex-1 overflow-y-auto outline-none">
+        <main id="main-content" tabIndex={-1} className="min-w-0 flex-1 overflow-y-auto outline-none">
           <Outlet />
         </main>
       </div>
