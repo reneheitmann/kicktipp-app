@@ -392,6 +392,10 @@ export function SeasonDetailPage() {
           await removeSeasonParticipant(id)
           await reload()
         }}
+        onRemoveMany={async (ids) => {
+          await Promise.all(ids.map((id) => removeSeasonParticipant(id)))
+          await reload()
+        }}
       />
 
       <CollapsibleSection
