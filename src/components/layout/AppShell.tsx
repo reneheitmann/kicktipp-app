@@ -20,6 +20,15 @@ export function AppShell() {
 
   return (
     <div className="flex h-full flex-col md:flex-row">
+      {/* Tastatur-Sprungmarke: ohne sie muss ein Tastatur-/Screenreader-Nutzer
+          bei jedem Seitenaufruf erst durch die komplette Sidebar/Kontoleiste
+          tabben, bevor der eigentliche Seiteninhalt erreichbar ist. */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-slate-900 focus:shadow-lg focus:outline focus:outline-2 focus:outline-[var(--color-primary)]"
+      >
+        Zum Inhalt springen
+      </a>
       {/* Desktop-Sidebar */}
       <aside className="hidden w-60 shrink-0 flex-col overflow-y-auto border-r border-slate-200 bg-white p-4 md:flex">
         <div className="mb-6 flex items-center gap-2 px-2 text-lg font-semibold text-slate-900">
@@ -150,7 +159,7 @@ export function AppShell() {
           </Modal>
         )}
 
-        <main className="flex-1 overflow-y-auto">
+        <main id="main-content" tabIndex={-1} className="flex-1 overflow-y-auto outline-none">
           <Outlet />
         </main>
       </div>

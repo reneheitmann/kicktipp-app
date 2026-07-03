@@ -13,6 +13,11 @@ import { listPlayerTransactions, listAllTransactions } from '../features/balance
 import { computeAccountBalance, computeTotalOutstanding, type AccountBalance } from '../features/players/accountBalance'
 import type { Player, Season } from '../types/database'
 
+// Ab dieser Anzahl verknüpfter Spieler wird die Liste als kompakte Tabelle
+// statt als volle Karten-pro-Spieler dargestellt – sonst wird die "ruhige"
+// Startseite bei vielen verknüpften Spielern zu einer langen Kartenwand.
+const COMPACT_PLAYER_LIST_THRESHOLD = 3
+
 interface AdminStats {
   playerCount: number
   activeSeasonCount: number
@@ -44,16 +49,24 @@ export function DashboardPage() {
   const [myGewinnBySeasonId, setMyGewinnBySeasonId] = useState<Map<string, number>>(new Map())
   const [stats, setStats] = useState<AdminStats | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!profile) return
-    Promise.all([listSeasons(), listPlayers(), listMatchdayCountsBySeasonId(), listPlayerProfileLinks()])
-      .then(async ([seasons, players, matchdayCounts, links]) => {
+
+    async function load() {
+      setLoading(true)
+      setError(null)
+      try {
+        const [seasons, players, matchdayCounts, links] = await Promise.all([
+          listSeasons(),
+          listPlayers(),
+          listMatchdayCountsBySeasonId(),
+          listPlayerProfileLinks(),
+        ])
         setActiveSeasons(seasons.filter((s) => s.status === 'aktiv'))
 
-        const linkedPlayerIds = new Set(
-          links.filter((l) => l.profile_id === profile.id).map((l) => l.player_id),
-        )
+        const linkedPlayerIds = new Set(links.filter((l) => l.profile_id === profile!.id).map((l) => l.player_id))
         const linked = players.filter((p) => linkedPlayerIds.has(p.id))
         setLinkedPlayers(linked)
         if (linked.length > 0) {
@@ -89,9 +102,7 @@ export function DashboardPage() {
           // "abgerechnet" zählen, dazu die Gesamtwertung, sofern auch diese
           // schon abgerechnet ist.
           const matchdays = await listAllMatchdays()
-          const abgerechnetMatchdayIds = new Set(
-            matchdays.filter((m) => m.status === 'abgerechnet').map((m) => m.id),
-          )
+          const abgerechnetMatchdayIds = new Set(matchdays.filter((m) => m.status === 'abgerechnet').map((m) => m.id))
           const gewinnMap = new Map<string, number>()
           for (const { participants, transactions } of perPlayerData) {
             for (const participant of participants) {
@@ -136,8 +147,14 @@ export function DashboardPage() {
             ),
           })
         }
-      })
-      .finally(() => setLoading(false))
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Übersicht konnte nicht vollständig geladen werden.')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    load()
   }, [profile, canManage])
 
   if (loading) {
@@ -148,11 +165,23 @@ export function DashboardPage() {
     <div className="p-4 sm:p-6">
       <h1 className="mb-6 text-xl font-semibold text-slate-900">Willkommen, {profile?.name}</h1>
 
+      {error && (
+        <p className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+          Daten konnten nicht vollständig geladen werden ({error}). Bitte Seite neu laden.
+        </p>
+      )}
+
+      {linkedPlayers.length === 0 && (
+        <p className="mb-6 rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-500">
+          Dein Login ist noch nicht mit einem Spieler verknüpft. Wende dich an deinen Spielleiter.
+        </p>
+      )}
+
       {linkedPlayers.length === 1 && myBalance && (
         <PlayerBalanceCard player={linkedPlayers[0]} balance={myBalance} title="Mein Konto" className="mb-6" />
       )}
 
-      {linkedPlayers.length > 1 && myBalance && (
+      {linkedPlayers.length > 1 && linkedPlayers.length < COMPACT_PLAYER_LIST_THRESHOLD && myBalance && (
         <div className="mb-6">
           <PlayerBalanceSummary balance={myBalance} title="Mein Konto (alle Spieler)" />
           <div className="mt-3 space-y-3">
@@ -163,15 +192,41 @@ export function DashboardPage() {
         </div>
       )}
 
+      {linkedPlayers.length >= COMPACT_PLAYER_LIST_THRESHOLD && myBalance && (
+        <div className="mb-6">
+          <PlayerBalanceSummary balance={myBalance} title="Mein Konto (alle Spieler)" />
+          <ul className="mt-3 divide-y divide-slate-200 overflow-hidden rounded-xl border border-slate-200 bg-white">
+            {myPlayerBalances.map(({ player, balance }) => (
+              <li key={player.id}>
+                <Link
+                  to={`/players/${player.id}`}
+                  aria-label={`${player.name}, ${describeBalance(balance)}`}
+                  className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-slate-50"
+                >
+                  <span className="truncate font-medium text-slate-900">{player.name}</span>
+                  <span
+                    className={`shrink-0 text-sm font-medium ${
+                      balance.offen > 0 ? 'text-amber-700' : balance.offen < 0 ? 'text-emerald-700' : 'text-slate-500'
+                    }`}
+                  >
+                    {describeBalance(balance)}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {canManage && stats && (
         <>
           <h2 className="mb-3 text-base font-semibold text-slate-900">Statistik</h2>
-          <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="mb-6 grid grid-cols-2 gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 sm:grid-cols-4">
             <StatCard label="Spieler" value={String(stats.playerCount)} />
             <StatCard label="Aktive Saisons" value={String(stats.activeSeasonCount)} />
             <StatCard label="Spieltage gesamt" value={String(stats.matchdayCount)} />
             <StatCard
-              label="Offene Beträge"
+              label="Offene Beträge (alle Spieler)"
               value={currencyFormatter.format(stats.totalOutstanding)}
               tone={stats.totalOutstanding > 0 ? 'amber' : undefined}
             />
@@ -190,6 +245,7 @@ export function DashboardPage() {
               <li key={season.id}>
                 <Link
                   to={`/seasons/${season.id}`}
+                  aria-label={`Saison ${season.name}${myGewinn !== undefined ? `, Gewinn ${currencyFormatter.format(myGewinn)}` : ''}, Status ${season.status}`}
                   className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-slate-50"
                 >
                   <span className="font-medium text-slate-900">{season.name}</span>
@@ -239,11 +295,18 @@ export function DashboardPage() {
 
 function StatCard({ label, value, tone }: { label: string; value: string; tone?: 'amber' }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4">
+    <div className="rounded-xl bg-white p-3">
       <p className="text-sm text-slate-500">{label}</p>
       <p className={`text-lg font-semibold ${tone === 'amber' ? 'text-amber-700' : 'text-slate-900'}`}>{value}</p>
     </div>
   )
+}
+
+/** Kurzform der Saldo-Aussage, z. B. "12,00 € offen" / "5,00 € Guthaben" / "Ausgeglichen" – für Headline und Accessible Names. */
+function describeBalance(balance: AccountBalance): string {
+  if (balance.offen > 0) return `${currencyFormatter.format(balance.offen)} offen`
+  if (balance.offen < 0) return `${currencyFormatter.format(-balance.offen)} Guthaben`
+  return 'Ausgeglichen'
 }
 
 /** Reine Saldo-Anzeige ohne Link – für die Gesamtsumme über mehrere verknüpfte Spieler, die zu keiner einzelnen Spieler-Detailseite führt. */
@@ -272,6 +335,7 @@ function PlayerBalanceCard({
   return (
     <Link
       to={`/players/${player.id}`}
+      aria-label={`${title}, ${describeBalance(balance)}`}
       className={`block rounded-xl border border-slate-200 bg-white p-4 hover:bg-slate-50 ${className}`}
     >
       <p className="text-sm text-slate-500">{title}</p>
@@ -288,22 +352,30 @@ function BalanceHeadline({ balance }: { balance: AccountBalance }) {
         balance.offen > 0 ? 'text-amber-700' : balance.offen < 0 ? 'text-emerald-600' : 'text-slate-900'
       }`}
     >
-      {balance.offen > 0
-        ? `${currencyFormatter.format(balance.offen)} offen`
-        : balance.offen < 0
-          ? `${currencyFormatter.format(-balance.offen)} Guthaben`
-          : 'Ausgeglichen'}
+      {describeBalance(balance)}
     </p>
   )
 }
 
 function BalanceBreakdown({ balance }: { balance: AccountBalance }) {
   return (
-    <p className="mt-1 text-xs text-slate-500">
-      Beiträge: {currencyFormatter.format(balance.beitraegeGesamt)} · Eingezahlt:{' '}
-      {currencyFormatter.format(balance.einzahlungenGesamt)} · Ausgezahlt:{' '}
-      {currencyFormatter.format(balance.auszahlungenGesamt)} · Gewinne:{' '}
-      {currencyFormatter.format(balance.gewinneGesamt)}
-    </p>
+    <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-slate-500">
+      <div className="flex justify-between gap-2">
+        <dt>Beiträge</dt>
+        <dd className="font-medium text-slate-700">{currencyFormatter.format(balance.beitraegeGesamt)}</dd>
+      </div>
+      <div className="flex justify-between gap-2">
+        <dt>Eingezahlt</dt>
+        <dd className="font-medium text-slate-700">{currencyFormatter.format(balance.einzahlungenGesamt)}</dd>
+      </div>
+      <div className="flex justify-between gap-2">
+        <dt>Ausgezahlt</dt>
+        <dd className="font-medium text-slate-700">{currencyFormatter.format(balance.auszahlungenGesamt)}</dd>
+      </div>
+      <div className="flex justify-between gap-2">
+        <dt>Gewinne</dt>
+        <dd className="font-medium text-slate-700">{currencyFormatter.format(balance.gewinneGesamt)}</dd>
+      </div>
+    </dl>
   )
 }
