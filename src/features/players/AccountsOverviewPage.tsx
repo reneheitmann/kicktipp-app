@@ -116,7 +116,7 @@ export function AccountsOverviewPage() {
       </p>
       <SearchInput value={search} onChange={setSearch} placeholder="Spieler suchen..." className="mb-4 max-w-xs" />
 
-      {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
+      {error && <p role="alert" className="mb-4 text-sm text-red-600">{error}</p>}
 
       {rows.length === 0 ? (
         <p className="text-sm text-slate-500">

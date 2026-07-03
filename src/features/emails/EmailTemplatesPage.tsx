@@ -59,7 +59,7 @@ export function EmailTemplatesPage() {
         <Button onClick={openCreate}>+ Vorlage</Button>
       </div>
 
-      {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
+      {error && <p role="alert" className="mb-4 text-sm text-red-600">{error}</p>}
 
       {loading ? (
         <p className="text-sm text-slate-500">Lade...</p>

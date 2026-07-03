@@ -137,7 +137,7 @@ export function PayoutRulesEditor({ seasonId, typ, title, canManage }: PayoutRul
         </p>
       )}
 
-      {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
+      {error && <p role="alert" className="mb-3 text-sm text-red-600">{error}</p>}
 
       {draftPercents.length === 0 && !canManage ? (
         <p className="text-sm text-slate-500">Noch keine Verteilung konfiguriert.</p>

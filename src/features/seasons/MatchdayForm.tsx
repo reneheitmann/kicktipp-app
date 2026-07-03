@@ -64,7 +64,7 @@ export function MatchdayForm({ matchday, nextNummer, onClose, onSubmit }: Matchd
           />
         </div>
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
 
         <div className="flex gap-2 pt-2">
           <Button type="button" variant="secondary" className="flex-1" onClick={onClose}>

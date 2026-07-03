@@ -29,7 +29,38 @@ export interface SmtpMessage {
 
 export class SmtpError extends Error {}
 
+// Sehr konservative Prüfung: reicht aus, um echte Adressen durchzulassen und
+// jede Form von CR/LF oder Envelope-Sonderzeichen ("<", ">", Leerraum) sicher
+// abzulehnen. Envelope-Adressen (MAIL FROM/RCPT TO) werden direkt in rohe
+// SMTP-Befehlszeilen eingesetzt – ungeprüft wäre das eine klassische
+// SMTP-/Header-Injection (CWE-93): ein Empfänger wie
+// "a@b.de>\r\nRCPT TO:<opfer@x.de" könnte zusätzliche Befehle einschleusen.
+const EMAIL_ADDRESS_RE = /^[^\s<>()[\]\\,;:"@\r\n]+@[^\s<>()[\]\\,;:"@\r\n]+\.[^\s<>()[\]\\,;:"@\r\n]{2,}$/
+
+function assertSafeEmailAddress(address: string, field: string): string {
+  const trimmed = address.trim()
+  if (!EMAIL_ADDRESS_RE.test(trimmed)) {
+    throw new SmtpError(`Ungültige E-Mail-Adresse (${field}): "${address}"`)
+  }
+  return trimmed
+}
+
+// Header-Werte (Subject, Absendername) landen roh als "Header: <wert>\r\n" in
+// der DATA-Phase – ein eingeschleustes CR/LF im Wert würde zusätzliche
+// Header oder sogar eine komplett neue, vom Angreifer kontrollierte Nachricht
+// einschleusen (Header-Injection). encodeHeader() base64-kodiert zwar
+// Nicht-ASCII, ließe ein reines "a\r\nBcc: opfer@x.de" in einem ASCII-Subject
+// aber unverändert durch – deshalb hier zusätzlich hart entschärft.
+function stripHeaderInjection(text: string): string {
+  return text.replace(/[\r\n]+/g, ' ')
+}
+
 export async function sendSmtpMail(config: SmtpConfig, message: SmtpMessage): Promise<void> {
+  const to = assertSafeEmailAddress(message.to, 'Empfänger')
+  const fromEmail = assertSafeEmailAddress(message.fromEmail, 'Absender')
+  const fromName = message.fromName ? stripHeaderInjection(message.fromName) : message.fromName
+  const subject = stripHeaderInjection(message.subject)
+
   let conn: Deno.Conn =
     config.encryption === 'tls'
       ? await Deno.connectTls({ hostname: config.hostname, port: config.port })
@@ -58,15 +89,15 @@ export async function sendSmtpMail(config: SmtpConfig, message: SmtpMessage): Pr
       await command(io, base64(config.password ?? ''), 235)
     }
 
-    await command(io, `MAIL FROM:<${message.fromEmail}>`, 250)
-    await command(io, `RCPT TO:<${message.to}>`, 250)
+    await command(io, `MAIL FROM:<${fromEmail}>`, 250)
+    await command(io, `RCPT TO:<${to}>`, 250)
     await command(io, 'DATA', 354)
 
-    const from = message.fromName ? `${encodeHeader(message.fromName)} <${message.fromEmail}>` : message.fromEmail
+    const from = fromName ? `${encodeHeader(fromName)} <${fromEmail}>` : fromEmail
     const headers = [
       `From: ${from}`,
-      `To: ${message.to}`,
-      `Subject: ${encodeHeader(message.subject)}`,
+      `To: ${to}`,
+      `Subject: ${encodeHeader(subject)}`,
       'MIME-Version: 1.0',
       'Content-Type: text/html; charset=UTF-8',
       'Content-Transfer-Encoding: base64',

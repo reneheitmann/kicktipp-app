@@ -263,7 +263,7 @@ export function SeasonDetailPage() {
   }
 
   if (!season) {
-    return <p className="p-4 text-sm text-red-600 sm:p-6">{error ?? 'Saison nicht gefunden.'}</p>
+    return <p role="alert" className="p-4 text-sm text-red-600 sm:p-6">{error ?? 'Saison nicht gefunden.'}</p>
   }
 
   const playersById = new Map(players.map((p) => [p.id, p]))
@@ -356,7 +356,7 @@ export function SeasonDetailPage() {
         </div>
       </div>
 
-      {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
+      {error && <p role="alert" className="mb-4 text-sm text-red-600">{error}</p>}
 
       <CollapsibleSection title="Gewinnverteilung" defaultOpen={false}>
         <div className="grid gap-4 sm:grid-cols-2">

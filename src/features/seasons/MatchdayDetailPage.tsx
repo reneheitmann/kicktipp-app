@@ -80,7 +80,7 @@ export function MatchdayDetailPage() {
   }
 
   if (!matchday) {
-    return <p className="p-4 text-sm text-red-600 sm:p-6">{error ?? 'Spieltag nicht gefunden.'}</p>
+    return <p role="alert" className="p-4 text-sm text-red-600 sm:p-6">{error ?? 'Spieltag nicht gefunden.'}</p>
   }
 
   const entryPlayerIds = new Set(entries.map((e) => e.player_id))
@@ -114,7 +114,7 @@ export function MatchdayDetailPage() {
         <Badge tone={matchday.status === 'abgerechnet' ? 'positive' : 'warning'}>{matchday.status}</Badge>
       </div>
 
-      {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
+      {error && <p role="alert" className="mb-4 text-sm text-red-600">{error}</p>}
 
       {canManageEntries && missingParticipants.length > 0 && (
         <div className="mb-3 flex justify-end">

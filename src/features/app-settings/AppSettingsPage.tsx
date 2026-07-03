@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Button } from '../../components/ui/Button'
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { useAuth } from '../auth/useAuth'
 import { useAppBranding } from './useAppBranding'
 import { getAppSettings, saveAppSettings, uploadAppIcon } from './appSettingsApi'
@@ -16,10 +17,17 @@ export function AppSettingsPage() {
   const [iconUrl, setIconUrl] = useState<string | null>(null)
   const [primaryColor, setPrimaryColor] = useState(DEFAULT_PRIMARY_COLOR)
 
-  const [uploadingIcon, setUploadingIcon] = useState(false)
+  // Icon-Auswahl wird erst beim bestätigten Speichern tatsächlich hochgeladen
+  // (uploadAppIcon überschreibt einen festen Storage-Pfad) – bis dahin nur
+  // lokale Vorschau, damit ein Datei-Dialog-Abbruch/Zurücksetzen nicht schon
+  // das live Icon zerstört.
+  const [pendingIconFile, setPendingIconFile] = useState<File | null>(null)
+  const [pendingIconPreview, setPendingIconPreview] = useState<string | null>(null)
+
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [info, setInfo] = useState<string | null>(null)
+  const [confirmingSave, setConfirmingSave] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -34,7 +42,7 @@ export function AppSettingsPage() {
       .finally(() => setLoading(false))
   }, [])
 
-  async function handleIconChange(e: React.ChangeEvent<HTMLInputElement>) {
+  function handleIconChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
     if (!file.type.startsWith('image/')) {
@@ -45,32 +53,35 @@ export function AppSettingsPage() {
       setError('Datei zu groß (max. 2 MB).')
       return
     }
-    setUploadingIcon(true)
     setError(null)
-    try {
-      const url = await uploadAppIcon(file)
-      setIconUrl(url)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Icon konnte nicht hochgeladen werden.')
-    } finally {
-      setUploadingIcon(false)
-      if (fileInputRef.current) fileInputRef.current.value = ''
-    }
+    if (pendingIconPreview) URL.revokeObjectURL(pendingIconPreview)
+    setPendingIconFile(file)
+    setPendingIconPreview(URL.createObjectURL(file))
   }
 
-  async function handleSubmit(e: FormEvent) {
+  function handleSubmit(e: FormEvent) {
     e.preventDefault()
+    setConfirmingSave(true)
+  }
+
+  async function confirmSave() {
     if (!profile) return
     setSaving(true)
     setError(null)
     setInfo(null)
     try {
+      const nextIconUrl = pendingIconFile ? await uploadAppIcon(pendingIconFile) : iconUrl
       await saveAppSettings({
         app_name: appName.trim() || DEFAULT_APP_NAME,
-        icon_url: iconUrl,
+        icon_url: nextIconUrl,
         primary_color: primaryColor,
         updated_by: profile.id,
       })
+      setIconUrl(nextIconUrl)
+      if (pendingIconPreview) URL.revokeObjectURL(pendingIconPreview)
+      setPendingIconFile(null)
+      setPendingIconPreview(null)
+      if (fileInputRef.current) fileInputRef.current.value = ''
       await refresh()
       setInfo('Einstellungen gespeichert.')
     } catch (err) {
@@ -84,6 +95,10 @@ export function AppSettingsPage() {
     setAppName(DEFAULT_APP_NAME)
     setIconUrl(null)
     setPrimaryColor(DEFAULT_PRIMARY_COLOR)
+    if (pendingIconPreview) URL.revokeObjectURL(pendingIconPreview)
+    setPendingIconFile(null)
+    setPendingIconPreview(null)
+    if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
   if (loading) {
@@ -95,7 +110,7 @@ export function AppSettingsPage() {
       <h1 className="mb-6 text-xl font-semibold text-slate-900">Erscheinungsbild</h1>
 
       <form className="max-w-xl space-y-6 rounded-xl border border-slate-200 bg-white p-4" onSubmit={handleSubmit}>
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
         {info && <p className="text-sm text-emerald-700">{info}</p>}
 
         <div>
@@ -118,7 +133,7 @@ export function AppSettingsPage() {
           <span className="mb-1 block text-sm font-medium text-slate-700">Icon (Browser-Favicon)</span>
           <div className="flex items-center gap-3">
             <img
-              src={iconUrl ?? '/icon.png'}
+              src={pendingIconPreview ?? iconUrl ?? '/icon.png'}
               alt="Aktuelles Icon"
               className="h-12 w-12 rounded-lg border border-slate-200 object-contain"
             />
@@ -127,14 +142,16 @@ export function AppSettingsPage() {
               type="file"
               accept="image/*"
               onChange={handleIconChange}
-              disabled={uploadingIcon}
+              disabled={saving}
               className="text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-[var(--color-primary)] file:px-3 file:py-2 file:text-sm file:font-medium file:text-white"
             />
-            {uploadingIcon && <span className="text-sm text-slate-500">Lädt hoch...</span>}
           </div>
+          {pendingIconFile && (
+            <p className="mt-1 text-xs text-amber-700">Neues Icon ausgewählt – wird erst mit „Speichern" übernommen.</p>
+          )}
           <p className="mt-1 text-xs text-slate-500">
-            Wirkt sofort auf das Browser-Favicon. Das separate Docker-/Unraid-Container-Icon ist davon nicht
-            betroffen – das bleibt fest im Docker-Image hinterlegt und ändert sich nur mit einem neuen
+            Wirkt nach dem Speichern auf das Browser-Favicon. Das separate Docker-/Unraid-Container-Icon ist davon
+            nicht betroffen – das bleibt fest im Docker-Image hinterlegt und ändert sich nur mit einem neuen
             Code-Deployment.
           </p>
         </div>
@@ -173,6 +190,16 @@ export function AppSettingsPage() {
           </Button>
         </div>
       </form>
+
+      {confirmingSave && (
+        <ConfirmDialog
+          title="Erscheinungsbild speichern?"
+          message="App-Name, Icon und Primärfarbe werden sofort app-weit für alle Nutzer sichtbar."
+          confirmLabel="Speichern"
+          onConfirm={confirmSave}
+          onClose={() => setConfirmingSave(false)}
+        />
+      )}
     </div>
   )
 }

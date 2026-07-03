@@ -81,7 +81,7 @@ export function PlayerDetailPage() {
   }
 
   if (!player) {
-    return <p className="p-4 text-sm text-red-600 sm:p-6">{error ?? 'Spieler nicht gefunden.'}</p>
+    return <p role="alert" className="p-4 text-sm text-red-600 sm:p-6">{error ?? 'Spieler nicht gefunden.'}</p>
   }
 
   const filteredParticipants = seasonFilter
@@ -108,7 +108,7 @@ export function PlayerDetailPage() {
       </div>
       <p className="mb-6 text-sm text-slate-500">Kicktipp: {player.kicktipp_name || '—'}</p>
 
-      {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
+      {error && <p role="alert" className="mb-4 text-sm text-red-600">{error}</p>}
 
       <div className="mb-6 grid gap-3 sm:grid-cols-2">
         <div className="rounded-xl border border-slate-200 bg-white p-4">

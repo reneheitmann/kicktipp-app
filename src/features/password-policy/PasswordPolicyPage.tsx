@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Button } from '../../components/ui/Button'
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { useAuth } from '../auth/useAuth'
 import { describePasswordPolicy } from '../../lib/passwordValidation'
 import { getPasswordPolicy, savePasswordPolicy } from './passwordPolicyApi'
@@ -15,6 +16,7 @@ export function PasswordPolicyPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [info, setInfo] = useState<string | null>(null)
+  const [confirmingSave, setConfirmingSave] = useState(false)
 
   useEffect(() => {
     getPasswordPolicy()
@@ -28,8 +30,12 @@ export function PasswordPolicyPage() {
       .finally(() => setLoading(false))
   }, [])
 
-  async function handleSubmit(e: FormEvent) {
+  function handleSubmit(e: FormEvent) {
     e.preventDefault()
+    setConfirmingSave(true)
+  }
+
+  async function confirmSave() {
     if (!profile) return
     setSaving(true)
     setError(null)
@@ -62,7 +68,7 @@ export function PasswordPolicyPage() {
         vom User selbst gewählte Passwort ersetzt).
       </p>
 
-      {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
+      {error && <p role="alert" className="mb-4 text-sm text-red-600">{error}</p>}
       {info && <p className="mb-4 text-sm text-emerald-700">{info}</p>}
 
       <form className="max-w-md space-y-4 rounded-xl border border-slate-200 bg-white p-4" onSubmit={handleSubmit}>
@@ -124,6 +130,16 @@ export function PasswordPolicyPage() {
           {saving ? 'Speichern...' : 'Speichern'}
         </Button>
       </form>
+
+      {confirmingSave && (
+        <ConfirmDialog
+          title="Passwort-Richtlinie speichern?"
+          message="Gilt sofort app-weit für alle künftigen Passwortänderungen und neu angelegten Benutzer."
+          confirmLabel="Speichern"
+          onConfirm={confirmSave}
+          onClose={() => setConfirmingSave(false)}
+        />
+      )}
     </div>
   )
 }

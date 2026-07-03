@@ -25,6 +25,9 @@ name: Datenbank-Backup
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   backup:
     runs-on: ubuntu-latest

@@ -85,7 +85,7 @@ export function SeasonRankingPage() {
   }
 
   if (!season) {
-    return <p className="p-4 text-sm text-red-600 sm:p-6">{error ?? 'Saison nicht gefunden.'}</p>
+    return <p role="alert" className="p-4 text-sm text-red-600 sm:p-6">{error ?? 'Saison nicht gefunden.'}</p>
   }
 
   return (
@@ -101,7 +101,7 @@ export function SeasonRankingPage() {
         </Badge>
       </div>
 
-      {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
+      {error && <p role="alert" className="mb-4 text-sm text-red-600">{error}</p>}
 
       {canManage && (
         <div className="mb-3 flex flex-wrap items-center justify-end gap-3">

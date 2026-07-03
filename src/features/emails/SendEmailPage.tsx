@@ -231,7 +231,7 @@ export function SendEmailPage() {
         </Link>
       </div>
 
-      {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
+      {error && <p role="alert" className="mb-4 text-sm text-red-600">{error}</p>}
 
       {seasons.length === 0 ? (
         <p className="text-sm text-slate-500">Noch keine Saisons vorhanden.</p>
@@ -351,6 +351,7 @@ export function SendEmailPage() {
                             checked={!excluded}
                             disabled={!contactable}
                             onChange={() => toggleExcluded(player.id)}
+                            aria-label={`${player.name} in E-Mail-Versand einbeziehen`}
                             className="h-4 w-4"
                           />
                         </td>
