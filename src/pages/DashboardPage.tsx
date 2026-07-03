@@ -148,7 +148,11 @@ export function DashboardPage() {
           })
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Übersicht konnte nicht vollständig geladen werden.')
+        // Nur generische Meldung für den Nutzer – eine rohe Fehlermeldung
+        // (z. B. ein Netzwerk-/Supabase-String) wäre für nicht-technische
+        // Nutzer auf einer Geld-Seite verwirrend statt hilfreich.
+        console.error('Dashboard konnte nicht vollständig geladen werden:', err)
+        setError('Übersicht konnte nicht vollständig geladen werden.')
       } finally {
         setLoading(false)
       }
@@ -158,7 +162,17 @@ export function DashboardPage() {
   }, [profile, canManage])
 
   if (loading) {
-    return <p className="p-4 text-sm text-slate-500 sm:p-6">Lade...</p>
+    return (
+      <div className="p-4 sm:p-6" aria-live="polite" aria-busy="true">
+        <span className="sr-only">Konto wird geladen…</span>
+        <div className="mb-6 h-8 w-56 animate-pulse rounded bg-slate-200" />
+        <div className="mb-6 animate-pulse rounded-xl border border-slate-200 bg-white p-4">
+          <div className="mb-2 h-4 w-32 rounded bg-slate-100" />
+          <div className="mb-3 h-7 w-40 rounded bg-slate-100" />
+          <div className="h-4 w-full rounded bg-slate-100" />
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -167,7 +181,7 @@ export function DashboardPage() {
 
       {error && (
         <p className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-          Daten konnten nicht vollständig geladen werden ({error}). Bitte Seite neu laden.
+          {error} Bitte Seite neu laden.
         </p>
       )}
 
@@ -220,7 +234,8 @@ export function DashboardPage() {
 
       {canManage && stats && (
         <>
-          <h2 className="mb-3 text-base font-semibold text-slate-900">Statistik</h2>
+          <h2 className="text-base font-semibold text-slate-900">Statistik</h2>
+          <p className="mb-3 text-xs text-slate-500">Zahlen über alle Spieler – nicht dein eigenes Konto.</p>
           <div className="mb-6 grid grid-cols-2 gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 sm:grid-cols-4">
             <StatCard label="Spieler" value={String(stats.playerCount)} />
             <StatCard label="Aktive Saisons" value={String(stats.activeSeasonCount)} />
@@ -313,7 +328,7 @@ function describeBalance(balance: AccountBalance): string {
 function PlayerBalanceSummary({ balance, title }: { balance: AccountBalance; title: string }) {
   return (
     <div className="block rounded-xl border border-slate-200 bg-white p-4">
-      <p className="text-sm text-slate-500">{title}</p>
+      <h2 className="text-sm text-slate-500">{title}</h2>
       <BalanceHeadline balance={balance} />
       <BalanceBreakdown balance={balance} />
     </div>
@@ -338,7 +353,7 @@ function PlayerBalanceCard({
       aria-label={`${title}, ${describeBalance(balance)}`}
       className={`block rounded-xl border border-slate-200 bg-white p-4 hover:bg-slate-50 ${className}`}
     >
-      <p className="text-sm text-slate-500">{title}</p>
+      <h2 className="text-sm text-slate-500">{title}</h2>
       <BalanceHeadline balance={balance} />
       <BalanceBreakdown balance={balance} />
     </Link>
