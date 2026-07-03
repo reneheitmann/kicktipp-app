@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { Badge } from '../../components/ui/Badge'
 import { CollapsibleSection } from '../../components/ui/CollapsibleSection'
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { SearchInput } from '../../components/ui/SearchInput'
 import { currencyFormatter, formatGermanDate } from '../../lib/format'
 import { useAuth } from '../auth/useAuth'
@@ -79,6 +80,13 @@ export function SeasonDetailPage() {
   })
   const [selectedPlayerId, setSelectedPlayerId] = useState('')
   const [profileLinks, setProfileLinks] = useState<PlayerProfileLink[]>([])
+  const [confirmDialog, setConfirmDialog] = useState<{
+    title: string
+    message: string
+    confirmLabel?: string
+    danger?: boolean
+    onConfirm: () => void
+  } | null>(null)
 
   const reload = useCallback(async () => {
     if (!seasonId) return
@@ -151,7 +159,7 @@ export function SeasonDetailPage() {
     })
   }
 
-  async function handleToggleSeasonStatus() {
+  async function doToggleSeasonStatus() {
     if (!season) return
     const next = season.status === 'aktiv' ? 'abgeschlossen' : 'aktiv'
     try {
@@ -162,15 +170,22 @@ export function SeasonDetailPage() {
     }
   }
 
-  async function handleToggleGesamtwertungStatus() {
+  function handleToggleSeasonStatus() {
     if (!season) return
-    const next = season.gesamtwertung_status === 'offen' ? 'abgerechnet' : 'offen'
-    if (
-      next === 'offen' &&
-      !confirm('Gesamtwertung wieder öffnen? Ein bereits berechneter Gewinn für diese Saison wird dabei entfernt (Platzierungen bleiben erhalten).')
-    ) {
-      return
-    }
+    const next = season.status === 'aktiv' ? 'abgeschlossen' : 'aktiv'
+    setConfirmDialog({
+      title: next === 'abgeschlossen' ? 'Saison abschließen?' : 'Saison reaktivieren?',
+      message:
+        next === 'abgeschlossen'
+          ? 'Die Saison wird als abgeschlossen markiert. Sie bleibt weiterhin einsehbar und lässt sich jederzeit wieder reaktivieren.'
+          : 'Die Saison wird wieder als aktiv markiert.',
+      confirmLabel: next === 'abgeschlossen' ? 'Abschließen' : 'Reaktivieren',
+      onConfirm: doToggleSeasonStatus,
+    })
+  }
+
+  async function doSetGesamtwertungStatus(next: 'offen' | 'abgerechnet') {
+    if (!season) return
     try {
       await setGesamtwertungStatus(season.id, next)
       await reload()
@@ -179,14 +194,23 @@ export function SeasonDetailPage() {
     }
   }
 
-  async function handleToggleMatchdayStatus(matchday: Matchday) {
-    const next = matchday.status === 'offen' ? 'abgerechnet' : 'offen'
-    if (
-      next === 'offen' &&
-      !confirm('Spieltag wieder öffnen? Ein bereits berechneter Gewinn für diesen Spieltag wird dabei entfernt (Platzierungen bleiben erhalten).')
-    ) {
+  function handleToggleGesamtwertungStatus() {
+    if (!season) return
+    const next = season.gesamtwertung_status === 'offen' ? 'abgerechnet' : 'offen'
+    if (next === 'offen') {
+      setConfirmDialog({
+        title: 'Gesamtwertung wieder öffnen?',
+        message: 'Ein bereits berechneter Gewinn für diese Saison wird dabei entfernt (Platzierungen bleiben erhalten).',
+        confirmLabel: 'Öffnen',
+        danger: true,
+        onConfirm: () => doSetGesamtwertungStatus(next),
+      })
       return
     }
+    doSetGesamtwertungStatus(next)
+  }
+
+  async function doSetMatchdayStatus(matchday: Matchday, next: 'offen' | 'abgerechnet') {
     try {
       await updateMatchday(matchday.id, { status: next })
       await reload()
@@ -195,8 +219,22 @@ export function SeasonDetailPage() {
     }
   }
 
-  async function handleDeleteMatchday(matchday: Matchday) {
-    if (!confirm(`Spieltag ${matchday.nummer} wirklich löschen?`)) return
+  function handleToggleMatchdayStatus(matchday: Matchday) {
+    const next = matchday.status === 'offen' ? 'abgerechnet' : 'offen'
+    if (next === 'offen') {
+      setConfirmDialog({
+        title: 'Spieltag wieder öffnen?',
+        message: 'Ein bereits berechneter Gewinn für diesen Spieltag wird dabei entfernt (Platzierungen bleiben erhalten).',
+        confirmLabel: 'Öffnen',
+        danger: true,
+        onConfirm: () => doSetMatchdayStatus(matchday, next),
+      })
+      return
+    }
+    doSetMatchdayStatus(matchday, next)
+  }
+
+  async function doDeleteMatchday(matchday: Matchday) {
     try {
       await deleteMatchday(matchday.id)
       await reload()
@@ -205,7 +243,22 @@ export function SeasonDetailPage() {
     }
   }
 
-  if (loading) {
+  function handleDeleteMatchday(matchday: Matchday) {
+    setConfirmDialog({
+      title: 'Spieltag löschen?',
+      message: `Spieltag ${matchday.nummer} wird unwiderruflich gelöscht.`,
+      confirmLabel: 'Löschen',
+      danger: true,
+      onConfirm: () => doDeleteMatchday(matchday),
+    })
+  }
+
+  // Nur beim allerersten Laden die ganze Seite auf einen Ladehinweis
+  // reduzieren – reload() nach einer Änderung (z. B. Teilnehmer entfernen)
+  // soll die bereits gerenderte Seite nicht mehr komplett wegwerfen, sonst
+  // verliert man bei jeder Aktion Scroll-Position und Kontext (relevant bei
+  // Saisons mit vielen Teilnehmern/Spieltagen).
+  if (loading && !season) {
     return <p className="p-4 text-sm text-slate-500 sm:p-6">Lade...</p>
   }
 
@@ -274,25 +327,31 @@ export function SeasonDetailPage() {
             </a>
           )}
         </div>
-        <div className="flex flex-wrap gap-2 sm:justify-end">
-          <Link to={`/seasons/${season.id}/guthaben`}>
-            <Button variant="secondary">Guthaben</Button>
-          </Link>
+        <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+          <div className="flex flex-wrap gap-2">
+            <Link to={`/seasons/${season.id}/guthaben`}>
+              <Button variant="secondary">Guthaben</Button>
+            </Link>
+            {canManageSeason && (
+              <>
+                <Button variant="secondary" onClick={() => setShowSeasonForm(true)}>
+                  Bearbeiten
+                </Button>
+                <Button variant="secondary" onClick={() => setShowCopyDialog(true)}>
+                  Kopieren
+                </Button>
+              </>
+            )}
+          </div>
           {canManageSeason && (
-            <>
-              <Button variant="secondary" onClick={() => setShowSeasonForm(true)}>
-                Bearbeiten
-              </Button>
-              <Button variant="secondary" onClick={() => setShowCopyDialog(true)}>
-                Kopieren
-              </Button>
+            <div className="flex flex-wrap gap-2 border-l border-slate-200 pl-2">
               <Button variant="secondary" onClick={handleToggleSeasonStatus}>
                 {season.status === 'aktiv' ? 'Abschließen' : 'Reaktivieren'}
               </Button>
               <Button variant="danger" onClick={() => setShowDeleteDialog(true)}>
                 Löschen
               </Button>
-            </>
+            </div>
           )}
         </div>
       </div>
@@ -576,6 +635,17 @@ export function SeasonDetailPage() {
           existingNummern={new Set(matchdays.map((m) => m.nummer))}
           onClose={() => setShowImportSpieltageDialog(false)}
           onImported={reload}
+        />
+      )}
+
+      {confirmDialog && (
+        <ConfirmDialog
+          title={confirmDialog.title}
+          message={confirmDialog.message}
+          confirmLabel={confirmDialog.confirmLabel}
+          danger={confirmDialog.danger}
+          onConfirm={confirmDialog.onConfirm}
+          onClose={() => setConfirmDialog(null)}
         />
       )}
     </div>
