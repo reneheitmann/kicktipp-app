@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { Badge } from '../../components/ui/Badge'
-import { currencyFormatter } from '../../lib/format'
+import { currencyFormatter, formatGermanDate } from '../../lib/format'
 import { useAuth } from '../auth/useAuth'
 import { listPlayerProfileLinks } from '../players/playerProfileLinksApi'
 import { listAllTransactions } from '../balances/balancesApi'
@@ -116,7 +116,7 @@ export function SeasonsPage() {
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-medium text-slate-900">{season.name}</p>
                     <p className="truncate text-sm text-slate-500">
-                      {season.start_date} – {season.end_date}
+                      {formatGermanDate(season.start_date)} – {formatGermanDate(season.end_date)}
                     </p>
                   </div>
                   {myGewinn !== undefined && (

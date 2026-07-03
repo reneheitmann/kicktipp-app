@@ -314,7 +314,7 @@ export function SeasonDetailPage() {
             <Badge tone={season.status === 'aktiv' ? 'positive' : 'neutral'}>{season.status}</Badge>
           </div>
           <p className="mt-1 text-sm text-slate-500">
-            {season.start_date} – {season.end_date}
+            {formatGermanDate(season.start_date)} – {formatGermanDate(season.end_date)}
           </p>
           {season.kicktipp_link && (
             <a
