@@ -23,6 +23,11 @@ name: Docker Image bauen und veröffentlichen
 # an die zuletzt von main gemergte Versionsnummer "_beta.<Commit-Anzahl auf
 # beta>" an, sodass die angezeigte Version trotzdem bei jedem Beta-Push sichtbar
 # hochzählt (z. B. "1.1.7_beta.42").
+#
+# Lint (oxlint) und Tests (vitest) laufen vor dem eigentlichen Image-Build und
+# blockieren ihn bei Fehlern – zuvor prüfte die Pipeline nur implizit über
+# `tsc -b` als Teil von `npm run build` innerhalb des Dockerfiles, oxlint-
+# Verstöße blieben dadurch folgenlos.
 
 on:
   push:
@@ -45,6 +50,21 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Node einrichten
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Abhängigkeiten installieren
+        run: npm ci
+
+      - name: Lint prüfen
+        run: npm run lint
+
+      - name: Tests ausführen
+        run: npm run test
 
       - name: Version automatisch erhöhen (nur main)
         id: bump
