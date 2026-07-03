@@ -1,7 +1,6 @@
 import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { AppBrandingProvider } from './features/app-settings/AppBrandingProvider'
-import { AppSettingsPage } from './features/app-settings/AppSettingsPage'
 import { AuthProvider } from './features/auth/AuthProvider'
 import { useAuth } from './features/auth/useAuth'
 import { ProtectedRoute } from './features/auth/ProtectedRoute'
@@ -12,23 +11,49 @@ import { DashboardPage } from './pages/DashboardPage'
 import { AboutPage } from './pages/AboutPage'
 import { UnauthorizedPage } from './pages/UnauthorizedPage'
 import { NotFoundPage } from './pages/NotFoundPage'
-import { PlayersPage } from './features/players/PlayersPage'
 import { PlayerDetailPage } from './features/players/PlayerDetailPage'
-import { AccountsOverviewPage } from './features/players/AccountsOverviewPage'
-import { AdminUsersPage } from './features/admin-users/AdminUsersPage'
-import { EmailSettingsPage } from './features/email-settings/EmailSettingsPage'
-import { RolesPermissionsPage } from './features/permissions/RolesPermissionsPage'
-import { LogsPage } from './features/logs/LogsPage'
-import { PasswordPolicyPage } from './features/password-policy/PasswordPolicyPage'
 import { SeasonsPage } from './features/seasons/SeasonsPage'
 import { SeasonDetailPage } from './features/seasons/SeasonDetailPage'
-import { SeasonRankingPage } from './features/seasons/SeasonRankingPage'
-import { MatchdayDetailPage } from './features/seasons/MatchdayDetailPage'
-import { ImportPage } from './features/kicktipp-import/ImportPage'
-import { TipperImportPage } from './features/kicktipp-import/TipperImportPage'
 import { MyAccountPage } from './features/auth/MyAccountPage'
-import { SendEmailPage } from './features/emails/SendEmailPage'
-import { EmailTemplatesPage } from './features/emails/EmailTemplatesPage'
+
+// Lazy geladen: Admin-/Import-/E-Mail-/Konten-Verwaltungsseiten sind
+// rollenbeschränkt und werden von den meisten Logins nie geöffnet – jeder
+// Login soll trotzdem nicht deren Code mitladen müssen (relevant für mobile
+// Ladezeiten, siehe PRODUCT.md "Mobile gleichwertig").
+const PlayersPage = lazy(() => import('./features/players/PlayersPage').then((m) => ({ default: m.PlayersPage })))
+const AccountsOverviewPage = lazy(() =>
+  import('./features/players/AccountsOverviewPage').then((m) => ({ default: m.AccountsOverviewPage })),
+)
+const AdminUsersPage = lazy(() =>
+  import('./features/admin-users/AdminUsersPage').then((m) => ({ default: m.AdminUsersPage })),
+)
+const EmailSettingsPage = lazy(() =>
+  import('./features/email-settings/EmailSettingsPage').then((m) => ({ default: m.EmailSettingsPage })),
+)
+const RolesPermissionsPage = lazy(() =>
+  import('./features/permissions/RolesPermissionsPage').then((m) => ({ default: m.RolesPermissionsPage })),
+)
+const AppSettingsPage = lazy(() =>
+  import('./features/app-settings/AppSettingsPage').then((m) => ({ default: m.AppSettingsPage })),
+)
+const LogsPage = lazy(() => import('./features/logs/LogsPage').then((m) => ({ default: m.LogsPage })))
+const PasswordPolicyPage = lazy(() =>
+  import('./features/password-policy/PasswordPolicyPage').then((m) => ({ default: m.PasswordPolicyPage })),
+)
+const SeasonRankingPage = lazy(() =>
+  import('./features/seasons/SeasonRankingPage').then((m) => ({ default: m.SeasonRankingPage })),
+)
+const MatchdayDetailPage = lazy(() =>
+  import('./features/seasons/MatchdayDetailPage').then((m) => ({ default: m.MatchdayDetailPage })),
+)
+const ImportPage = lazy(() => import('./features/kicktipp-import/ImportPage').then((m) => ({ default: m.ImportPage })))
+const TipperImportPage = lazy(() =>
+  import('./features/kicktipp-import/TipperImportPage').then((m) => ({ default: m.TipperImportPage })),
+)
+const SendEmailPage = lazy(() => import('./features/emails/SendEmailPage').then((m) => ({ default: m.SendEmailPage })))
+const EmailTemplatesPage = lazy(() =>
+  import('./features/emails/EmailTemplatesPage').then((m) => ({ default: m.EmailTemplatesPage })),
+)
 
 // Lazy geladen, da recharts (Diagramme) allein mehrere hundert KB wiegt und nur
 // auf diesen beiden Seiten gebraucht wird – relevant für mobile Ladezeiten.
@@ -55,81 +80,69 @@ function AppRoutes() {
   }
 
   return (
-    <Routes>
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/unauthorized" element={<UnauthorizedPage />} />
+    <Suspense fallback={<PageLoading />}>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/unauthorized" element={<UnauthorizedPage />} />
 
-      <Route element={<ProtectedRoute />}>
-        <Route element={<AppShell />}>
-          <Route element={<ProtectedRoute requiredPermission="page.dashboard.view" />}>
-            <Route path="/" element={<DashboardPage />} />
-          </Route>
+        <Route element={<ProtectedRoute />}>
+          <Route element={<AppShell />}>
+            <Route element={<ProtectedRoute requiredPermission="page.dashboard.view" />}>
+              <Route path="/" element={<DashboardPage />} />
+            </Route>
 
-          <Route element={<ProtectedRoute requiredPermission="page.seasons.view" />}>
-            <Route path="/seasons" element={<SeasonsPage />} />
-            <Route path="/seasons/:seasonId" element={<SeasonDetailPage />} />
-            <Route path="/seasons/:seasonId/gesamtwertung" element={<SeasonRankingPage />} />
-            <Route path="/seasons/:seasonId/matchdays/:matchdayId" element={<MatchdayDetailPage />} />
-            <Route
-              path="/seasons/:seasonId/guthaben"
-              element={
-                <Suspense fallback={<PageLoading />}>
-                  <SeasonBalancesPage />
-                </Suspense>
-              }
-            />
-          </Route>
+            <Route element={<ProtectedRoute requiredPermission="page.seasons.view" />}>
+              <Route path="/seasons" element={<SeasonsPage />} />
+              <Route path="/seasons/:seasonId" element={<SeasonDetailPage />} />
+              <Route path="/seasons/:seasonId/gesamtwertung" element={<SeasonRankingPage />} />
+              <Route path="/seasons/:seasonId/matchdays/:matchdayId" element={<MatchdayDetailPage />} />
+              <Route path="/seasons/:seasonId/guthaben" element={<SeasonBalancesPage />} />
+            </Route>
 
-          {/* Persönliche Seiten (eigenes Konto/Profil) bleiben bewusst außerhalb
-              des page.*.view-Konzepts – jeder aktive User muss sein eigenes Konto
-              und Profil immer erreichen können, unabhängig davon, ob z. B. die
-              Saisons- oder Konten-Übersichtsseite für seine Rolle ausgeblendet ist. */}
-          <Route path="/players/:playerId" element={<PlayerDetailPage />} />
-          <Route path="/profil" element={<MyAccountPage />} />
-          <Route path="/ueber" element={<AboutPage />} />
+            {/* Persönliche Seiten (eigenes Konto/Profil) bleiben bewusst außerhalb
+                des page.*.view-Konzepts – jeder aktive User muss sein eigenes Konto
+                und Profil immer erreichen können, unabhängig davon, ob z. B. die
+                Saisons- oder Konten-Übersichtsseite für seine Rolle ausgeblendet ist. */}
+            <Route path="/players/:playerId" element={<PlayerDetailPage />} />
+            <Route path="/profil" element={<MyAccountPage />} />
+            <Route path="/ueber" element={<AboutPage />} />
 
-          <Route element={<ProtectedRoute requiredPermission="page.vergleich.view" />}>
-            <Route
-              path="/vergleich"
-              element={
-                <Suspense fallback={<PageLoading />}>
-                  <SeasonComparisonPage />
-                </Suspense>
-              }
-            />
-          </Route>
+            <Route element={<ProtectedRoute requiredPermission="page.vergleich.view" />}>
+              <Route path="/vergleich" element={<SeasonComparisonPage />} />
+            </Route>
 
-          <Route element={<ProtectedRoute requiredPermission={['players.manage', 'page.players.view']} />}>
-            <Route path="/players" element={<PlayersPage />} />
-          </Route>
+            <Route element={<ProtectedRoute requiredPermission={['players.manage', 'page.players.view']} />}>
+              <Route path="/players" element={<PlayersPage />} />
+            </Route>
 
-          <Route element={<ProtectedRoute requiredPermission={['accounts.manage', 'page.accounts.view']} />}>
-            <Route path="/konten" element={<AccountsOverviewPage />} />
-          </Route>
+            <Route element={<ProtectedRoute requiredPermission={['accounts.manage', 'page.accounts.view']} />}>
+              <Route path="/konten" element={<AccountsOverviewPage />} />
+            </Route>
 
-          <Route element={<ProtectedRoute requiredPermission={['import.use', 'page.import.view']} />}>
-            <Route path="/import" element={<ImportPage />} />
-            <Route path="/import/tipper" element={<TipperImportPage />} />
-          </Route>
+            <Route element={<ProtectedRoute requiredPermission={['import.use', 'page.import.view']} />}>
+              <Route path="/import" element={<ImportPage />} />
+              <Route path="/import/tipper" element={<TipperImportPage />} />
+            </Route>
 
-          <Route element={<ProtectedRoute requiredPermission={['email.send', 'page.email_send.view']} />}>
-            <Route path="/emails/senden" element={<SendEmailPage />} />
-            <Route path="/emails/vorlagen" element={<EmailTemplatesPage />} />
-          </Route>
+            <Route element={<ProtectedRoute requiredPermission={['email.send', 'page.email_send.view']} />}>
+              <Route path="/emails/senden" element={<SendEmailPage />} />
+              <Route path="/emails/vorlagen" element={<EmailTemplatesPage />} />
+            </Route>
 
-          <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
-            <Route path="/admin/users" element={<AdminUsersPage />} />
-            <Route path="/admin/email" element={<EmailSettingsPage />} />
-            <Route path="/admin/roles" element={<RolesPermissionsPage />} />
-            <Route path="/admin/branding" element={<AppSettingsPage />} />
-            <Route path="/admin/logs" element={<LogsPage />} />
-            <Route path="/admin/password-policy" element={<PasswordPolicyPage />} />
+            <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
+              <Route path="/admin/users" element={<AdminUsersPage />} />
+              <Route path="/admin/email" element={<EmailSettingsPage />} />
+              <Route path="/admin/roles" element={<RolesPermissionsPage />} />
+              <Route path="/admin/branding" element={<AppSettingsPage />} />
+              <Route path="/admin/logs" element={<LogsPage />} />
+              <Route path="/admin/password-policy" element={<PasswordPolicyPage />} />
+            </Route>
           </Route>
         </Route>
-      </Route>
 
-      <Route path="*" element={<NotFoundPage />} />
-    </Routes>
+        <Route path="*" element={<NotFoundPage />} />
+      </Routes>
+    </Suspense>
   )
 }
 

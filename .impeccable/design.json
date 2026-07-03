@@ -1,0 +1,140 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-07-03T00:00:00Z",
+  "title": "Design System: Kicktipp Auswertung",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Gedecktes Ziegelrot",
+        "canonical": "oklch(38% 0.15 30)",
+        "tonalRamp": [
+          "oklch(20% 0.10 30)",
+          "oklch(28% 0.13 30)",
+          "oklch(33% 0.15 30)",
+          "oklch(38% 0.15 30)",
+          "oklch(48% 0.14 30)",
+          "oklch(62% 0.12 30)",
+          "oklch(80% 0.08 30)",
+          "oklch(94% 0.03 30)"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Tinte",
+        "canonical": "oklch(21% 0.03 265)",
+        "tonalRamp": [
+          "oklch(15% 0.02 265)",
+          "oklch(21% 0.03 265)",
+          "oklch(32% 0.03 265)",
+          "oklch(45% 0.03 265)",
+          "oklch(55% 0.02 265)",
+          "oklch(70% 0.02 265)",
+          "oklch(88% 0.01 265)",
+          "oklch(97% 0.005 265)"
+        ]
+      },
+      "surface-subtle": {
+        "role": "neutral",
+        "displayName": "Fläche, gedämpft",
+        "canonical": "oklch(98% 0.003 265)",
+        "tonalRamp": [
+          "oklch(30% 0.02 265)",
+          "oklch(45% 0.02 265)",
+          "oklch(60% 0.01 265)",
+          "oklch(75% 0.01 265)",
+          "oklch(88% 0.005 265)",
+          "oklch(93% 0.005 265)",
+          "oklch(98% 0.003 265)",
+          "oklch(100% 0 0)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "title": { "displayName": "Title", "purpose": "Seitenüberschriften (h1)." },
+      "body": { "displayName": "Body", "purpose": "Eingabefelder, primärer Fließtext." },
+      "bodySmall": { "displayName": "Body Small", "purpose": "Sekundärtext, Tabellenzellen, Kartenbeschreibungen." },
+      "label": { "displayName": "Label", "purpose": "Badges, Formular-Labels, Captions." }
+    },
+    "shadows": [
+      { "name": "overlay", "value": "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)", "purpose": "Modal, das über anderem Inhalt schwebt." }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Hauptaktion einer Seite (Speichern, Anlegen).",
+      "html": "<button class=\"ds-btn-primary\">Speichern</button>",
+      "css": ".ds-btn-primary { background: var(--color-primary, #b51a00); color: #ffffff; padding: 10px 16px; border-radius: 8px; border: none; font-size: 0.875rem; font-weight: 500; transition: background 0.15s, transform 0.1s; } .ds-btn-primary:hover { background: var(--color-primary-hover, #9f1700); } .ds-btn-primary:focus-visible { outline: 2px solid var(--color-primary, #b51a00); outline-offset: 2px; } .ds-btn-primary:active { transform: scale(0.99); } .ds-btn-primary:disabled { opacity: 0.5; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Nebenaktion (Bearbeiten, Abbrechen).",
+      "html": "<button class=\"ds-btn-secondary\">Bearbeiten</button>",
+      "css": ".ds-btn-secondary { background: #f1f5f9; color: #0f172a; padding: 10px 16px; border-radius: 8px; border: none; font-size: 0.875rem; font-weight: 500; transition: background 0.15s; } .ds-btn-secondary:hover { background: #e2e8f0; }"
+    },
+    {
+      "name": "Danger Button",
+      "kind": "button",
+      "refersTo": "button-danger",
+      "description": "Destruktive Aktion (Löschen, Entfernen).",
+      "html": "<button class=\"ds-btn-danger\">Löschen</button>",
+      "css": ".ds-btn-danger { background: #fef2f2; color: #b91c1c; padding: 10px 16px; border-radius: 8px; border: none; font-size: 0.875rem; font-weight: 500; transition: background 0.15s; } .ds-btn-danger:hover { background: #fee2e2; }"
+    },
+    {
+      "name": "Status Badge",
+      "kind": "chip",
+      "refersTo": "badge",
+      "description": "Status-Anzeige (Saison-/Spieltag-Status, Rolle) in vier Tönen: neutral, positive, warning, negative.",
+      "html": "<span class=\"ds-badge ds-badge-positive\">abgerechnet</span>",
+      "css": ".ds-badge { display: inline-flex; align-items: center; border-radius: 9999px; padding: 4px 10px; font-size: 0.75rem; font-weight: 500; } .ds-badge-neutral { background: #f1f5f9; color: #334155; } .ds-badge-positive { background: #ecfdf5; color: #047857; } .ds-badge-warning { background: #fffbeb; color: #b45309; } .ds-badge-negative { background: #fef2f2; color: #b91c1c; }"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Grundbaustein für Inhaltsblöcke (Konten, Salden, Formulare) — mit Abstand am häufigsten wiederverwendetes Muster.",
+      "html": "<div class=\"ds-card\"><p class=\"ds-card-label\">Mein Konto</p><p class=\"ds-card-value\">198,24 € Guthaben</p></div>",
+      "css": ".ds-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; } .ds-card-label { color: #64748b; font-size: 0.875rem; margin: 0 0 4px; } .ds-card-value { color: #059669; font-size: 1.25rem; font-weight: 600; margin: 0; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Der Ruhige Kontoauszug",
+    "overview": "Dieses System ist bewusst so gestaltet, wie ein gut gemachter Kontoauszug wirkt: nichts lenkt von den Zahlen ab, jede Fläche hat einen klaren Zweck, und die einzige Farbe, die sich Aufmerksamkeit nimmt, ist die Primärfarbe — sparsam auf Buttons und aktive Navigation begrenzt. Es gibt keine Hero-Bereiche, keine Marketing-Sprache, keine Dekoration, die nicht auch eine Funktion trägt. Für eine private Tippgemeinschaft mit gemischt technikaffinen Nutzern (auch Eltern, auch am Handy) muss die Oberfläche auf den ersten Blick verständlich sein, nicht beeindruckend.",
+    "keyCharacteristics": [
+      "Eine einzige Akzentfarbe, sparsam eingesetzt (Buttons, aktive Navigation)",
+      "Flächen über Rand + Weißraum definiert, nicht über Schatten",
+      "Ein einziger Schriftschnitt (system-ui-Stack), Hierarchie über Größe/Gewicht statt Font-Wechsel",
+      "Karten als wiederkehrendes, immer gleiches Grundmuster",
+      "Semantische Statusfarben (Grün/Amber/Rot) ausschließlich für Geld-Zustände, nie dekorativ"
+    ],
+    "rules": [
+      { "name": "The One Accent Rule", "body": "Die Primärfarbe erscheint ausschließlich auf Primär-Buttons und der aktiven Navigation. Nirgendwo sonst.", "section": "colors" },
+      { "name": "The Focus-Stays-Neutral Rule", "body": "Eingabefelder fokussieren immer mit slate-900-Rand, nicht mit der konfigurierbaren Primärfarbe.", "section": "colors" },
+      { "name": "The 4.5:1 Rule", "body": "Jede Textfarbe muss WCAG AA erreichen (4,5:1 normal, 3:1 ab text-lg font-semibold). slate-400 als Text und emerald-600 bei kleiner Schrift waren beide zu blass — behoben zugunsten slate-500 bzw. emerald-700.", "section": "colors" },
+      { "name": "The No-Display-Font Rule", "body": "Es gibt keine Hero-Typografie. Hierarchie entsteht über Größe/Gewicht, nicht über einen zweiten Schriftschnitt.", "section": "typography" },
+      { "name": "The Flat-By-Default Rule", "body": "Flächen sind im Ruhezustand schattenlos. Schatten sind die Ausnahme für schwebende oder bewusst hervorgehobene Elemente.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do die Primärfarbe ausschließlich auf Primär-Buttons und aktiver Navigation verwenden",
+      "Do jede Karte mit rounded-xl border border-slate-200 bg-white p-4 aufbauen",
+      "Do Status ausschließlich über die drei semantischen Farben transportieren",
+      "Do Eingabefelder mit focus:border-slate-900 fokussieren, unabhängig von der Primärfarbe",
+      "Do alle interaktiven Elemente mindestens 44px hoch und breit halten",
+      "Do vor jeder neuen Textfarbe den Kontrast nachrechnen (The 4.5:1 Rule)"
+    ],
+    "donts": [
+      "Don't Gradient-Hero-Bereiche, große Marketing-Claims oder Feature-Grids einbauen",
+      "Don't einen verspielten Consumer-App-Look anstreben",
+      "Don't border-left/border-right größer als 1px als farbigen Akzent verwenden",
+      "Don't Schatten als Standard-Zustand jeder Karte einsetzen",
+      "Don't eine zweite Schriftart für Überschriften einführen",
+      "Don't text-slate-400 für Text verwenden (2,56:1, verfehlt WCAG AA)",
+      "Don't text-emerald-600 bei normaler Textgröße verwenden (3,77:1, verfehlt 4,5:1)"
+    ]
+  }
+}

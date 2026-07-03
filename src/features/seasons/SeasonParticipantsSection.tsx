@@ -96,7 +96,7 @@ export function SeasonParticipantsSection({
                             ? 'Als Standardauswahl entfernen'
                             : 'Als Standardauswahl für Spieltage markieren'
                         }
-                        className={`shrink-0 text-base leading-none ${
+                        className={`flex min-w-11 shrink-0 items-center justify-center text-base leading-none ${
                           favoritePlayerId === participant.player_id
                             ? 'text-amber-500'
                             : 'text-slate-300 hover:text-amber-400'
@@ -115,7 +115,7 @@ export function SeasonParticipantsSection({
                 </div>
                 <div className="flex flex-wrap items-center justify-between gap-3 sm:justify-end sm:gap-4">
                   <div className="shrink-0 text-right">
-                    <p className="text-xs text-slate-400">Gesamteinsatz</p>
+                    <p className="text-xs text-slate-500">Gesamteinsatz</p>
                     <p className="text-sm font-semibold text-slate-900">
                       {currencyFormatter.format(
                         participant.gesamtsieg_einsatz_betrag + participant.spieltags_einsatz_betrag * matchdayCount,

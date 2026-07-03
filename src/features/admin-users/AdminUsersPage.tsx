@@ -76,7 +76,7 @@ export function AdminUsersPage() {
       <SearchInput value={search} onChange={setSearch} placeholder="Benutzer suchen..." className="mb-4 max-w-xs" />
 
       {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
-      {info && <p className="mb-4 text-sm text-emerald-600">{info}</p>}
+      {info && <p className="mb-4 text-sm text-emerald-700">{info}</p>}
 
       {loading ? (
         <p className="text-sm text-slate-500">Lade...</p>

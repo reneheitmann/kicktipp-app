@@ -15,6 +15,7 @@ export function SortableTh({ columnKey, label, activeKey, direction, onSort, ali
   const active = activeKey === columnKey
   return (
     <th
+      aria-sort={active ? (direction === 'asc' ? 'ascending' : 'descending') : 'none'}
       className={`sticky top-0 z-10 bg-white px-2 py-2 text-xs font-medium sm:px-4 sm:py-3 sm:text-sm ${align === 'right' ? 'text-right' : 'text-left'} ${className}`}
     >
       <button
@@ -25,7 +26,7 @@ export function SortableTh({ columnKey, label, activeKey, direction, onSort, ali
         }`}
       >
         {label}
-        <span className="w-3 text-xs text-slate-400">{active ? (direction === 'asc' ? '▲' : '▼') : ''}</span>
+        <span className="w-3 text-xs text-slate-500">{active ? (direction === 'asc' ? '▲' : '▼') : ''}</span>
       </button>
     </th>
   )

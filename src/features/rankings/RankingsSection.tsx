@@ -121,7 +121,7 @@ export function RankingsSection({
       </div>
 
       {canManage && (
-        <p className="mb-2 text-xs text-slate-400">
+        <p className="mb-2 text-xs text-slate-500">
           Bei Gleichstand (mehrere Spieler auf demselben Platz) bitte den nächsten freien Platz für den
           Folge-Rang überspringen, z. B. zwei Spieler auf Platz 1, danach weiter mit Platz 3 – sonst stimmt die
           Gewinnverteilung nicht.
@@ -143,7 +143,7 @@ export function RankingsSection({
                 </p>
                 <div className="flex shrink-0 items-center gap-3">
                   {payout !== undefined && (
-                    <span className="text-sm font-medium text-emerald-600">{currencyFormatter.format(payout)}</span>
+                    <span className="text-sm font-medium text-emerald-700">{currencyFormatter.format(payout)}</span>
                   )}
                   {canManage ? (
                     <input

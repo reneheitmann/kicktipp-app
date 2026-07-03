@@ -96,7 +96,7 @@ export function AppSettingsPage() {
 
       <form className="max-w-xl space-y-6 rounded-xl border border-slate-200 bg-white p-4" onSubmit={handleSubmit}>
         {error && <p className="text-sm text-red-600">{error}</p>}
-        {info && <p className="text-sm text-emerald-600">{info}</p>}
+        {info && <p className="text-sm text-emerald-700">{info}</p>}
 
         <div>
           <label htmlFor="app-name" className="mb-1 block text-sm font-medium text-slate-700">
@@ -109,7 +109,7 @@ export function AppSettingsPage() {
             onChange={(e) => setAppName(e.target.value)}
             className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base focus:border-slate-900 focus:outline-none"
           />
-          <p className="mt-1 text-xs text-slate-400">
+          <p className="mt-1 text-xs text-slate-500">
             Erscheint in der Seitenleiste, im mobilen Header, auf der Login-Seite und als Browser-Tab-Titel.
           </p>
         </div>
@@ -130,9 +130,9 @@ export function AppSettingsPage() {
               disabled={uploadingIcon}
               className="text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-[var(--color-primary)] file:px-3 file:py-2 file:text-sm file:font-medium file:text-white"
             />
-            {uploadingIcon && <span className="text-sm text-slate-400">Lädt hoch...</span>}
+            {uploadingIcon && <span className="text-sm text-slate-500">Lädt hoch...</span>}
           </div>
-          <p className="mt-1 text-xs text-slate-400">
+          <p className="mt-1 text-xs text-slate-500">
             Wirkt sofort auf das Browser-Favicon. Das separate Docker-/Unraid-Container-Icon ist davon nicht
             betroffen – das bleibt fest im Docker-Image hinterlegt und ändert sich nur mit einem neuen
             Code-Deployment.
@@ -159,7 +159,7 @@ export function AppSettingsPage() {
               className="w-32 rounded-lg border border-slate-300 px-3 py-2 text-base focus:border-slate-900 focus:outline-none"
             />
           </div>
-          <p className="mt-1 text-xs text-slate-400">
+          <p className="mt-1 text-xs text-slate-500">
             Wirkt auf Buttons und die aktive Menü-Hervorhebung. Überschriften/Text bleiben unverändert dunkel.
           </p>
         </div>

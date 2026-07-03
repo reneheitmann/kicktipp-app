@@ -127,7 +127,7 @@ export function PayoutRulesEditor({ seasonId, typ, title, canManage }: PayoutRul
     <div className="rounded-xl border border-slate-200 bg-white p-4">
       <h3 className="mb-1 text-sm font-semibold text-slate-900">{title}</h3>
       <p className="mb-3 text-sm text-slate-500">
-        Gesamtgewinn: <span className="font-medium text-emerald-600">{currencyFormatter.format(pool)}</span>
+        Gesamtgewinn: <span className="font-medium text-emerald-700">{currencyFormatter.format(pool)}</span>
       </p>
 
       {paidOut && canManage && (
@@ -180,7 +180,7 @@ export function PayoutRulesEditor({ seasonId, typ, title, canManage }: PayoutRul
           </Button>
 
           <div className="mt-3 flex items-center justify-between">
-            <span className={`text-sm font-medium ${sumIsValid ? 'text-emerald-600' : 'text-red-600'}`}>
+            <span className={`text-sm font-medium ${sumIsValid ? 'text-emerald-700' : 'text-red-600'}`}>
               Summe: {sum.toFixed(2)} % {sumIsValid ? '✓' : '(muss 100 % ergeben)'}
             </span>
             <div className="flex gap-2">

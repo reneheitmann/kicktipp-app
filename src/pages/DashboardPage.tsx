@@ -195,7 +195,7 @@ export function DashboardPage() {
                   <span className="font-medium text-slate-900">{season.name}</span>
                   <div className="flex items-center gap-3">
                     {myGewinn !== undefined && (
-                      <span className="text-sm font-medium text-emerald-600">{currencyFormatter.format(myGewinn)}</span>
+                      <span className="text-sm font-medium text-emerald-700">{currencyFormatter.format(myGewinn)}</span>
                     )}
                     <Badge tone="positive">{season.status}</Badge>
                   </div>
@@ -299,7 +299,7 @@ function BalanceHeadline({ balance }: { balance: AccountBalance }) {
 
 function BalanceBreakdown({ balance }: { balance: AccountBalance }) {
   return (
-    <p className="mt-1 text-xs text-slate-400">
+    <p className="mt-1 text-xs text-slate-500">
       Beiträge: {currencyFormatter.format(balance.beitraegeGesamt)} · Eingezahlt:{' '}
       {currencyFormatter.format(balance.einzahlungenGesamt)} · Ausgezahlt:{' '}
       {currencyFormatter.format(balance.auszahlungenGesamt)} · Gewinne:{' '}

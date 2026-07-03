@@ -121,7 +121,7 @@ export function ImportSpieltageDialog({ season, existingNummern, onClose, onImpo
                     />
                     <span className="w-24 shrink-0 text-sm text-slate-900">Spieltag {s.nummer}</span>
                     <span className="text-sm text-slate-500">{formatGermanDate(s.datum)}</span>
-                    {alreadyExists && <span className="ml-auto text-xs text-slate-400">bereits vorhanden</span>}
+                    {alreadyExists && <span className="ml-auto text-xs text-slate-500">bereits vorhanden</span>}
                   </li>
                 )
               })}
@@ -132,7 +132,7 @@ export function ImportSpieltageDialog({ season, existingNummern, onClose, onImpo
                 Importiere... {importedCount} / {selected.size}
               </p>
             )}
-            {done && !error && <p className="text-sm font-medium text-emerald-600">{importedCount} Spieltag(e) importiert.</p>}
+            {done && !error && <p className="text-sm font-medium text-emerald-700">{importedCount} Spieltag(e) importiert.</p>}
 
             <div className="flex gap-2 pt-2">
               <Button type="button" variant="secondary" className="flex-1" onClick={onClose}>

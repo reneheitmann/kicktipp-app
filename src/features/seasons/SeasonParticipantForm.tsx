@@ -118,7 +118,7 @@ export function SeasonParticipantForm({
             placeholder="0,00"
             className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base focus:border-slate-900 focus:outline-none"
           />
-          <p className="mt-1 text-xs text-slate-400">
+          <p className="mt-1 text-xs text-slate-500">
             Wird automatisch für jeden neu angelegten Spieltag dieser Saison übernommen. 0 = nimmt nicht am
             Spieltags-Topf teil.
           </p>

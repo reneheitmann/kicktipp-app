@@ -63,7 +63,7 @@ export function PasswordPolicyPage() {
       </p>
 
       {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
-      {info && <p className="mb-4 text-sm text-emerald-600">{info}</p>}
+      {info && <p className="mb-4 text-sm text-emerald-700">{info}</p>}
 
       <form className="max-w-md space-y-4 rounded-xl border border-slate-200 bg-white p-4" onSubmit={handleSubmit}>
         <div>
@@ -97,7 +97,7 @@ export function PasswordPolicyPage() {
               </option>
             ))}
           </select>
-          <p className="mt-1 text-xs text-slate-400">Großbuchstaben, Kleinbuchstaben, Zahlen, Sonderzeichen.</p>
+          <p className="mt-1 text-xs text-slate-500">Großbuchstaben, Kleinbuchstaben, Zahlen, Sonderzeichen.</p>
         </div>
 
         <div>
@@ -113,7 +113,7 @@ export function PasswordPolicyPage() {
             onChange={(e) => setReuseDays(Number(e.target.value))}
             className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base focus:border-slate-900 focus:outline-none"
           />
-          <p className="mt-1 text-xs text-slate-400">0 deaktiviert die Sperre.</p>
+          <p className="mt-1 text-xs text-slate-500">0 deaktiviert die Sperre.</p>
         </div>
 
         <div className="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-500">

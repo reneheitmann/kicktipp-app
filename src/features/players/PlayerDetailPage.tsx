@@ -116,7 +116,7 @@ export function PlayerDetailPage() {
             Beiträge gesamt {seasonFilter ? '' : '(alle Saisons)'}
           </p>
           <p className="text-lg font-semibold text-slate-900">{currencyFormatter.format(balance.beitraegeGesamt)}</p>
-          <p className="mt-1 text-xs text-slate-400">
+          <p className="mt-1 text-xs text-slate-500">
             Gesamtwertung: {currencyFormatter.format(balance.beitraegeGesamtsieg)} · Spieltag:{' '}
             {currencyFormatter.format(balance.beitraegeSpieltag)}
           </p>
@@ -145,7 +145,7 @@ export function PlayerDetailPage() {
               </Button>
             )}
           </div>
-          <p className="mt-1 text-xs text-slate-400">
+          <p className="mt-1 text-xs text-slate-500">
             Beiträge {currencyFormatter.format(balance.beitraegeGesamt)} − Einzahlungen{' '}
             {currencyFormatter.format(balance.einzahlungenGesamt)} − Gewinne{' '}
             {currencyFormatter.format(balance.gewinneGesamt)} − Korrektur/Übertrag{' '}
@@ -167,9 +167,9 @@ export function PlayerDetailPage() {
           {filteredZahlungen.map((z) => (
             <li key={z.id} className="flex items-center justify-between gap-3 px-4 py-3">
               <div className="min-w-0">
-                <p className={`font-medium ${z.typ === 'auszahlung' ? 'text-amber-700' : 'text-emerald-600'}`}>
+                <p className={`font-medium ${z.typ === 'auszahlung' ? 'text-amber-700' : 'text-emerald-700'}`}>
                   {z.typ === 'auszahlung' ? '−' : '+'} {currencyFormatter.format(z.betrag)}
-                  <span className="ml-2 text-xs font-normal text-slate-400">
+                  <span className="ml-2 text-xs font-normal text-slate-500">
                     {z.typ === 'auszahlung' ? 'Auszahlung' : 'Einzahlung'}
                   </span>
                 </p>

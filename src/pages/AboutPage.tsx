@@ -135,7 +135,7 @@ export function AboutPage() {
             aria-expanded={changelogOpen}
           >
             <h2 className="text-base font-semibold text-slate-900">Änderungen</h2>
-            <span className="text-slate-400">{changelogOpen ? '▲' : '▼'}</span>
+            <span className="text-slate-500">{changelogOpen ? '▲' : '▼'}</span>
           </button>
           {changelogOpen && (
             <div className="mt-3 space-y-4">

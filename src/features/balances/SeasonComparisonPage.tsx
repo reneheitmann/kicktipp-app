@@ -210,11 +210,12 @@ export function SeasonComparisonPage() {
                 value={playerSearch}
                 onChange={(e) => setPlayerSearch(e.target.value)}
                 placeholder="Spieler suchen..."
+                aria-label="Spieler suchen..."
                 className="mb-2 w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm focus:border-slate-900 focus:outline-none"
               />
               <div className="flex-1 overflow-y-auto">
                 {filteredPlayerRows.length === 0 ? (
-                  <p className="px-1 py-2 text-sm text-slate-400">Keine Treffer.</p>
+                  <p className="px-1 py-2 text-sm text-slate-500">Keine Treffer.</p>
                 ) : (
                   filteredPlayerRows.map(({ player, total }) => (
                     <label key={player.id} className="flex items-center gap-2 px-1 py-1.5 text-sm">
@@ -225,7 +226,7 @@ export function SeasonComparisonPage() {
                         className="h-4 w-4 shrink-0"
                       />
                       <span className="min-w-0 flex-1 truncate text-slate-700">{player.name}</span>
-                      <span className={`shrink-0 text-xs ${total >= 0 ? 'text-emerald-600' : 'text-amber-700'}`}>
+                      <span className={`shrink-0 text-xs ${total >= 0 ? 'text-emerald-700' : 'text-amber-700'}`}>
                         {currencyFormatter.format(total)}
                       </span>
                     </label>
@@ -234,7 +235,7 @@ export function SeasonComparisonPage() {
               </div>
             </div>
           </div>
-          <p className="mb-6 hidden text-xs text-slate-400 sm:block">
+          <p className="mb-6 hidden text-xs text-slate-500 sm:block">
             Vorausgewählt sind die größten Gewinner und Verlierer über alle Saisons – weitere Spieler lassen sich
             links über die Suche gezielt hinzufügen.
           </p>
@@ -287,7 +288,7 @@ export function SeasonComparisonPage() {
                       </td>
                     ))}
                     <td
-                      className={`px-2 py-2 text-right font-semibold sm:px-4 sm:py-3 ${total >= 0 ? 'text-emerald-600' : 'text-amber-700'}`}
+                      className={`px-2 py-2 text-right font-semibold sm:px-4 sm:py-3 ${total >= 0 ? 'text-emerald-700' : 'text-amber-700'}`}
                     >
                       {currencyFormatter.format(total)}
                     </td>

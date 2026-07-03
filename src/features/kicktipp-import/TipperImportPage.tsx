@@ -272,10 +272,10 @@ export function TipperImportPage() {
                   {entry.row.email ?? 'keine E-Mail'}
                 </span>
                 <span className="shrink-0 text-xs">
-                  {entry.status === 'done' && <span className="text-emerald-600">✓ übernommen</span>}
+                  {entry.status === 'done' && <span className="text-emerald-700">✓ übernommen</span>}
                   {entry.status === 'error' && <span className="text-red-600">Fehler: {entry.message}</span>}
                   {entry.status === 'pending' && entry.row.playerExists && (
-                    <span className="text-slate-400">Spieler existiert bereits</span>
+                    <span className="text-slate-500">Spieler existiert bereits</span>
                   )}
                   {entry.status === 'pending' && !entry.row.playerExists && (
                     <span className="text-emerald-700">Neuer Spieler</span>
@@ -293,7 +293,7 @@ export function TipperImportPage() {
               Verarbeite... {processedCount} / {results.filter((r) => r.included).length}
             </p>
           )}
-          {done && <p className="mb-3 text-sm font-medium text-emerald-600">Import abgeschlossen.</p>}
+          {done && <p className="mb-3 text-sm font-medium text-emerald-700">Import abgeschlossen.</p>}
 
           <Button onClick={handleImport} disabled={running || done || (newPlayerCount === 0 && newLoginCount === 0)}>
             {running ? 'Importiere...' : 'Import übernehmen'}
