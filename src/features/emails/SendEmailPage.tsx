@@ -239,7 +239,7 @@ export function SendEmailPage() {
         <div className="space-y-6">
           <section className="rounded-xl border border-slate-200 bg-white p-4">
             <h2 className="mb-3 text-sm font-semibold text-slate-900">1. Bezugssaison</h2>
-            <p className="mb-2 text-xs text-slate-400">
+            <p className="mb-2 text-xs text-slate-500">
               Bestimmt, für welche Saison offene Posten und Gewinne (Variablen) berechnet werden – unabhängig vom
               gewählten Empfänger-Modus.
             </p>
@@ -303,7 +303,7 @@ export function SendEmailPage() {
                 />
                 <div className="max-h-48 max-w-sm overflow-y-auto rounded-lg border border-slate-200 p-2">
                   {filteredPlayers.length === 0 ? (
-                    <p className="px-1 py-2 text-sm text-slate-400">Keine Treffer.</p>
+                    <p className="px-1 py-2 text-sm text-slate-500">Keine Treffer.</p>
                   ) : (
                     filteredPlayers.map((player) => (
                       <label key={player.id} className="flex items-center gap-2 px-1 py-1.5 text-sm">
@@ -466,7 +466,7 @@ export function SendEmailPage() {
                   <li key={r.to} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
                     <span className="text-slate-700">{r.to}</span>
                     {r.ok ? (
-                      <span className="text-emerald-600">✓ Gesendet</span>
+                      <span className="text-emerald-700">✓ Gesendet</span>
                     ) : (
                       <span className="text-red-600">✗ {r.error}</span>
                     )}

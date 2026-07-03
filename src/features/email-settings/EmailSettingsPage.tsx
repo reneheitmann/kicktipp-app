@@ -102,7 +102,7 @@ export function EmailSettingsPage() {
 
       <form className="mb-6 max-w-xl space-y-4 rounded-xl border border-slate-200 bg-white p-4" onSubmit={handleSubmit}>
         {error && <p className="text-sm text-red-600">{error}</p>}
-        {info && <p className="text-sm text-emerald-600">{info}</p>}
+        {info && <p className="text-sm text-emerald-700">{info}</p>}
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <div className="sm:col-span-2">
@@ -217,7 +217,7 @@ export function EmailSettingsPage() {
         <h2 className="text-base font-semibold text-slate-900">Test-E-Mail senden</h2>
         <p className="text-sm text-slate-500">Prüft die gespeicherte Konfiguration mit einer echten Test-E-Mail.</p>
         {testError && <p className="text-sm text-red-600">{testError}</p>}
-        {testInfo && <p className="text-sm text-emerald-600">{testInfo}</p>}
+        {testInfo && <p className="text-sm text-emerald-700">{testInfo}</p>}
         <div className="flex flex-col gap-2 sm:flex-row">
           <input
             type="email"

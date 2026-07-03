@@ -51,9 +51,9 @@ export function CollapsibleSection({ title, count, actions, defaultOpen = true, 
           aria-expanded={open}
           className="flex items-center gap-1.5 text-base font-semibold text-slate-900"
         >
-          <span className={`inline-block text-slate-400 transition-transform ${open ? 'rotate-90' : ''}`}>▶</span>
+          <span className={`inline-block text-slate-500 transition-transform ${open ? 'rotate-90' : ''}`}>▶</span>
           {title}
-          {count !== undefined && <span className="font-normal text-slate-400">({count})</span>}
+          {count !== undefined && <span className="font-normal text-slate-500">({count})</span>}
         </button>
         <div className="flex flex-wrap items-center gap-2">{actions}</div>
       </div>

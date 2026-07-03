@@ -56,6 +56,8 @@ export function AppShell() {
             <button
               onClick={() => setNavMenuOpen(true)}
               aria-label="Menü öffnen"
+              aria-haspopup="menu"
+              aria-expanded={navMenuOpen}
               className="-ml-2 flex shrink-0 flex-col items-center justify-center gap-1 rounded-lg p-2 active:bg-slate-100"
             >
               <span className="h-0.5 w-5 rounded-full bg-slate-700" />
@@ -70,6 +72,8 @@ export function AppShell() {
           <button
             onClick={() => setAccountMenuOpen(true)}
             aria-label="Konto-Menü öffnen"
+            aria-haspopup="menu"
+            aria-expanded={accountMenuOpen}
             className="flex shrink-0 items-center gap-2 rounded-full py-1 pl-1 pr-2.5 active:bg-slate-100"
           >
             <span className="relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-200 text-xs font-semibold text-slate-700">

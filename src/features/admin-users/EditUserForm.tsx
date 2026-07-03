@@ -87,7 +87,7 @@ export function EditUserForm({
             />
           </div>
         </div>
-        <p className="-mt-2 text-xs text-slate-400">
+        <p className="-mt-2 text-xs text-slate-500">
           Optional – wird für die Personalisierung von E-Mails genutzt (Variablen {'{{Vorname}}'}/{'{{Nachname}}'}).
         </p>
 
@@ -103,7 +103,7 @@ export function EditUserForm({
             onChange={(e) => setEmail(e.target.value)}
             className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base focus:border-slate-900 focus:outline-none"
           />
-          <p className="mt-1 text-xs text-slate-400">
+          <p className="mt-1 text-xs text-slate-500">
             Ändert auch die Login-Adresse – der Benutzer meldet sich künftig mit dieser E-Mail an.
           </p>
         </div>

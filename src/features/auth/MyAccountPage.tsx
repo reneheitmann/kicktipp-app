@@ -149,7 +149,7 @@ export function MyAccountPage() {
           </div>
 
           {nameError && <p className="text-sm text-red-600">{nameError}</p>}
-          {nameSuccess && <p className="text-sm text-emerald-600">{nameSuccess}</p>}
+          {nameSuccess && <p className="text-sm text-emerald-700">{nameSuccess}</p>}
 
           <Button type="submit" disabled={savingName}>
             {savingName ? 'Speichern...' : 'Name speichern'}
@@ -204,7 +204,7 @@ export function MyAccountPage() {
       <div className="rounded-xl border border-slate-200 bg-white p-4">
         <h2 className="mb-1 text-base font-semibold text-slate-900">Passwort ändern</h2>
         {passwordPolicy && (
-          <p className="mb-3 text-xs text-slate-400">{describePasswordPolicy(passwordPolicy)}</p>
+          <p className="mb-3 text-xs text-slate-500">{describePasswordPolicy(passwordPolicy)}</p>
         )}
         <form className="space-y-4" onSubmit={handlePasswordSubmit}>
           <div>
@@ -233,7 +233,7 @@ export function MyAccountPage() {
           </div>
 
           {passwordError && <p className="text-sm text-red-600">{passwordError}</p>}
-          {passwordSuccess && <p className="text-sm text-emerald-600">{passwordSuccess}</p>}
+          {passwordSuccess && <p className="text-sm text-emerald-700">{passwordSuccess}</p>}
 
           <Button type="submit" disabled={savingPassword}>
             {savingPassword ? 'Speichern...' : 'Passwort ändern'}

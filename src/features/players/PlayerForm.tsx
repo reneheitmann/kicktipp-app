@@ -122,7 +122,7 @@ export function PlayerForm({ player, existingPlayers, existingLinks, onClose, on
             placeholder="Anzeigename in Kicktipp.de"
             className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base focus:border-slate-900 focus:outline-none"
           />
-          <p className="mt-1 text-xs text-slate-400">
+          <p className="mt-1 text-xs text-slate-500">
             Wird später für den automatischen Abgleich beim Kicktipp-Import genutzt.
           </p>
         </div>
@@ -132,7 +132,7 @@ export function PlayerForm({ player, existingPlayers, existingLinks, onClose, on
             <p className="mb-1 text-sm font-medium text-slate-700">
               Verknüpfte Logins ({profileIds.size} ausgewählt)
             </p>
-            <p className="mb-1 text-xs text-slate-400">
+            <p className="mb-1 text-xs text-slate-500">
               Mehrfachauswahl möglich – z. B. wenn Eltern und Kind sich einen Spieler teilen.
             </p>
             <input
@@ -140,11 +140,12 @@ export function PlayerForm({ player, existingPlayers, existingLinks, onClose, on
               value={profileSearch}
               onChange={(e) => setProfileSearch(e.target.value)}
               placeholder="Login suchen..."
+              aria-label="Login suchen..."
               className="mb-2 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-slate-900 focus:outline-none"
             />
             <div className="max-h-40 overflow-y-auto rounded-lg border border-slate-300 p-1">
               {filteredProfiles.length === 0 ? (
-                <p className="px-2 py-2 text-sm text-slate-400">Keine Treffer.</p>
+                <p className="px-2 py-2 text-sm text-slate-500">Keine Treffer.</p>
               ) : (
                 filteredProfiles.map((p) => (
                   <label key={p.id} className="flex items-center gap-2 px-2 py-1.5 text-sm">

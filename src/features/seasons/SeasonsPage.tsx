@@ -120,7 +120,7 @@ export function SeasonsPage() {
                     </p>
                   </div>
                   {myGewinn !== undefined && (
-                    <span className="shrink-0 text-right text-sm font-medium text-emerald-600">
+                    <span className="shrink-0 text-right text-sm font-medium text-emerald-700">
                       {currencyFormatter.format(myGewinn)}
                     </span>
                   )}

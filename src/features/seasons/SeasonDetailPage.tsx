@@ -374,7 +374,7 @@ export function SeasonDetailPage() {
             {selectedPlayerId && (
               <span className="text-sm text-slate-500">
                 Gesamtgewinn:{' '}
-                <span className="font-medium text-emerald-600">{currencyFormatter.format(selectedGesamtgewinnsumme)}</span>
+                <span className="font-medium text-emerald-700">{currencyFormatter.format(selectedGesamtgewinnsumme)}</span>
               </span>
             )}
             {canManageMatchdays && (
@@ -396,7 +396,7 @@ export function SeasonDetailPage() {
         }
       >
         {canManageMatchdays && matchdays.length === 0 && participants.some((p) => p.spieltags_einsatz_betrag > 0) && (
-          <p className="mb-3 text-xs text-slate-400">
+          <p className="mb-3 text-xs text-slate-500">
             Der Spieltags-Einsatz der Teilnehmer wird automatisch für jeden neuen Spieltag übernommen.
           </p>
         )}
@@ -420,7 +420,7 @@ export function SeasonDetailPage() {
                   <p className="text-sm font-medium text-slate-700 sm:hidden">
                     Platz {selectedOverallRanking.rang}
                     {selectedOverallPayout && (
-                      <span className="text-emerald-600"> · {currencyFormatter.format(selectedOverallPayout.betrag)}</span>
+                      <span className="text-emerald-700"> · {currencyFormatter.format(selectedOverallPayout.betrag)}</span>
                     )}
                   </p>
                 )}
@@ -429,7 +429,7 @@ export function SeasonDetailPage() {
                 <span className="hidden w-16 text-right text-sm text-slate-700 sm:inline">
                   {selectedOverallRanking ? `Platz ${selectedOverallRanking.rang}` : '–'}
                 </span>
-                <span className="hidden w-20 text-right text-sm font-medium text-emerald-600 sm:inline">
+                <span className="hidden w-20 text-right text-sm font-medium text-emerald-700 sm:inline">
                   {selectedOverallPayout ? currencyFormatter.format(selectedOverallPayout.betrag) : '–'}
                 </span>
                 <Badge tone={season.gesamtwertung_status === 'abgerechnet' ? 'positive' : 'warning'}>
@@ -471,7 +471,7 @@ export function SeasonDetailPage() {
                     <p className="text-sm font-medium text-slate-700 sm:hidden">
                       Platz {selectedRanking.rang}
                       {selectedPayout && (
-                        <span className="text-emerald-600"> · {currencyFormatter.format(selectedPayout.betrag)}</span>
+                        <span className="text-emerald-700"> · {currencyFormatter.format(selectedPayout.betrag)}</span>
                       )}
                     </p>
                   )}
@@ -480,7 +480,7 @@ export function SeasonDetailPage() {
                   <span className="hidden w-16 text-right text-sm text-slate-700 sm:inline">
                     {selectedRanking ? `Platz ${selectedRanking.rang}` : '–'}
                   </span>
-                  <span className="hidden w-20 text-right text-sm font-medium text-emerald-600 sm:inline">
+                  <span className="hidden w-20 text-right text-sm font-medium text-emerald-700 sm:inline">
                     {selectedPayout ? currencyFormatter.format(selectedPayout.betrag) : '–'}
                   </span>
                   <Badge tone={matchday.status === 'abgerechnet' ? 'positive' : 'warning'}>{matchday.status}</Badge>

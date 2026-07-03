@@ -421,7 +421,7 @@ export function ImportPage() {
                 ))}
               </select>
               {target === 'spieltag' && (
-                <p className="mt-1 text-xs text-slate-400">
+                <p className="mt-1 text-xs text-slate-500">
                   Achtung: Bei Kicktipps Spieltags-Ranglisten-Export ist „Spieltagsplatzierung" die korrekte Spalte –
                   „Rang" ist dort der Gesamtsaison-Stand, nicht die Platzierung an diesem Spieltag.
                 </p>
@@ -487,10 +487,10 @@ export function ImportPage() {
                       ))}
                     </select>
                     <span className="w-full shrink-0 text-xs sm:w-auto">
-                      {row.status === 'done' && <span className="text-emerald-600">✓ übernommen</span>}
+                      {row.status === 'done' && <span className="text-emerald-700">✓ übernommen</span>}
                       {row.status === 'error' && <span className="text-red-600">Fehler: {row.message}</span>}
                       {row.status === 'pending' && !row.eligible && row.playerId && (
-                        <span className="text-slate-400">kein Saison-Teilnehmer</span>
+                        <span className="text-slate-500">kein Saison-Teilnehmer</span>
                       )}
                       {row.status === 'pending' && row.needsAutoAssign && (
                         <span className="text-blue-700">+ wird zugewiesen</span>

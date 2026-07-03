@@ -48,7 +48,7 @@ export function TransferForm({ playerName, fromSeason, currentOffen, otherSeason
       <form className="space-y-4" onSubmit={handleSubmit}>
         <p className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-600">
           Aktueller Saldo in <span className="font-medium">{fromSeason.name}</span>:{' '}
-          <span className={currentOffen > 0 ? 'font-medium text-amber-700' : 'font-medium text-emerald-600'}>
+          <span className={currentOffen > 0 ? 'font-medium text-amber-700' : 'font-medium text-emerald-700'}>
             {currentOffen > 0 ? 'Schuldet' : 'Guthaben'} {currencyFormatter.format(Math.abs(currentOffen))}
           </span>
           . Der Übertrag gleicht diese Saison auf 0 aus und übernimmt den Betrag als Startsaldo in die Ziel-Saison.
@@ -85,7 +85,7 @@ export function TransferForm({ playerName, fromSeason, currentOffen, otherSeason
             onChange={(e) => setBetrag(e.target.value)}
             className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base focus:border-slate-900 focus:outline-none"
           />
-          <p className="mt-1 text-xs text-slate-400">Positiv = Schuld, negativ = Guthaben (wie oben bei "Noch offen/Guthaben").</p>
+          <p className="mt-1 text-xs text-slate-500">Positiv = Schuld, negativ = Guthaben (wie oben bei "Noch offen/Guthaben").</p>
         </div>
 
         <div>

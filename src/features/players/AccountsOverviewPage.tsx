@@ -124,7 +124,7 @@ export function AccountsOverviewPage() {
         </p>
       ) : (
         <>
-          <p className="mb-2 text-xs text-slate-400 sm:hidden">→ Tabelle nach links wischen für weitere Spalten</p>
+          <p className="mb-2 text-xs text-slate-500 sm:hidden">→ Tabelle nach links wischen für weitere Spalten</p>
           <div className="max-h-[70vh] overflow-auto rounded-xl border border-slate-200 bg-white">
             <table className="w-full min-w-[720px] text-sm">
             <thead>
@@ -191,7 +191,7 @@ export function AccountsOverviewPage() {
                         {currencyFormatter.format(balance.offen)} offen
                       </span>
                     ) : balance.offen < 0 ? (
-                      <span className="font-medium text-emerald-600">
+                      <span className="font-medium text-emerald-700">
                         {currencyFormatter.format(-balance.offen)} Guthaben
                       </span>
                     ) : (

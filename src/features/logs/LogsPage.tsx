@@ -113,7 +113,7 @@ export function LogsPage() {
                   <div className="mb-1 flex flex-wrap items-center gap-2">
                     <Badge tone={levelTone[log.level]}>{log.level}</Badge>
                     <span className="text-xs font-medium text-slate-500">{log.source}</span>
-                    <span className="text-xs text-slate-400">{dateFormatter.format(new Date(log.created_at))}</span>
+                    <span className="text-xs text-slate-500">{dateFormatter.format(new Date(log.created_at))}</span>
                   </div>
                   <p className="truncate text-sm text-slate-900">{log.message}</p>
                 </div>

@@ -17,7 +17,7 @@ export function Modal({
           <button
             onClick={onClose}
             aria-label="Schließen"
-            className="rounded-lg px-2 py-1 text-slate-400 hover:bg-slate-100"
+            className="rounded-lg px-2 py-1 text-slate-500 hover:bg-slate-100"
           >
             ✕
           </button>
