@@ -78,25 +78,25 @@ export function AppShell() {
               <BetaBadge />
             </span>
           </div>
-          <button
-            onClick={() => setAccountMenuOpen(true)}
-            aria-label="Konto-Menü öffnen"
-            aria-haspopup="menu"
-            aria-expanded={accountMenuOpen}
-            className="flex shrink-0 items-center gap-2 rounded-full py-1 pl-1 pr-2.5 active:bg-slate-100"
-          >
-            <span className="relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-200 text-xs font-semibold text-slate-700">
-              {getInitials(profile?.name)}
-              {profile?.base_role && (
-                <span
-                  title={`Du agierst als Spieler (eigentliche Rolle: ${roleLabels[profile.base_role]})`}
-                  className="absolute -right-1 -top-1 text-[11px] leading-none text-amber-500"
-                >
-                  ★
-                </span>
-              )}
-            </span>
-          </button>
+          <span className="relative shrink-0">
+            <button
+              onClick={() => setAccountMenuOpen(true)}
+              aria-label="Konto-Menü öffnen"
+              aria-haspopup="menu"
+              aria-expanded={accountMenuOpen}
+              className="flex shrink-0 items-center gap-2 rounded-full py-1 pl-1 pr-2.5 active:bg-slate-100"
+            >
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-200 text-xs font-semibold text-slate-700">
+                {getInitials(profile?.name)}
+              </span>
+            </button>
+            {profile?.base_role && (
+              <RoleSwitchBadge
+                label={`Du agierst als Spieler (eigentliche Rolle: ${roleLabels[profile.base_role]})`}
+                className="absolute right-1 top-0"
+              />
+            )}
+          </span>
 
           {navMenuOpen && (
             <>
@@ -188,6 +188,51 @@ function BetaBadge() {
   )
 }
 
+/** Markierung für "agiert aktuell als Spieler". `title` bedient Desktop-Hover,
+ * der Klick/Tap zeigt zusätzlich ein Label direkt an – auf Touch-Geräten gibt
+ * es keinen Hover, ohne das eigene onClick wäre der Stern dort ohne jede
+ * Erklärung sichtbar. stopPropagation, damit der Tap nicht zugleich das
+ * umgebende Element (Konto-Button/NavLink) auslöst. */
+function RoleSwitchBadge({ label, className }: { label: string; className?: string }) {
+  const [open, setOpen] = useState(false)
+  return (
+    // className (Positionierung beim Aufrufer, z. B. "absolute right-1 top-0")
+    // sitzt bewusst auf einem eigenen äußeren Element statt zusammen mit dem
+    // fest codierten "relative" unten – beide auf demselben Element würden
+    // sich über die generierte Tailwind-Stylesheet-Reihenfolge gegenseitig
+    // überschreiben, unabhängig von der Reihenfolge im className-String.
+    //
+    // Feste kleine Ankergröße statt inline-flex: der globale button-Touch-
+    // Target (min-height: 44px, siehe index.css) würde sonst die sichtbare
+    // ★-Glyphe aus der Ecke nach unten verschieben. Der button wird darum
+    // per absolute + translate(-50%, -50%) auf den Ankerpunkt zentriert,
+    // unabhängig von seiner eigenen (aufgeblähten) Box.
+    <span className={className}>
+      <span className="relative block h-3 w-3">
+        <button
+          type="button"
+          title={label}
+          aria-label={label}
+          onClick={(e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            setOpen((o) => !o)
+          }}
+          onBlur={() => setOpen(false)}
+          className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center text-[11px] leading-none text-amber-500"
+        >
+          ★
+        </button>
+        {open && (
+          <span className="absolute right-0 top-full z-10 mt-1 w-max max-w-[14rem] rounded-lg bg-slate-900 px-2 py-1 text-xs font-normal text-white shadow-lg">
+            {label}
+          </span>
+        )}
+      </span>
+    </span>
+  )
+}
+
 function UserFooter({
   name,
   role,
@@ -201,17 +246,18 @@ function UserFooter({
 }) {
   return (
     <div className="mt-4 border-t border-slate-200 pt-4">
-      <NavLink to="/profil" className="block rounded-lg px-2 py-1.5 hover:bg-slate-100">
-        <p className="flex items-center gap-1 text-sm font-medium text-slate-900">
-          {name}
-          {baseRole && (
-            <span title={`Du agierst als Spieler (eigentliche Rolle: ${roleLabels[baseRole]})`} className="text-amber-500">
-              ★
-            </span>
-          )}
-        </p>
-        <p className="text-xs text-slate-500">{role && roleLabels[role]}</p>
-      </NavLink>
+      <div className="relative">
+        <NavLink to="/profil" className="block rounded-lg px-2 py-1.5 hover:bg-slate-100">
+          <p className="text-sm font-medium text-slate-900">{name}</p>
+          <p className="text-xs text-slate-500">{role && roleLabels[role]}</p>
+        </NavLink>
+        {baseRole && (
+          <RoleSwitchBadge
+            label={`Du agierst als Spieler (eigentliche Rolle: ${roleLabels[baseRole]})`}
+            className="absolute right-2 top-1.5"
+          />
+        )}
+      </div>
       <NavLink
         to="/ueber"
         className="mt-1 block rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100"
