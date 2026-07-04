@@ -1,4 +1,5 @@
 import { fetchAllRows } from '../../lib/fetchAllRows'
+import type { Cents } from '../../lib/money'
 import { supabase } from '../../lib/supabaseClient'
 import { listSeasonTransactions } from '../balances/balancesApi'
 import { computeAccountBalance } from '../players/accountBalance'
@@ -37,8 +38,8 @@ export async function resolveSeasonWinnerIds(seasonId: string): Promise<Set<stri
 }
 
 export interface PlayerSeasonBalance {
-  offen: number
-  gewinneGesamt: number
+  offen: Cents
+  gewinneGesamt: Cents
 }
 
 /**

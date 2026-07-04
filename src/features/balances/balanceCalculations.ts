@@ -1,25 +1,26 @@
+import type { Cents } from '../../lib/money'
 import type { Player, SeasonParticipant, Transaction, Zahlung } from '../../types/database'
 
 export interface PlayerBalance {
   player_id: string
   name: string
-  gesamtsieg_einsatz: number
-  gesamtsieg_gewinn: number
-  gesamtsieg_saldo: number
-  spieltag_einsatz: number
-  spieltag_gewinn: number
-  spieltag_saldo: number
-  gesamt_saldo: number
+  gesamtsieg_einsatz: Cents
+  gesamtsieg_gewinn: Cents
+  gesamtsieg_saldo: Cents
+  spieltag_einsatz: Cents
+  spieltag_gewinn: Cents
+  spieltag_saldo: Cents
+  gesamt_saldo: Cents
 }
 
 interface Accumulator {
   name: string
-  gesamtsieg_einsatz: number
-  gesamtsieg_gewinn: number
-  gesamtsieg_korrektur: number
-  spieltag_einsatz: number
-  spieltag_gewinn: number
-  spieltag_korrektur: number
+  gesamtsieg_einsatz: Cents
+  gesamtsieg_gewinn: Cents
+  gesamtsieg_korrektur: Cents
+  spieltag_einsatz: Cents
+  spieltag_gewinn: Cents
+  spieltag_korrektur: Cents
 }
 
 /**
@@ -27,6 +28,13 @@ interface Accumulator {
  * Einsatzart. Korrektur-Buchungen werden anhand von matchday_id (gesetzt =
  * Spieltags-Topf, null = Gesamtwertung-Topf) der jeweiligen Einsatzart
  * zugerechnet, da der Transaktionstyp selbst das nicht weiter unterscheidet.
+ *
+ * Alle Beträge (Eingaben wie Ergebnis) sind ganze Cent (`Cents`, siehe
+ * src/lib/money.ts), nicht Euro-Floats – Integer-Addition/-Subtraktion ist
+ * exakt, während Euro-Floats bei vielen Einzelbuchungen Fließkomma-Drift
+ * ansammeln könnten (0.1 + 0.2-Problem). Die Umrechnung Euro<->Cent passiert
+ * ausschließlich an der API-Grenze (siehe *Api.ts-Dateien), hier drin bleibt
+ * die Arithmetik unverändert reine Ganzzahl-Rechnung.
  *
  * Der Spieltags-Einsatz wird – sofern `participants` und `matchdayCount`
  * übergeben werden – bewusst per Formel (Standard-Spieltagseinsatz × Anzahl

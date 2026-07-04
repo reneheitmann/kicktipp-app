@@ -1,4 +1,5 @@
 import ExcelJS from 'exceljs'
+import { centsToEuros } from '../../lib/money'
 import type { Matchday, Player, Season, Transaction } from '../../types/database'
 import type { PlayerBalance } from './balanceCalculations'
 
@@ -34,7 +35,18 @@ export async function exportSeasonExcel(
   ]
   balanceSheet.getRow(1).font = { bold: true }
   for (const b of balances) {
-    balanceSheet.addRow(b)
+    // Excel numFmt erwartet Euro-Skala, die App rechnet intern in Cent
+    // (siehe src/lib/money.ts) – vor dem Schreiben zurückwandeln.
+    balanceSheet.addRow({
+      ...b,
+      gesamtsieg_einsatz: centsToEuros(b.gesamtsieg_einsatz),
+      gesamtsieg_gewinn: centsToEuros(b.gesamtsieg_gewinn),
+      gesamtsieg_saldo: centsToEuros(b.gesamtsieg_saldo),
+      spieltag_einsatz: centsToEuros(b.spieltag_einsatz),
+      spieltag_gewinn: centsToEuros(b.spieltag_gewinn),
+      spieltag_saldo: centsToEuros(b.spieltag_saldo),
+      gesamt_saldo: centsToEuros(b.gesamt_saldo),
+    })
   }
   balanceSheet.getColumn('gesamtsieg_einsatz').numFmt = '#,##0.00 €'
   balanceSheet.getColumn('gesamtsieg_gewinn').numFmt = '#,##0.00 €'
@@ -63,7 +75,7 @@ export async function exportSeasonExcel(
       spieler: playersById.get(tx.player_id) ?? tx.player_id,
       typ: typLabels[tx.typ],
       spieltag: tx.matchday_id ? (matchdaysById.get(tx.matchday_id) ?? '') : '',
-      betrag: tx.betrag,
+      betrag: centsToEuros(tx.betrag),
       notiz: tx.notiz ?? '',
     })
   }

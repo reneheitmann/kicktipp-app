@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Modal } from '../../components/ui/Modal'
 import { Button } from '../../components/ui/Button'
+import { formatEuroInputValue, parseEuroInput, type Cents } from '../../lib/money'
 import type { Player, SeasonParticipant } from '../../types/database'
 
 interface SeasonParticipantFormProps {
@@ -10,13 +11,9 @@ interface SeasonParticipantFormProps {
   onClose: () => void
   onSubmit: (input: {
     playerId: string
-    gesamtsiegBetrag: number
-    spieltagsBetrag: number
+    gesamtsiegBetrag: Cents
+    spieltagsBetrag: Cents
   }) => Promise<void>
-}
-
-function parseAmount(value: string): number {
-  return Number(value.replace(',', '.'))
 }
 
 export function SeasonParticipantForm({
@@ -28,27 +25,27 @@ export function SeasonParticipantForm({
 }: SeasonParticipantFormProps) {
   const [playerId, setPlayerId] = useState(fixedPlayer?.id ?? '')
   const [gesamtsiegBetrag, setGesamtsiegBetrag] = useState(
-    participant ? String(participant.gesamtsieg_einsatz_betrag) : '',
+    participant ? formatEuroInputValue(participant.gesamtsieg_einsatz_betrag) : '',
   )
   const [spieltagsBetrag, setSpieltagsBetrag] = useState(
-    participant ? String(participant.spieltags_einsatz_betrag) : '',
+    participant ? formatEuroInputValue(participant.spieltags_einsatz_betrag) : '',
   )
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    const parsedGesamtsieg = parseAmount(gesamtsiegBetrag)
-    const parsedSpieltag = parseAmount(spieltagsBetrag)
+    const parsedGesamtsieg = parseEuroInput(gesamtsiegBetrag)
+    const parsedSpieltag = parseEuroInput(spieltagsBetrag)
     if (!playerId) {
       setError('Bitte einen Spieler auswählen.')
       return
     }
-    if (!Number.isFinite(parsedGesamtsieg) || parsedGesamtsieg < 0) {
+    if (parsedGesamtsieg === null || parsedGesamtsieg < 0) {
       setError('Gesamtwertung-Einsatz muss eine gültige Zahl (≥ 0) sein.')
       return
     }
-    if (!Number.isFinite(parsedSpieltag) || parsedSpieltag < 0) {
+    if (parsedSpieltag === null || parsedSpieltag < 0) {
       setError('Spieltags-Einsatz muss eine gültige Zahl (≥ 0) sein.')
       return
     }

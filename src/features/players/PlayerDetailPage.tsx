@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { SeasonFilter } from '../../components/ui/SeasonFilter'
 import { currencyFormatter } from '../../lib/format'
+import { centsToEuros } from '../../lib/money'
 import { useAuth } from '../auth/useAuth'
 import { getPlayer } from './playersApi'
 import { listSeasons } from '../seasons/seasonsApi'
@@ -115,28 +116,28 @@ export function PlayerDetailPage() {
           <p className="text-sm text-slate-500">
             Beiträge gesamt {seasonFilter ? '' : '(alle Saisons)'}
           </p>
-          <p className="text-lg font-semibold text-slate-900">{currencyFormatter.format(balance.beitraegeGesamt)}</p>
+          <p className="text-lg font-semibold text-slate-900">{currencyFormatter.format(centsToEuros(balance.beitraegeGesamt))}</p>
           <p className="mt-1 text-xs text-slate-500">
-            Gesamtwertung: {currencyFormatter.format(balance.beitraegeGesamtsieg)} · Spieltag:{' '}
-            {currencyFormatter.format(balance.beitraegeSpieltag)}
+            Gesamtwertung: {currencyFormatter.format(centsToEuros(balance.beitraegeGesamtsieg))} · Spieltag:{' '}
+            {currencyFormatter.format(centsToEuros(balance.beitraegeSpieltag))}
           </p>
         </div>
         <div className="rounded-xl border border-slate-200 bg-white p-4">
           <p className="text-sm text-slate-500">Eingezahlt / Ausgezahlt</p>
           <p className="text-lg font-semibold text-slate-900">
-            {currencyFormatter.format(balance.einzahlungenGesamt)} / {currencyFormatter.format(balance.auszahlungenGesamt)}
+            {currencyFormatter.format(centsToEuros(balance.einzahlungenGesamt))} / {currencyFormatter.format(centsToEuros(balance.auszahlungenGesamt))}
           </p>
         </div>
         <div className="rounded-xl border border-slate-200 bg-white p-4">
           <p className="text-sm text-slate-500">Abgerechnete Gewinne</p>
-          <p className="text-lg font-semibold text-emerald-600">{currencyFormatter.format(balance.gewinneGesamt)}</p>
+          <p className="text-lg font-semibold text-emerald-600">{currencyFormatter.format(centsToEuros(balance.gewinneGesamt))}</p>
         </div>
         <div className="rounded-xl border border-slate-200 bg-white p-4 sm:col-span-2">
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div>
               <p className="text-sm text-slate-500">{balance.offen > 0 ? 'Noch offen' : 'Guthaben'}</p>
               <p className={`text-xl font-semibold ${balance.offen > 0 ? 'text-amber-700' : 'text-emerald-600'}`}>
-                {currencyFormatter.format(Math.abs(balance.offen))}
+                {currencyFormatter.format(centsToEuros(Math.abs(balance.offen)))}
               </p>
             </div>
             {canManageBalanceTransfer && seasonFilter && balance.offen !== 0 && (
@@ -146,11 +147,11 @@ export function PlayerDetailPage() {
             )}
           </div>
           <p className="mt-1 text-xs text-slate-500">
-            Beiträge {currencyFormatter.format(balance.beitraegeGesamt)} − Einzahlungen{' '}
-            {currencyFormatter.format(balance.einzahlungenGesamt)} − Gewinne{' '}
-            {currencyFormatter.format(balance.gewinneGesamt)} − Korrektur/Übertrag{' '}
-            {currencyFormatter.format(balance.korrekturGesamt)} + Auszahlungen{' '}
-            {currencyFormatter.format(balance.auszahlungenGesamt)}
+            Beiträge {currencyFormatter.format(centsToEuros(balance.beitraegeGesamt))} − Einzahlungen{' '}
+            {currencyFormatter.format(centsToEuros(balance.einzahlungenGesamt))} − Gewinne{' '}
+            {currencyFormatter.format(centsToEuros(balance.gewinneGesamt))} − Korrektur/Übertrag{' '}
+            {currencyFormatter.format(centsToEuros(balance.korrekturGesamt))} + Auszahlungen{' '}
+            {currencyFormatter.format(centsToEuros(balance.auszahlungenGesamt))}
           </p>
         </div>
       </div>
@@ -168,7 +169,7 @@ export function PlayerDetailPage() {
             <li key={z.id} className="flex items-center justify-between gap-3 px-4 py-3">
               <div className="min-w-0">
                 <p className={`font-medium ${z.typ === 'auszahlung' ? 'text-amber-700' : 'text-emerald-700'}`}>
-                  {z.typ === 'auszahlung' ? '−' : '+'} {currencyFormatter.format(z.betrag)}
+                  {z.typ === 'auszahlung' ? '−' : '+'} {currencyFormatter.format(centsToEuros(z.betrag))}
                   <span className="ml-2 text-xs font-normal text-slate-500">
                     {z.typ === 'auszahlung' ? 'Auszahlung' : 'Einzahlung'}
                   </span>

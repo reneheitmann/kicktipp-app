@@ -3,6 +3,7 @@ import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, X
 import { SearchInput } from '../../components/ui/SearchInput'
 import { SortableTh } from '../../components/ui/SortableTh'
 import { currencyFormatter } from '../../lib/format'
+import { centsToEuros } from '../../lib/money'
 import { listPlayers } from '../players/playersApi'
 import { listAllZahlungen } from '../players/zahlungenApi'
 import { listSeasons } from '../seasons/seasonsApi'
@@ -184,7 +185,7 @@ export function SeasonComparisonPage() {
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="name" tick={{ fontSize: 12 }} />
                     <YAxis tick={{ fontSize: 12 }} />
-                    <Tooltip formatter={(value) => currencyFormatter.format(Number(value))} />
+                    <Tooltip formatter={(value) => currencyFormatter.format(centsToEuros(Number(value)))} />
                     <Legend />
                     {selectedPlayers.map(({ player }, i) => (
                       <Line
@@ -227,7 +228,7 @@ export function SeasonComparisonPage() {
                       />
                       <span className="min-w-0 flex-1 truncate text-slate-700">{player.name}</span>
                       <span className={`shrink-0 text-xs ${total >= 0 ? 'text-emerald-700' : 'text-amber-700'}`}>
-                        {currencyFormatter.format(total)}
+                        {currencyFormatter.format(centsToEuros(total))}
                       </span>
                     </label>
                   ))
@@ -284,13 +285,13 @@ export function SeasonComparisonPage() {
                     </td>
                     {seasons.map((season) => (
                       <td key={season.id} className="px-2 py-2 text-right text-slate-700 sm:px-4 sm:py-3">
-                        {currencyFormatter.format(bySeasonId.get(season.id) ?? 0)}
+                        {currencyFormatter.format(centsToEuros(bySeasonId.get(season.id) ?? 0))}
                       </td>
                     ))}
                     <td
                       className={`px-2 py-2 text-right font-semibold sm:px-4 sm:py-3 ${total >= 0 ? 'text-emerald-700' : 'text-amber-700'}`}
                     >
-                      {currencyFormatter.format(total)}
+                      {currencyFormatter.format(centsToEuros(total))}
                     </td>
                   </tr>
                 ))}

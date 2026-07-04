@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { Badge } from '../../components/ui/Badge'
 import { currencyFormatter, formatGermanDate } from '../../lib/format'
+import { centsToEuros } from '../../lib/money'
 import { useAuth } from '../auth/useAuth'
 import { listPlayerProfileLinks } from '../players/playerProfileLinksApi'
 import { listAllTransactions } from '../balances/balancesApi'
@@ -121,7 +122,7 @@ export function SeasonsPage() {
                   </div>
                   {myGewinn !== undefined && (
                     <span className="shrink-0 text-right text-sm font-medium text-emerald-700">
-                      {currencyFormatter.format(myGewinn)}
+                      {currencyFormatter.format(centsToEuros(myGewinn))}
                     </span>
                   )}
                   <Badge tone={season.status === 'aktiv' ? 'positive' : 'neutral'}>{season.status}</Badge>

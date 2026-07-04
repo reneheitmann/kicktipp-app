@@ -164,4 +164,21 @@ describe('computePlayerBalances', () => {
 
     expect(balance.name).toBe('Unbekannter Spieler')
   })
+
+  it('sums many small cent amounts without float drift (the original bug this refactor fixes)', () => {
+    const players = [player('p1', 'Anna')]
+    // Alle Beträge sind ganze Cent (10 = 0,10 €) – in einer Euro-Float-Welt
+    // wäre 0.1 + 0.1 + 0.1 exakt der klassische Fall, der 0.30000000000000004
+    // statt 0.3 ergibt.
+    const transactions = [
+      tx({ player_id: 'p1', typ: 'einsatz_gesamt', betrag: 10 }),
+      tx({ player_id: 'p1', typ: 'einsatz_gesamt', betrag: 10 }),
+      tx({ player_id: 'p1', typ: 'einsatz_gesamt', betrag: 10 }),
+    ]
+
+    const [balance] = computePlayerBalances(transactions, players)
+
+    expect(balance.gesamtsieg_einsatz).toBe(30)
+    expect(Number.isInteger(balance.gesamtsieg_einsatz)).toBe(true)
+  })
 })

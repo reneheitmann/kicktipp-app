@@ -2,32 +2,33 @@ import { useState, type FormEvent } from 'react'
 import { Modal } from '../../components/ui/Modal'
 import { Button } from '../../components/ui/Button'
 import { currencyFormatter } from '../../lib/format'
+import { centsToEuros, formatEuroInputValue, parseEuroInput, type Cents } from '../../lib/money'
 import type { Season } from '../../types/database'
 
 interface TransferFormProps {
   playerName?: string
   fromSeason: Season
-  currentOffen: number
+  currentOffen: Cents
   otherSeasons: Season[]
   onClose: () => void
-  onSubmit: (input: { toSeasonId: string; betrag: number; notiz: string | null }) => Promise<void>
+  onSubmit: (input: { toSeasonId: string; betrag: Cents; notiz: string | null }) => Promise<void>
 }
 
 export function TransferForm({ playerName, fromSeason, currentOffen, otherSeasons, onClose, onSubmit }: TransferFormProps) {
   const [toSeasonId, setToSeasonId] = useState(otherSeasons.length === 1 ? otherSeasons[0].id : '')
-  const [betrag, setBetrag] = useState(currentOffen.toFixed(2).replace('.', ','))
+  const [betrag, setBetrag] = useState(formatEuroInputValue(currentOffen))
   const [notiz, setNotiz] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    const parsed = Number(betrag.replace(',', '.'))
+    const parsed = parseEuroInput(betrag)
     if (!toSeasonId) {
       setError('Bitte eine Ziel-Saison auswählen.')
       return
     }
-    if (!Number.isFinite(parsed) || parsed === 0) {
+    if (parsed === null || parsed === 0) {
       setError('Bitte einen gültigen Betrag ungleich 0 angeben.')
       return
     }
@@ -49,7 +50,7 @@ export function TransferForm({ playerName, fromSeason, currentOffen, otherSeason
         <p className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-600">
           Aktueller Saldo in <span className="font-medium">{fromSeason.name}</span>:{' '}
           <span className={currentOffen > 0 ? 'font-medium text-amber-700' : 'font-medium text-emerald-700'}>
-            {currentOffen > 0 ? 'Schuldet' : 'Guthaben'} {currencyFormatter.format(Math.abs(currentOffen))}
+            {currentOffen > 0 ? 'Schuldet' : 'Guthaben'} {currencyFormatter.format(centsToEuros(Math.abs(currentOffen)))}
           </span>
           . Der Übertrag gleicht diese Saison auf 0 aus und übernimmt den Betrag als Startsaldo in die Ziel-Saison.
         </p>

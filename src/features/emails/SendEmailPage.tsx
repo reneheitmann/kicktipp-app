@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { currencyFormatter } from '../../lib/format'
+import { centsToEuros } from '../../lib/money'
 import { listEmailTemplates } from './emailTemplatesApi'
 import { sendBulkEmail, type BulkEmailResult } from './emailSendApi'
 import {
@@ -39,8 +40,8 @@ function recipientVariablesFor(player: PlayerWithProfile, balance: PlayerSeasonB
     Nachname: player.profile?.nachname ?? '',
     Kicktippname: player.kicktipp_name ?? '',
     EMailadresse: player.profile?.email ?? '',
-    OffenePosten: currencyFormatter.format(balance.offen),
-    Gewinne: currencyFormatter.format(balance.gewinneGesamt),
+    OffenePosten: currencyFormatter.format(centsToEuros(balance.offen)),
+    Gewinne: currencyFormatter.format(centsToEuros(balance.gewinneGesamt)),
   }
 }
 
@@ -360,9 +361,9 @@ export function SendEmailPage() {
                         <td className="px-3 py-2 text-slate-600">
                           {contactable ? player.profile?.email : 'kann nicht kontaktiert werden'}
                         </td>
-                        <td className="px-3 py-2 text-right text-slate-700">{currencyFormatter.format(balance.offen)}</td>
+                        <td className="px-3 py-2 text-right text-slate-700">{currencyFormatter.format(centsToEuros(balance.offen))}</td>
                         <td className="px-3 py-2 text-right text-slate-700">
-                          {currencyFormatter.format(balance.gewinneGesamt)}
+                          {currencyFormatter.format(centsToEuros(balance.gewinneGesamt))}
                         </td>
                       </tr>
                     ))}

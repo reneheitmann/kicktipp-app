@@ -5,6 +5,7 @@ import { SearchInput } from '../../components/ui/SearchInput'
 import { SeasonFilter } from '../../components/ui/SeasonFilter'
 import { SortableTh } from '../../components/ui/SortableTh'
 import { currencyFormatter } from '../../lib/format'
+import { centsToEuros } from '../../lib/money'
 import { listPlayers } from './playersApi'
 import { addZahlung, listAllZahlungen } from './zahlungenApi'
 import { listAllSeasonParticipants } from '../seasons/seasonParticipantsApi'
@@ -112,7 +113,7 @@ export function AccountsOverviewPage() {
         <SeasonFilter seasons={seasons} value={seasonFilter} onChange={setSeasonFilter} />
       </div>
       <p className="mb-4 text-sm font-medium text-slate-700">
-        Insgesamt offen: {currencyFormatter.format(totalOffen)}
+        Insgesamt offen: {currencyFormatter.format(centsToEuros(totalOffen))}
       </p>
       <SearchInput value={search} onChange={setSearch} placeholder="Spieler suchen..." className="mb-4 max-w-xs" />
 
@@ -181,18 +182,18 @@ export function AccountsOverviewPage() {
                       {player.name}
                     </Link>
                   </td>
-                  <td className="px-4 py-3 text-right text-slate-700">{currencyFormatter.format(balance.beitraegeGesamt)}</td>
-                  <td className="px-4 py-3 text-right text-slate-700">{currencyFormatter.format(balance.einzahlungenGesamt)}</td>
-                  <td className="px-4 py-3 text-right text-slate-700">{currencyFormatter.format(balance.auszahlungenGesamt)}</td>
-                  <td className="px-4 py-3 text-right text-slate-700">{currencyFormatter.format(balance.gewinneGesamt)}</td>
+                  <td className="px-4 py-3 text-right text-slate-700">{currencyFormatter.format(centsToEuros(balance.beitraegeGesamt))}</td>
+                  <td className="px-4 py-3 text-right text-slate-700">{currencyFormatter.format(centsToEuros(balance.einzahlungenGesamt))}</td>
+                  <td className="px-4 py-3 text-right text-slate-700">{currencyFormatter.format(centsToEuros(balance.auszahlungenGesamt))}</td>
+                  <td className="px-4 py-3 text-right text-slate-700">{currencyFormatter.format(centsToEuros(balance.gewinneGesamt))}</td>
                   <td className="px-4 py-3 text-right">
                     {balance.offen > 0 ? (
                       <span className="font-medium text-amber-700">
-                        {currencyFormatter.format(balance.offen)} offen
+                        {currencyFormatter.format(centsToEuros(balance.offen))} offen
                       </span>
                     ) : balance.offen < 0 ? (
                       <span className="font-medium text-emerald-700">
-                        {currencyFormatter.format(-balance.offen)} Guthaben
+                        {currencyFormatter.format(centsToEuros(-balance.offen))} Guthaben
                       </span>
                     ) : (
                       <span className="font-medium text-slate-500">Ausgeglichen</span>
