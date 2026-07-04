@@ -1,10 +1,11 @@
+import { centsToEuros, type Cents } from '../../lib/money'
 import { supabase } from '../../lib/supabaseClient'
 
 export interface TransferBalanceInput {
   playerId: string
   fromSeasonId: string
   toSeasonId: string
-  betrag: number
+  betrag: Cents
   notiz: string | null
 }
 
@@ -20,7 +21,7 @@ export async function transferBalanceToSeason(input: TransferBalanceInput): Prom
     p_player_id: input.playerId,
     p_from_season_id: input.fromSeasonId,
     p_to_season_id: input.toSeasonId,
-    p_betrag: input.betrag,
+    p_betrag: centsToEuros(input.betrag),
     p_notiz: input.notiz,
   })
   if (error) throw error

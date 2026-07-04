@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Modal } from '../../components/ui/Modal'
 import { Button } from '../../components/ui/Button'
+import { formatEuroInputValue, parseEuroInput, type Cents } from '../../lib/money'
 import type { Player } from '../../types/database'
 
 interface StakeEntryFormProps {
@@ -10,9 +11,9 @@ interface StakeEntryFormProps {
   fixedPlayer?: Player
   /** Bei Neuanlage: Spieler, die noch keinen Eintrag haben. */
   availablePlayers?: Player[]
-  initialBetrag?: number
+  initialBetrag?: Cents
   onClose: () => void
-  onSubmit: (input: { playerId: string; betrag: number }) => Promise<void>
+  onSubmit: (input: { playerId: string; betrag: Cents }) => Promise<void>
 }
 
 export function StakeEntryForm({
@@ -25,18 +26,18 @@ export function StakeEntryForm({
   onSubmit,
 }: StakeEntryFormProps) {
   const [playerId, setPlayerId] = useState(fixedPlayer?.id ?? '')
-  const [betrag, setBetrag] = useState(initialBetrag !== undefined ? String(initialBetrag) : '')
+  const [betrag, setBetrag] = useState(initialBetrag !== undefined ? formatEuroInputValue(initialBetrag) : '')
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    const parsedBetrag = Number(betrag.replace(',', '.'))
+    const parsedBetrag = parseEuroInput(betrag)
     if (!playerId) {
       setError('Bitte einen Spieler auswählen.')
       return
     }
-    if (!Number.isFinite(parsedBetrag) || parsedBetrag < 0) {
+    if (parsedBetrag === null || parsedBetrag < 0) {
       setError('Bitte einen gültigen Betrag (≥ 0) angeben.')
       return
     }

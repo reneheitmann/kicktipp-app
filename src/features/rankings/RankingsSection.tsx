@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Button } from '../../components/ui/Button'
 import { currencyFormatter } from '../../lib/format'
+import { centsToEuros, type Cents } from '../../lib/money'
 import type { Player } from '../../types/database'
 
 export interface RankingEntry {
@@ -11,7 +12,7 @@ export interface RankingEntry {
 
 export interface PayoutAmount {
   player_id: string
-  betrag: number
+  betrag: Cents
 }
 
 interface RankingsSectionProps {
@@ -143,7 +144,7 @@ export function RankingsSection({
                 </p>
                 <div className="flex shrink-0 items-center gap-3">
                   {payout !== undefined && (
-                    <span className="text-sm font-medium text-emerald-700">{currencyFormatter.format(payout)}</span>
+                    <span className="text-sm font-medium text-emerald-700">{currencyFormatter.format(centsToEuros(payout))}</span>
                   )}
                   {canManage ? (
                     <input

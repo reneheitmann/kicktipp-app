@@ -1,6 +1,11 @@
 import { fetchAllRows } from '../../lib/fetchAllRows'
+import { eurosToCents } from '../../lib/money'
 import { supabase } from '../../lib/supabaseClient'
 import type { MatchdayRanking, Transaction } from '../../types/database'
+
+function toCents(row: Transaction): Transaction {
+  return { ...row, betrag: eurosToCents(row.betrag) }
+}
 
 export async function listMatchdayRankings(matchdayId: string): Promise<MatchdayRanking[]> {
   return fetchAllRows((from, to) =>
@@ -38,11 +43,11 @@ export async function listMatchdayPayouts(matchdayId: string): Promise<Transacti
     .eq('matchday_id', matchdayId)
     .eq('typ', 'gewinn_spieltag')
   if (error) throw error
-  return data
+  return data.map(toCents)
 }
 
 export async function calculateMatchdayPayout(matchdayId: string): Promise<Transaction[]> {
   const { data, error } = await supabase.rpc('calculate_matchday_payout', { p_matchday_id: matchdayId })
   if (error) throw error
-  return data
+  return data.map(toCents)
 }

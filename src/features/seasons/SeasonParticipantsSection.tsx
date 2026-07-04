@@ -5,6 +5,7 @@ import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { SearchInput } from '../../components/ui/SearchInput'
 import { SeasonParticipantForm } from './SeasonParticipantForm'
 import { currencyFormatter } from '../../lib/format'
+import { centsToEuros, type Cents } from '../../lib/money'
 import type { Player, SeasonParticipant } from '../../types/database'
 
 interface SeasonParticipantsSectionProps {
@@ -13,10 +14,10 @@ interface SeasonParticipantsSectionProps {
   /** Anzahl der bisher angelegten Spieltage dieser Saison, für die Spieltagseinsatz-Aufschlüsselung. */
   matchdayCount: number
   canManage: boolean
-  onAdd: (input: { playerId: string; gesamtsiegBetrag: number; spieltagsBetrag: number }) => Promise<void>
+  onAdd: (input: { playerId: string; gesamtsiegBetrag: Cents; spieltagsBetrag: Cents }) => Promise<void>
   onUpdate: (
     id: string,
-    input: { gesamtsiegBetrag: number; spieltagsBetrag: number },
+    input: { gesamtsiegBetrag: Cents; spieltagsBetrag: Cents },
   ) => Promise<void>
   onRemove: (id: string) => Promise<void>
   /** Mehrere Teilnehmer auf einmal entfernen – für Saisons mit vielen
@@ -176,9 +177,9 @@ export function SeasonParticipantsSection({
                     <span className="min-w-0 truncate">{playersById.get(participant.player_id)?.name ?? 'Unbekannter Spieler'}</span>
                   </p>
                   <p className="truncate text-sm text-slate-500">
-                    Gesamtwertung: {currencyFormatter.format(participant.gesamtsieg_einsatz_betrag)} · Spieltag:{' '}
-                    {matchdayCount} × {currencyFormatter.format(participant.spieltags_einsatz_betrag)} ={' '}
-                    {currencyFormatter.format(matchdayCount * participant.spieltags_einsatz_betrag)}
+                    Gesamtwertung: {currencyFormatter.format(centsToEuros(participant.gesamtsieg_einsatz_betrag))} · Spieltag:{' '}
+                    {matchdayCount} × {currencyFormatter.format(centsToEuros(participant.spieltags_einsatz_betrag))} ={' '}
+                    {currencyFormatter.format(centsToEuros(matchdayCount * participant.spieltags_einsatz_betrag))}
                   </p>
                   </div>
                 </div>
@@ -187,7 +188,7 @@ export function SeasonParticipantsSection({
                     <p className="text-xs text-slate-500">Gesamteinsatz</p>
                     <p className="text-sm font-semibold text-slate-900">
                       {currencyFormatter.format(
-                        participant.gesamtsieg_einsatz_betrag + participant.spieltags_einsatz_betrag * matchdayCount,
+                        centsToEuros(participant.gesamtsieg_einsatz_betrag + participant.spieltags_einsatz_betrag * matchdayCount),
                       )}
                     </p>
                   </div>

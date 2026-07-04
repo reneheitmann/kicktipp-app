@@ -2,12 +2,13 @@ import { useState } from 'react'
 import { Button } from '../../components/ui/Button'
 import { StakeEntryForm } from './StakeEntryForm'
 import { currencyFormatter } from '../../lib/format'
+import { centsToEuros, type Cents } from '../../lib/money'
 import type { Player } from '../../types/database'
 
 export interface StakeEntry {
   id: string
   player_id: string
-  betrag: number
+  betrag: Cents
 }
 
 interface StakeEntriesSectionProps {
@@ -16,8 +17,8 @@ interface StakeEntriesSectionProps {
   entries: StakeEntry[]
   players: Player[]
   canManage: boolean
-  onAdd: (playerId: string, betrag: number) => Promise<void>
-  onUpdate: (id: string, betrag: number) => Promise<void>
+  onAdd: (playerId: string, betrag: Cents) => Promise<void>
+  onUpdate: (id: string, betrag: Cents) => Promise<void>
   onRemove: (id: string) => Promise<void>
 }
 
@@ -70,7 +71,7 @@ export function StakeEntriesSection({
                 {playersById.get(entry.player_id)?.name ?? 'Unbekannter Spieler'}
               </p>
               <div className="flex shrink-0 flex-wrap items-center gap-2">
-                <span className="text-sm text-slate-700">{currencyFormatter.format(entry.betrag)}</span>
+                <span className="text-sm text-slate-700">{currencyFormatter.format(centsToEuros(entry.betrag))}</span>
                 {canManage && (
                   <>
                     <Button variant="secondary" onClick={() => setEditingEntry(entry)}>

@@ -5,6 +5,7 @@ import { Button } from '../../components/ui/Button'
 import { SearchInput } from '../../components/ui/SearchInput'
 import { SortableTh } from '../../components/ui/SortableTh'
 import { currencyFormatter } from '../../lib/format'
+import { centsToEuros } from '../../lib/money'
 import { listPlayers } from '../players/playersApi'
 import { listZahlungenForSeason } from '../players/zahlungenApi'
 import { getSeason } from '../seasons/seasonsApi'
@@ -138,7 +139,7 @@ export function SeasonBalancesPage() {
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" tick={{ fontSize: 12 }} />
                 <YAxis tick={{ fontSize: 12 }} />
-                <Tooltip formatter={(value) => currencyFormatter.format(Number(value))} />
+                <Tooltip formatter={(value) => currencyFormatter.format(centsToEuros(Number(value)))} />
                 <Legend />
                 <Bar dataKey="Gesamtwertung" fill="#0f172a" />
                 <Bar dataKey="Spieltag" fill="#94a3b8" />
@@ -218,18 +219,18 @@ export function SeasonBalancesPage() {
                 {sortedBalances.map((b) => (
                   <tr key={b.player_id} className="border-b border-slate-100 last:border-0">
                     <td className="px-4 py-3 font-medium text-slate-900">{b.name}</td>
-                    <td className="px-4 py-3 text-right text-slate-700">{currencyFormatter.format(b.gesamtsieg_einsatz)}</td>
-                    <td className="px-4 py-3 text-right text-slate-700">{currencyFormatter.format(b.gesamtsieg_gewinn)}</td>
+                    <td className="px-4 py-3 text-right text-slate-700">{currencyFormatter.format(centsToEuros(b.gesamtsieg_einsatz))}</td>
+                    <td className="px-4 py-3 text-right text-slate-700">{currencyFormatter.format(centsToEuros(b.gesamtsieg_gewinn))}</td>
                     <td className="px-4 py-3 text-right font-medium text-slate-900">
-                      {currencyFormatter.format(b.gesamtsieg_saldo)}
+                      {currencyFormatter.format(centsToEuros(b.gesamtsieg_saldo))}
                     </td>
-                    <td className="px-4 py-3 text-right text-slate-700">{currencyFormatter.format(b.spieltag_einsatz)}</td>
-                    <td className="px-4 py-3 text-right text-slate-700">{currencyFormatter.format(b.spieltag_gewinn)}</td>
+                    <td className="px-4 py-3 text-right text-slate-700">{currencyFormatter.format(centsToEuros(b.spieltag_einsatz))}</td>
+                    <td className="px-4 py-3 text-right text-slate-700">{currencyFormatter.format(centsToEuros(b.spieltag_gewinn))}</td>
                     <td className="px-4 py-3 text-right font-medium text-slate-900">
-                      {currencyFormatter.format(b.spieltag_saldo)}
+                      {currencyFormatter.format(centsToEuros(b.spieltag_saldo))}
                     </td>
                     <td className="px-4 py-3 text-right font-semibold text-slate-900">
-                      {currencyFormatter.format(b.gesamt_saldo)}
+                      {currencyFormatter.format(centsToEuros(b.gesamt_saldo))}
                     </td>
                   </tr>
                 ))}

@@ -1,6 +1,11 @@
 import { fetchAllRows } from '../../lib/fetchAllRows'
+import { eurosToCents } from '../../lib/money'
 import { supabase } from '../../lib/supabaseClient'
 import type { SeasonRanking, Transaction } from '../../types/database'
+
+function toCents(row: Transaction): Transaction {
+  return { ...row, betrag: eurosToCents(row.betrag) }
+}
 
 export async function listSeasonRankings(seasonId: string): Promise<SeasonRanking[]> {
   return fetchAllRows((from, to) =>
@@ -32,13 +37,13 @@ export async function listSeasonPayouts(seasonId: string): Promise<Transaction[]
     .eq('typ', 'gewinn_gesamt')
     .is('matchday_id', null)
   if (error) throw error
-  return data
+  return data.map(toCents)
 }
 
 export async function calculateSeasonPayout(seasonId: string): Promise<Transaction[]> {
   const { data, error } = await supabase.rpc('calculate_season_payout', { p_season_id: seasonId })
   if (error) throw error
-  return data
+  return data.map(toCents)
 }
 
 /** Setzt Platzierungen der Gesamtwertung samt bereits verbuchter Gewinne zurück – die konfigurierte Gewinnverteilung (Prozentsätze) bleibt unangetastet. */

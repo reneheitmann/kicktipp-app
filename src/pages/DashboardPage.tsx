@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Badge } from '../components/ui/Badge'
 import { currencyFormatter } from '../lib/format'
+import { centsToEuros } from '../lib/money'
 import { useAuth } from '../features/auth/useAuth'
 import { listSeasons } from '../features/seasons/seasonsApi'
 import { listPlayers } from '../features/players/playersApi'
@@ -192,7 +193,7 @@ export function DashboardPage() {
       )}
 
       {linkedPlayers.length === 1 && myBalance && (
-        <PlayerBalanceCard player={linkedPlayers[0]} balance={myBalance} title="Mein Konto" className="mb-6" />
+        <PlayerBalanceCard player={linkedPlayers[0]} balance={myBalance} title="Mein Konto" className="mb-6 shadow-md" />
       )}
 
       {linkedPlayers.length > 1 && linkedPlayers.length < COMPACT_PLAYER_LIST_THRESHOLD && myBalance && (
@@ -242,7 +243,7 @@ export function DashboardPage() {
             <StatCard label="Spieltage gesamt" value={String(stats.matchdayCount)} />
             <StatCard
               label="Offene Beträge (alle Spieler)"
-              value={currencyFormatter.format(stats.totalOutstanding)}
+              value={currencyFormatter.format(centsToEuros(stats.totalOutstanding))}
               tone={stats.totalOutstanding > 0 ? 'amber' : undefined}
             />
           </div>
@@ -260,13 +261,13 @@ export function DashboardPage() {
               <li key={season.id}>
                 <Link
                   to={`/seasons/${season.id}`}
-                  aria-label={`Saison ${season.name}${myGewinn !== undefined ? `, Gewinn ${currencyFormatter.format(myGewinn)}` : ''}, Status ${season.status}`}
+                  aria-label={`Saison ${season.name}${myGewinn !== undefined ? `, Gewinn ${currencyFormatter.format(centsToEuros(myGewinn))}` : ''}, Status ${season.status}`}
                   className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-slate-50"
                 >
                   <span className="font-medium text-slate-900">{season.name}</span>
                   <div className="flex items-center gap-3">
                     {myGewinn !== undefined && (
-                      <span className="text-sm font-medium text-emerald-700">{currencyFormatter.format(myGewinn)}</span>
+                      <span className="text-sm font-medium text-emerald-700">{currencyFormatter.format(centsToEuros(myGewinn))}</span>
                     )}
                     <Badge tone="positive">{season.status}</Badge>
                   </div>
@@ -319,15 +320,17 @@ function StatCard({ label, value, tone }: { label: string; value: string; tone?:
 
 /** Kurzform der Saldo-Aussage, z. B. "12,00 € offen" / "5,00 € Guthaben" / "Ausgeglichen" – für Headline und Accessible Names. */
 function describeBalance(balance: AccountBalance): string {
-  if (balance.offen > 0) return `${currencyFormatter.format(balance.offen)} offen`
-  if (balance.offen < 0) return `${currencyFormatter.format(-balance.offen)} Guthaben`
+  if (balance.offen > 0) return `${currencyFormatter.format(centsToEuros(balance.offen))} offen`
+  if (balance.offen < 0) return `${currencyFormatter.format(centsToEuros(-balance.offen))} Guthaben`
   return 'Ausgeglichen'
 }
 
-/** Reine Saldo-Anzeige ohne Link – für die Gesamtsumme über mehrere verknüpfte Spieler, die zu keiner einzelnen Spieler-Detailseite führt. */
+/** Reine Saldo-Anzeige ohne Link – für die Gesamtsumme über mehrere verknüpfte Spieler, die zu keiner einzelnen Spieler-Detailseite führt.
+ * Bekommt die "Betont"-Schatten-Stufe (siehe DESIGN.md), da hier immer "Mein Konto" gemeint ist – anders als bei PlayerBalanceCard,
+ * die auch für die flachen Nebenkarten der einzelnen Spieler wiederverwendet wird. */
 function PlayerBalanceSummary({ balance, title }: { balance: AccountBalance; title: string }) {
   return (
-    <div className="block rounded-xl border border-slate-200 bg-white p-4">
+    <div className="block rounded-xl border border-slate-200 bg-white p-4 shadow-md">
       <h2 className="text-sm text-slate-500">{title}</h2>
       <BalanceHeadline balance={balance} />
       <BalanceBreakdown balance={balance} />
@@ -377,19 +380,19 @@ function BalanceBreakdown({ balance }: { balance: AccountBalance }) {
     <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-slate-500">
       <div className="flex justify-between gap-2">
         <dt>Beiträge</dt>
-        <dd className="font-medium text-slate-700">{currencyFormatter.format(balance.beitraegeGesamt)}</dd>
+        <dd className="font-medium text-slate-700">{currencyFormatter.format(centsToEuros(balance.beitraegeGesamt))}</dd>
       </div>
       <div className="flex justify-between gap-2">
         <dt>Eingezahlt</dt>
-        <dd className="font-medium text-slate-700">{currencyFormatter.format(balance.einzahlungenGesamt)}</dd>
+        <dd className="font-medium text-slate-700">{currencyFormatter.format(centsToEuros(balance.einzahlungenGesamt))}</dd>
       </div>
       <div className="flex justify-between gap-2">
         <dt>Ausgezahlt</dt>
-        <dd className="font-medium text-slate-700">{currencyFormatter.format(balance.auszahlungenGesamt)}</dd>
+        <dd className="font-medium text-slate-700">{currencyFormatter.format(centsToEuros(balance.auszahlungenGesamt))}</dd>
       </div>
       <div className="flex justify-between gap-2">
         <dt>Gewinne</dt>
-        <dd className="font-medium text-slate-700">{currencyFormatter.format(balance.gewinneGesamt)}</dd>
+        <dd className="font-medium text-slate-700">{currencyFormatter.format(centsToEuros(balance.gewinneGesamt))}</dd>
       </div>
     </dl>
   )

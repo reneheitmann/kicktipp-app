@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Button } from '../../components/ui/Button'
 import { currencyFormatter } from '../../lib/format'
+import { centsToEuros, type Cents } from '../../lib/money'
 import { getPayoutPool, hasPayouts, listPayoutRules, setPayoutRules } from './payoutRulesApi'
 import type { PayoutTyp } from '../../types/database'
 
@@ -17,24 +18,20 @@ function parsePercent(value: string): number {
   return Number(value.replace(',', '.'))
 }
 
-function roundCents(value: number): number {
-  return Math.round((value + Number.EPSILON) * 100) / 100
-}
-
 /**
- * Euro-Beträge je Platz aus den (ggf. noch in Bearbeitung befindlichen)
+ * Cent-Beträge je Platz aus den (ggf. noch in Bearbeitung befindlichen)
  * Prozentsätzen, gegen den Gesamttopf gerechnet. Da jeder Platz einzeln
- * kaufmännisch gerundet wird, könnte die Summe der gerundeten Beträge den
- * Topf (100 %) um Rundungscents über- oder unterschreiten – der unterste
- * Gewinnrang bekommt daher den exakten Rest, sodass die angezeigte Summe nie
- * über dem Topf liegt.
+ * gerundet wird, könnte die Summe der gerundeten Beträge den Topf (100 %)
+ * um Rundungscents über- oder unterschreiten – der unterste Gewinnrang
+ * bekommt daher den exakten Rest, sodass die angezeigte Summe nie über dem
+ * Topf liegt.
  */
-function computeAmounts(percents: number[], pool: number): number[] {
-  const naive = percents.map((pct) => roundCents((pool * pct) / 100))
+function computeAmounts(percents: number[], pool: Cents): Cents[] {
+  const naive = percents.map((pct) => Math.round((pool * pct) / 100))
   return naive.map((amount, i) => {
     if (i < naive.length - 1) return amount
     const sumOthers = naive.slice(0, -1).reduce((s, a) => s + a, 0)
-    return roundCents(pool - sumOthers)
+    return pool - sumOthers
   })
 }
 
@@ -42,7 +39,7 @@ export function PayoutRulesEditor({ seasonId, typ, title, canManage }: PayoutRul
   const [savedPercents, setSavedPercents] = useState<number[]>([])
   const [draftPercents, setDraftPercents] = useState<string[]>([])
   const [paidOut, setPaidOut] = useState(false)
-  const [pool, setPool] = useState(0)
+  const [pool, setPool] = useState<Cents>(0)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -127,7 +124,7 @@ export function PayoutRulesEditor({ seasonId, typ, title, canManage }: PayoutRul
     <div className="rounded-xl border border-slate-200 bg-white p-4">
       <h3 className="mb-1 text-sm font-semibold text-slate-900">{title}</h3>
       <p className="mb-3 text-sm text-slate-500">
-        Gesamtgewinn: <span className="font-medium text-emerald-700">{currencyFormatter.format(pool)}</span>
+        Gesamtgewinn: <span className="font-medium text-emerald-700">{currencyFormatter.format(centsToEuros(pool))}</span>
       </p>
 
       {paidOut && canManage && (
@@ -157,7 +154,7 @@ export function PayoutRulesEditor({ seasonId, typ, title, canManage }: PayoutRul
                     className="w-24 rounded-lg border border-slate-300 px-3 py-2 text-base focus:border-slate-900 focus:outline-none"
                   />
                   <span className="text-sm text-slate-500">%</span>
-                  <span className="text-sm text-slate-500">≈ {currencyFormatter.format(amounts[index])}</span>
+                  <span className="text-sm text-slate-500">≈ {currencyFormatter.format(centsToEuros(amounts[index]))}</span>
                   <Button variant="danger" className="ml-auto" onClick={() => removeRow(index)}>
                     Entfernen
                   </Button>
@@ -165,7 +162,7 @@ export function PayoutRulesEditor({ seasonId, typ, title, canManage }: PayoutRul
               ) : (
                 <>
                   <span className="text-sm text-slate-900">{value} %</span>
-                  <span className="text-sm text-slate-500">≈ {currencyFormatter.format(amounts[index])}</span>
+                  <span className="text-sm text-slate-500">≈ {currencyFormatter.format(centsToEuros(amounts[index]))}</span>
                 </>
               )}
             </li>

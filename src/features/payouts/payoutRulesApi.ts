@@ -1,3 +1,4 @@
+import { eurosToCents, type Cents } from '../../lib/money'
 import { supabase } from '../../lib/supabaseClient'
 import type { PayoutRule, PayoutRuleInput, PayoutTyp } from '../../types/database'
 
@@ -37,10 +38,10 @@ export async function setPayoutRules(
  * bleiben dabei privat, nur die Gesamtsumme wird für alle aktiven User
  * offengelegt (siehe Migration 0021).
  */
-export async function getPayoutPool(seasonId: string, typ: PayoutTyp): Promise<number> {
+export async function getPayoutPool(seasonId: string, typ: PayoutTyp): Promise<Cents> {
   const { data, error } = await supabase.rpc('get_payout_pool', { p_season_id: seasonId, p_typ: typ })
   if (error) throw error
-  return data
+  return eurosToCents(data)
 }
 
 export async function hasPayouts(seasonId: string, typ: PayoutTyp): Promise<boolean> {

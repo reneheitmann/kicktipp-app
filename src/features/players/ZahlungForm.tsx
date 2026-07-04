@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Modal } from '../../components/ui/Modal'
 import { Button } from '../../components/ui/Button'
+import { parseEuroInput, type Cents } from '../../lib/money'
 import type { Season, ZahlungTyp } from '../../types/database'
 
 interface ZahlungFormProps {
@@ -8,7 +9,7 @@ interface ZahlungFormProps {
   seasons: Season[]
   initialSeasonId?: string
   onClose: () => void
-  onSubmit: (input: { typ: ZahlungTyp; seasonId: string; betrag: number; datum: string; notiz: string | null }) => Promise<void>
+  onSubmit: (input: { typ: ZahlungTyp; seasonId: string; betrag: Cents; datum: string; notiz: string | null }) => Promise<void>
 }
 
 export function ZahlungForm({ playerName, seasons, initialSeasonId, onClose, onSubmit }: ZahlungFormProps) {
@@ -22,12 +23,12 @@ export function ZahlungForm({ playerName, seasons, initialSeasonId, onClose, onS
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    const parsed = Number(betrag.replace(',', '.'))
+    const parsed = parseEuroInput(betrag)
     if (!seasonId) {
       setError('Bitte eine Saison auswählen.')
       return
     }
-    if (!Number.isFinite(parsed) || parsed <= 0) {
+    if (parsed === null || parsed <= 0) {
       setError('Bitte einen gültigen Betrag (> 0) angeben.')
       return
     }

@@ -1,14 +1,15 @@
+import type { Cents } from '../../lib/money'
 import type { SeasonParticipant, Transaction, Zahlung } from '../../types/database'
 
 export interface AccountBalance {
-  beitraegeGesamtsieg: number
-  beitraegeSpieltag: number
-  beitraegeGesamt: number
-  einzahlungenGesamt: number
-  auszahlungenGesamt: number
-  gewinneGesamt: number
-  korrekturGesamt: number
-  offen: number
+  beitraegeGesamtsieg: Cents
+  beitraegeSpieltag: Cents
+  beitraegeGesamt: Cents
+  einzahlungenGesamt: Cents
+  auszahlungenGesamt: Cents
+  gewinneGesamt: Cents
+  korrekturGesamt: Cents
+  offen: Cents
 }
 
 /**
@@ -30,6 +31,10 @@ export interface AccountBalance {
  * `offen > 0` heißt: Spieler schuldet noch Geld; `offen < 0` heißt: Spieler
  * hat (durch Einzahlungen und/oder noch nicht ausgezahlte Gewinne) mehr als
  * nötig beglichen.
+ *
+ * Alle Beträge sind ganze Cent (`Cents`, siehe src/lib/money.ts und
+ * balanceCalculations.ts), nicht Euro-Floats – vermeidet Fließkomma-Drift
+ * bei der Summierung vieler Einzelbuchungen.
  */
 export function computeAccountBalance(
   participants: SeasonParticipant[],
@@ -68,7 +73,7 @@ export function computeTotalOutstanding(
   matchdayCountsBySeasonId: Map<string, number>,
   zahlungen: Zahlung[],
   transactions: Transaction[],
-): number {
+): Cents {
   return playerIds.reduce((sum, playerId) => {
     const balance = computeAccountBalance(
       participants.filter((p) => p.player_id === playerId),

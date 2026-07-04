@@ -1,3 +1,5 @@
+import type { Cents } from '../lib/money'
+
 export type UserRole = 'admin' | 'spielleiter' | 'user'
 
 // Die konfigurierbaren Rechte, siehe supabase/migrations/0022_role_permissions.sql
@@ -108,8 +110,8 @@ export type SeasonParticipant = {
   id: string
   season_id: string
   player_id: string
-  gesamtsieg_einsatz_betrag: number
-  spieltags_einsatz_betrag: number
+  gesamtsieg_einsatz_betrag: Cents
+  spieltags_einsatz_betrag: Cents
   created_at: string
 }
 
@@ -117,7 +119,7 @@ export type MatchdayEntry = {
   id: string
   matchday_id: string
   player_id: string
-  spieltags_einsatz_betrag: number
+  spieltags_einsatz_betrag: Cents
   created_at: string
 }
 
@@ -129,7 +131,7 @@ export type Transaction = {
   season_id: string
   matchday_id: string | null
   typ: TransactionTyp
-  betrag: number
+  betrag: Cents
   datum: string
   notiz: string | null
   source_season_participant_id: string | null
@@ -196,7 +198,7 @@ export type Zahlung = {
   player_id: string
   season_id: string
   typ: ZahlungTyp
-  betrag: number
+  betrag: Cents
   datum: string
   notiz: string | null
   created_by: string | null
@@ -702,13 +704,18 @@ export interface Database {
         }
         Returns: PayoutRule[]
       }
+      // Returns das rohe Wire-Format (Euro, wie in Postgres numeric(10,2)) –
+      // bewusst NICHT Transaction[] (dessen betrag-Feld app-seitig Cents
+      // bedeutet), da die Funktion tatsächlich unkonvertierte Euro-Beträge
+      // liefert. matchdayRankingsApi.ts/seasonRankingsApi.ts wandeln beim
+      // Empfang nach Cents um (siehe eurosToCents in src/lib/money.ts).
       calculate_matchday_payout: {
         Args: { p_matchday_id: string }
-        Returns: Transaction[]
+        Returns: Array<Omit<Transaction, 'betrag'> & { betrag: number }>
       }
       calculate_season_payout: {
         Args: { p_season_id: string }
-        Returns: Transaction[]
+        Returns: Array<Omit<Transaction, 'betrag'> & { betrag: number }>
       }
       remove_matchday_ranking: {
         Args: { p_ranking_id: string }
