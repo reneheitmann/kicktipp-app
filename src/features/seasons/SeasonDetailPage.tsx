@@ -11,6 +11,7 @@ import { useAuth } from '../auth/useAuth'
 import { listPlayers } from '../players/playersApi'
 import { listPlayerProfileLinks } from '../players/playerProfileLinksApi'
 import { SeasonForm } from './SeasonForm'
+import { SEASON_STATUS_LABELS, SEASON_STATUS_TONE } from './seasonStatus'
 import { MatchdayForm } from './MatchdayForm'
 import { DeleteSeasonDialog } from './DeleteSeasonDialog'
 import { CopySeasonDialog } from './CopySeasonDialog'
@@ -36,6 +37,7 @@ import type {
   Season,
   SeasonParticipant,
   SeasonRanking,
+  SeasonStatus,
   Transaction,
 } from '../../types/database'
 
@@ -43,6 +45,15 @@ import type {
 // markiert, will dessen Platzierungen/Gewinne meist über alle Saisons
 // hinweg als Standard sehen, nicht nur in der Saison, in der markiert wurde.
 const FAVORITE_PLAYER_STORAGE_KEY = 'kicktipp_favorite_player_id'
+
+const SEASON_STATUS_MESSAGES: Record<SeasonStatus, string> = {
+  entwurf:
+    'Die Saison wird als Entwurf markiert und ist für normale Nutzer nicht mehr sichtbar (auch nicht für bereits eingetragene Teilnehmer).',
+  aktiv: 'Die Saison wird veröffentlicht und ist für ihre Teilnehmer ab sofort sichtbar.',
+  abgeschlossen: 'Die Saison wird als abgeschlossen markiert. Sie bleibt für ihre Teilnehmer weiterhin einsehbar.',
+  archiviert:
+    'Die Saison wird archiviert und ist für normale Nutzer nicht mehr sichtbar (auch nicht für bereits eingetragene Teilnehmer). Eigene Kontostände/Buchungen aus dieser Saison bleiben für Teilnehmer trotzdem korrekt in ihrer Gesamtübersicht enthalten.',
+}
 
 export function SeasonDetailPage() {
   const { seasonId } = useParams<{ seasonId: string }>()
@@ -160,9 +171,8 @@ export function SeasonDetailPage() {
     })
   }
 
-  async function doToggleSeasonStatus() {
+  async function doSetSeasonStatus(next: SeasonStatus) {
     if (!season) return
-    const next = season.status === 'aktiv' ? 'abgeschlossen' : 'aktiv'
     try {
       await setSeasonStatus(season.id, next)
       await reload()
@@ -171,17 +181,14 @@ export function SeasonDetailPage() {
     }
   }
 
-  function handleToggleSeasonStatus() {
-    if (!season) return
-    const next = season.status === 'aktiv' ? 'abgeschlossen' : 'aktiv'
+  function handleSeasonStatusChange(next: SeasonStatus) {
+    if (!season || next === season.status) return
     setConfirmDialog({
-      title: next === 'abgeschlossen' ? 'Saison abschließen?' : 'Saison reaktivieren?',
-      message:
-        next === 'abgeschlossen'
-          ? 'Die Saison wird als abgeschlossen markiert. Sie bleibt weiterhin einsehbar und lässt sich jederzeit wieder reaktivieren.'
-          : 'Die Saison wird wieder als aktiv markiert.',
-      confirmLabel: next === 'abgeschlossen' ? 'Abschließen' : 'Reaktivieren',
-      onConfirm: doToggleSeasonStatus,
+      title: `Status auf "${SEASON_STATUS_LABELS[next]}" setzen?`,
+      message: SEASON_STATUS_MESSAGES[next],
+      confirmLabel: 'Übernehmen',
+      danger: next === 'entwurf' || next === 'archiviert',
+      onConfirm: () => doSetSeasonStatus(next),
     })
   }
 
@@ -312,11 +319,17 @@ export function SeasonDetailPage() {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-xl font-semibold text-slate-900">{season.name}</h1>
-            <Badge tone={season.status === 'aktiv' ? 'positive' : 'neutral'}>{season.status}</Badge>
+            <Badge tone={SEASON_STATUS_TONE[season.status]}>{SEASON_STATUS_LABELS[season.status]}</Badge>
           </div>
           <p className="mt-1 text-sm text-slate-500">
             {formatGermanDate(season.start_date)} – {formatGermanDate(season.end_date)}
           </p>
+          {canManageSeason && (season.status === 'entwurf' || season.status === 'archiviert') && (
+            <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
+              Diese Saison ist aktuell {season.status === 'entwurf' ? 'ein Entwurf' : 'archiviert'} und für normale
+              Nutzer nicht sichtbar.
+            </p>
+          )}
           {season.kicktipp_link && (
             <a
               href={season.kicktipp_link}
@@ -346,9 +359,18 @@ export function SeasonDetailPage() {
           </div>
           {canManageSeason && (
             <div className="flex flex-wrap gap-2 border-l border-slate-200 pl-2">
-              <Button variant="secondary" onClick={handleToggleSeasonStatus}>
-                {season.status === 'aktiv' ? 'Abschließen' : 'Reaktivieren'}
-              </Button>
+              <select
+                value={season.status}
+                onChange={(e) => handleSeasonStatusChange(e.target.value as SeasonStatus)}
+                aria-label="Saison-Status"
+                className="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-slate-900 focus:outline-none"
+              >
+                {(Object.keys(SEASON_STATUS_LABELS) as SeasonStatus[]).map((status) => (
+                  <option key={status} value={status}>
+                    {SEASON_STATUS_LABELS[status]}
+                  </option>
+                ))}
+              </select>
               <Button variant="danger" onClick={() => setShowDeleteDialog(true)}>
                 Löschen
               </Button>

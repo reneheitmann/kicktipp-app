@@ -76,7 +76,10 @@ export type PlayerProfileLink = {
   created_at: string
 }
 
-export type SeasonStatus = 'aktiv' | 'abgeschlossen'
+// "entwurf"/"archiviert" sind für normale User unsichtbar (siehe
+// is_season_participant() in supabase/migrations/0044_season_lifecycle.sql) –
+// nur Admin/Spielleiter mit seasons.manage sehen sie.
+export type SeasonStatus = 'entwurf' | 'aktiv' | 'abgeschlossen' | 'archiviert'
 
 // Wiederverwendet für die Gesamtwertung, siehe Season.gesamtwertung_status:
 // dieselbe offen/abgerechnet-Semantik wie ein einzelner Spieltag.
