@@ -8,10 +8,20 @@ import { useAuth } from '../auth/useAuth'
 import { listPlayerProfileLinks } from '../players/playerProfileLinksApi'
 import { listAllTransactions } from '../balances/balancesApi'
 import { SeasonForm } from './SeasonForm'
+import { SEASON_STATUS_LABELS, SEASON_STATUS_TONE } from './seasonStatus'
 import { createSeason, listSeasons } from './seasonsApi'
 import { listAllMatchdays } from './matchdaysApi'
 import { listAllSeasonParticipants } from './seasonParticipantsApi'
-import type { Matchday, PlayerProfileLink, Season, SeasonParticipant, Transaction } from '../../types/database'
+import type {
+  Matchday,
+  PlayerProfileLink,
+  Season,
+  SeasonParticipant,
+  SeasonStatus,
+  Transaction,
+} from '../../types/database'
+
+type SeasonListFilter = 'ohne_archiviert' | 'alle' | SeasonStatus
 
 export function SeasonsPage() {
   const { profile, can } = useAuth()
@@ -25,6 +35,7 @@ export function SeasonsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showForm, setShowForm] = useState(false)
+  const [statusFilter, setStatusFilter] = useState<SeasonListFilter>('ohne_archiviert')
 
   async function reload() {
     setLoading(true)
@@ -91,11 +102,38 @@ export function SeasonsPage() {
     return spieltagSumme + gesamtwertungBetrag
   }
 
+  // Normale User bekommen über RLS ohnehin nur aktiv/abgeschlossen geliefert
+  // (siehe is_season_participant() in
+  // supabase/migrations/0044_season_lifecycle.sql) – der Filter ist daher
+  // nur für Admin/Spielleiter relevant, die auch Entwurf/Archiviert sehen.
+  const filteredSeasons = seasons.filter((season) => {
+    if (statusFilter === 'alle') return true
+    if (statusFilter === 'ohne_archiviert') return season.status !== 'archiviert'
+    return season.status === statusFilter
+  })
+
   return (
     <div className="p-4 sm:p-6">
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-xl font-semibold text-slate-900">Saison</h1>
-        {canManage && <Button onClick={() => setShowForm(true)}>+ Saison</Button>}
+        <div className="flex items-center gap-2">
+          {canManage && (
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as SeasonListFilter)}
+              aria-label="Nach Status filtern"
+              className="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-slate-900 focus:outline-none"
+            >
+              <option value="ohne_archiviert">Alle außer Archiviert</option>
+              <option value="alle">Alle</option>
+              <option value="entwurf">Entwurf</option>
+              <option value="aktiv">Aktiv</option>
+              <option value="abgeschlossen">Abgeschlossen</option>
+              <option value="archiviert">Archiviert</option>
+            </select>
+          )}
+          {canManage && <Button onClick={() => setShowForm(true)}>+ Saison</Button>}
+        </div>
       </div>
 
       {error && <p role="alert" className="mb-4 text-sm text-red-600">{error}</p>}
@@ -104,9 +142,11 @@ export function SeasonsPage() {
         <p className="text-sm text-slate-500">Lade...</p>
       ) : seasons.length === 0 ? (
         <p className="text-sm text-slate-500">Noch keine Saisons angelegt.</p>
+      ) : filteredSeasons.length === 0 ? (
+        <p className="text-sm text-slate-500">Keine Saisons für diesen Filter.</p>
       ) : (
         <ul className="divide-y divide-slate-200 overflow-hidden rounded-xl border border-slate-200 bg-white">
-          {seasons.map((season) => {
+          {filteredSeasons.map((season) => {
             const myGewinn = myGesamtgewinnForSeason(season)
             return (
               <li key={season.id}>
@@ -125,7 +165,7 @@ export function SeasonsPage() {
                       {currencyFormatter.format(centsToEuros(myGewinn))}
                     </span>
                   )}
-                  <Badge tone={season.status === 'aktiv' ? 'positive' : 'neutral'}>{season.status}</Badge>
+                  <Badge tone={SEASON_STATUS_TONE[season.status]}>{SEASON_STATUS_LABELS[season.status]}</Badge>
                 </Link>
               </li>
             )
