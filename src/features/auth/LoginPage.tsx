@@ -6,7 +6,7 @@ import { visibleNavItems } from '../../components/layout/navItems'
 import { requestPasswordReset } from './passwordResetApi'
 
 export function LoginPage() {
-  const { session, profile, loading, can, signIn } = useAuth()
+  const { session, profile, loading, can, signIn, sessionExpired, clearSessionExpired } = useAuth()
   const { appName } = useAppBranding()
   const location = useLocation()
   const [mode, setMode] = useState<'login' | 'forgot'>('login')
@@ -43,6 +43,8 @@ export function LoginPage() {
     setSubmitting(false)
     if (error) {
       setError('Anmeldung fehlgeschlagen. E-Mail oder Passwort prüfen.')
+    } else {
+      clearSessionExpired()
     }
   }
 
@@ -79,6 +81,12 @@ export function LoginPage() {
             {disabledHint && (
               <p className="mb-4 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
                 Dein Konto wurde deaktiviert. Bitte wende dich an den Administrator.
+              </p>
+            )}
+
+            {sessionExpired && (
+              <p className="mb-4 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                Deine Sitzung ist abgelaufen. Bitte melde dich erneut an.
               </p>
             )}
 

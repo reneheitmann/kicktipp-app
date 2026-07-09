@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from '../../lib/supabaseClient'
+import { getSessionPolicy, registerSession } from '../session-policy/sessionPolicyApi'
 import type { PermissionKey, Profile, UserRole } from '../../types/database'
 import { AuthContext } from './AuthContext'
 
@@ -26,12 +27,40 @@ async function fetchPermissions(role: UserRole): Promise<Set<PermissionKey>> {
   return new Set(data.map((row) => row.permission_key))
 }
 
+// Sitzungs-Zeitlimit (siehe src/features/session-policy/): clientseitige
+// Hälfte der Durchsetzung, Gegenstück zu current_session_valid() in
+// Migration 0043. login_at wird NUR bei einem echten Neu-Login gesetzt
+// (SIGNED_IN), nicht bei jedem Reload/Token-Refresh – sonst würde die
+// Frist bei jedem Seitenaufruf heimlich verlängert.
+const LOGIN_AT_STORAGE_KEY = 'kicktipp_session_login_at'
+const DEFAULT_MAX_SESSION_HOURS = 8
+
+function isSessionExpired(maxHours: number): boolean {
+  const raw = localStorage.getItem(LOGIN_AT_STORAGE_KEY)
+  if (!raw) return false
+  const loginAt = Number(raw)
+  if (!Number.isFinite(loginAt)) return false
+  return Date.now() - loginAt > maxHours * 60 * 60 * 1000
+}
+
+async function fetchMaxSessionHours(): Promise<number> {
+  try {
+    const policy = await getSessionPolicy()
+    return policy.max_duration_hours
+  } catch (err) {
+    console.error('Sitzungsrichtlinie konnte nicht geladen werden', err)
+    return DEFAULT_MAX_SESSION_HOURS
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [permissions, setPermissions] = useState<Set<PermissionKey>>(new Set())
   const [loading, setLoading] = useState(true)
   const [passwordRecovery, setPasswordRecovery] = useState(false)
+  const [maxSessionHours, setMaxSessionHours] = useState(DEFAULT_MAX_SESSION_HOURS)
+  const [sessionExpired, setSessionExpired] = useState(false)
 
   useEffect(() => {
     let isMounted = true
@@ -40,8 +69,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!isMounted) return
       setSession(data.session)
       if (data.session) {
-        const loadedProfile = await fetchProfile(data.session.user.id)
+        // Reload einer bestehenden Sitzung: login_at nur setzen, falls noch
+        // keiner gespeichert ist (Alt-Sessions von vor diesem Feature) –
+        // sonst würde jeder Reload die Frist heimlich verlängern.
+        if (!localStorage.getItem(LOGIN_AT_STORAGE_KEY)) {
+          localStorage.setItem(LOGIN_AT_STORAGE_KEY, String(Date.now()))
+        }
+        // Serverseitige Registrierung ist idempotent (on conflict do
+        // nothing) – fire-and-forget, darf den Ladevorgang nicht blockieren.
+        registerSession().catch((err) => console.error('Sitzung konnte nicht registriert werden', err))
+        const [loadedProfile, hours] = await Promise.all([
+          fetchProfile(data.session.user.id),
+          fetchMaxSessionHours(),
+        ])
+        if (!isMounted) return
         setProfile(loadedProfile)
+        setMaxSessionHours(hours)
         if (loadedProfile) setPermissions(await fetchPermissions(loadedProfile.role))
       }
       setLoading(false)
@@ -55,6 +98,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (event === 'PASSWORD_RECOVERY') {
         setPasswordRecovery(true)
       }
+      if (event === 'SIGNED_IN') {
+        // Echter Neu-Login (nicht Token-Refresh/Session-Restore) – Frist
+        // startet jetzt neu.
+        localStorage.setItem(LOGIN_AT_STORAGE_KEY, String(Date.now()))
+        registerSession().catch((err) => console.error('Sitzung konnte nicht registriert werden', err))
+      }
+      if (event === 'SIGNED_OUT') {
+        localStorage.removeItem(LOGIN_AT_STORAGE_KEY)
+      }
       setSession(newSession)
       if (newSession) {
         // `loading` war nach dem allerersten getSession()-Check (oben) bereits
@@ -66,8 +118,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Recht fälschlich false) – bei jedem Login sichtbar, sobald eine Route
         // wie "/" selbst über ein Recht (page.dashboard.view) gesteuert wird.
         setLoading(true)
-        const loadedProfile = await fetchProfile(newSession.user.id)
+        const [loadedProfile, hours] = await Promise.all([fetchProfile(newSession.user.id), fetchMaxSessionHours()])
         setProfile(loadedProfile)
+        setMaxSessionHours(hours)
         setPermissions(loadedProfile ? await fetchPermissions(loadedProfile.role) : new Set())
       } else {
         setProfile(null)
@@ -81,6 +134,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       subscription.subscription.unsubscribe()
     }
   }, [])
+
+  // Sitzungs-Zeitlimit: prüft alle 60s sowie bei Tab-Fokus (fängt den Fall
+  // "Gerät X Stunden im Hintergrund/zugeklappt" ab, den ein gedrosselter
+  // Hintergrund-Timer verpasst) gegen die admin-konfigurierte Dauer. Meldet
+  // bewusst nur dieses eine Gerät ab (scope: 'local') – ein Timeout auf
+  // Gerät A soll andere Sitzungen desselben Users nicht mit beenden. Die
+  // serverseitige Hälfte (current_session_valid() in Migration 0043) greift
+  // unabhängig davon, auch falls dieser Check nie liefe.
+  useEffect(() => {
+    if (!session) return
+
+    async function checkExpiry() {
+      if (!isSessionExpired(maxSessionHours)) return
+      setSessionExpired(true)
+      await supabase.auth.signOut({ scope: 'local' })
+    }
+
+    checkExpiry()
+    const interval = setInterval(checkExpiry, 60_000)
+    document.addEventListener('visibilitychange', checkExpiry)
+    return () => {
+      clearInterval(interval)
+      document.removeEventListener('visibilitychange', checkExpiry)
+    }
+  }, [session, maxSessionHours])
 
   async function signIn(email: string, password: string) {
     const { error } = await supabase.auth.signInWithPassword({ email, password })
@@ -107,6 +185,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   function clearPasswordRecovery() {
     setPasswordRecovery(false)
+  }
+
+  function clearSessionExpired() {
+    setSessionExpired(false)
   }
 
   function can(key: PermissionKey): boolean {
@@ -143,6 +225,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         switchBackToBaseRole,
         passwordRecovery,
         clearPasswordRecovery,
+        sessionExpired,
+        clearSessionExpired,
         can,
         signIn,
         signOut,
