@@ -3,7 +3,7 @@ import { NavLink, Outlet } from 'react-router-dom'
 import { useAuth } from '../../features/auth/useAuth'
 import { useAppBranding } from '../../features/app-settings/useAppBranding'
 import { Modal } from '../ui/Modal'
-import { visibleNavItems } from './navItems'
+import { groupNavItems, visibleNavItems, type NavItem } from './navItems'
 
 const linkBaseClasses = 'flex items-center rounded-lg px-3 py-2.5 text-sm font-medium transition'
 const linkActiveClasses = 'bg-[var(--color-primary)] text-white'
@@ -36,18 +36,7 @@ export function AppShell() {
           <BetaBadge />
         </div>
         <nav className="flex flex-1 flex-col gap-1">
-          {items.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.to === '/'}
-              className={({ isActive }) =>
-                `${linkBaseClasses} ${isActive ? linkActiveClasses : linkInactiveClasses}`
-              }
-            >
-              <span>{item.label}</span>
-            </NavLink>
-          ))}
+          <NavLinks items={items} variant="desktop" />
         </nav>
         <UserFooter name={profile?.name} role={profile?.role} baseRole={profile?.base_role} onSignOut={signOut} />
       </aside>
@@ -104,22 +93,8 @@ export function AppShell() {
                   Modal-Backdrops: das Dropdown soll wie ein Menü wirken,
                   nicht wie ein Dialog – Klick daneben schließt es trotzdem. */}
               <div className="fixed inset-0 z-20" onClick={() => setNavMenuOpen(false)} />
-              <nav className="absolute left-4 top-full z-30 mt-1 w-64 max-w-[calc(100vw-2rem)] space-y-1 rounded-xl border border-slate-200 bg-white p-2 shadow-lg">
-                {items.map((item) => (
-                  <NavLink
-                    key={item.to}
-                    to={item.to}
-                    end={item.to === '/'}
-                    onClick={() => setNavMenuOpen(false)}
-                    className={({ isActive }) =>
-                      `flex items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium ${
-                        isActive ? linkActiveClasses : 'text-slate-700 hover:bg-slate-100'
-                      }`
-                    }
-                  >
-                    <span>{item.label}</span>
-                  </NavLink>
-                ))}
+              <nav className="absolute left-4 top-full z-30 mt-1 w-64 max-w-[calc(100vw-2rem)] max-h-[calc(100vh-6rem)] space-y-1 overflow-y-auto rounded-xl border border-slate-200 bg-white p-2 shadow-lg">
+                <NavLinks items={items} variant="mobile" onNavigate={() => setNavMenuOpen(false)} />
               </nav>
             </>
           )}
@@ -164,6 +139,51 @@ export function AppShell() {
         </main>
       </div>
     </div>
+  )
+}
+
+/** Rendert die sichtbaren Nav-Items: normale Einträge flach, admin-only
+ * Einträge gebündelt unter einer "Administration"-Überschrift mit
+ * Untergruppen (siehe navItems.ts) – von Desktop-Sidebar und Mobile-Menü
+ * gemeinsam genutzt, damit die Gruppierungs-Logik nicht doppelt existiert. */
+function NavLinks({
+  items,
+  variant,
+  onNavigate,
+}: {
+  items: NavItem[]
+  variant: 'desktop' | 'mobile'
+  onNavigate?: () => void
+}) {
+  const { main, adminGroups } = groupNavItems(items)
+  const linkClassName = ({ isActive }: { isActive: boolean }) =>
+    variant === 'desktop'
+      ? `${linkBaseClasses} ${isActive ? linkActiveClasses : linkInactiveClasses}`
+      : `flex items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium ${
+          isActive ? linkActiveClasses : 'text-slate-700 hover:bg-slate-100'
+        }`
+
+  return (
+    <>
+      {main.map((item) => (
+        <NavLink key={item.to} to={item.to} end={item.to === '/'} onClick={onNavigate} className={linkClassName}>
+          <span>{item.label}</span>
+        </NavLink>
+      ))}
+      {adminGroups.length > 0 && (
+        <p className="mt-4 px-3 text-xs font-semibold uppercase tracking-wide text-slate-400">Administration</p>
+      )}
+      {adminGroups.map(([group, groupItems]) => (
+        <div key={group}>
+          <p className="mt-2 px-3 text-xs font-medium text-slate-400">{group}</p>
+          {groupItems.map((item) => (
+            <NavLink key={item.to} to={item.to} end={item.to === '/'} onClick={onNavigate} className={linkClassName}>
+              <span>{item.label}</span>
+            </NavLink>
+          ))}
+        </div>
+      ))}
+    </>
   )
 }
 
