@@ -13,6 +13,7 @@ import { listPlayerTransactions } from '../balances/balancesApi'
 import { addZahlung, listZahlungen, removeZahlung } from './zahlungenApi'
 import { transferBalanceToSeason } from './transferApi'
 import { computeAccountBalance } from './accountBalance'
+import { isSeasonBalanceEligible } from '../seasons/seasonStatus'
 import { ZahlungForm } from './ZahlungForm'
 import { TransferForm } from './TransferForm'
 import type { Player, Season, SeasonParticipant, Transaction, Zahlung } from '../../types/database'
@@ -85,13 +86,19 @@ export function PlayerDetailPage() {
     return <p role="alert" className="p-4 text-sm text-red-600 sm:p-6">{error ?? 'Spieler nicht gefunden.'}</p>
   }
 
+  // Ohne Filter (Aggregat über alle Saisons) zählen Entwurf/Archiviert nicht
+  // mit; eine explizit ausgewählte Einzelsaison zeigt ihre Zahlen dagegen
+  // unabhängig vom Status (siehe seasonStatus.ts).
+  const eligibleSeasonIds = new Set(seasons.filter((s) => isSeasonBalanceEligible(s.status)).map((s) => s.id))
   const filteredParticipants = seasonFilter
     ? participants.filter((p) => p.season_id === seasonFilter)
-    : participants
-  const filteredZahlungen = seasonFilter ? zahlungen.filter((z) => z.season_id === seasonFilter) : zahlungen
+    : participants.filter((p) => eligibleSeasonIds.has(p.season_id))
+  const filteredZahlungen = seasonFilter
+    ? zahlungen.filter((z) => z.season_id === seasonFilter)
+    : zahlungen.filter((z) => eligibleSeasonIds.has(z.season_id))
   const filteredTransactions = seasonFilter
     ? transactions.filter((t) => t.season_id === seasonFilter)
-    : transactions
+    : transactions.filter((t) => eligibleSeasonIds.has(t.season_id))
 
   const balance = computeAccountBalance(filteredParticipants, matchdayCounts, filteredZahlungen, filteredTransactions)
 

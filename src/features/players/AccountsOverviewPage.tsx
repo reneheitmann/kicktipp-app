@@ -13,6 +13,7 @@ import { listMatchdayCountsBySeasonId } from '../seasons/matchdaysApi'
 import { listSeasons } from '../seasons/seasonsApi'
 import { listAllTransactions } from '../balances/balancesApi'
 import { computeAccountBalance, computeTotalOutstanding } from './accountBalance'
+import { isSeasonBalanceEligible } from '../seasons/seasonStatus'
 import { ZahlungForm } from './ZahlungForm'
 import type { Player, Season, SeasonParticipant, Transaction, Zahlung } from '../../types/database'
 
@@ -75,11 +76,19 @@ export function AccountsOverviewPage() {
     return <p className="p-4 text-sm text-slate-500 sm:p-6">Lade...</p>
   }
 
+  // Ohne Filter (Aggregat über alle Saisons) zählen Entwurf/Archiviert nicht
+  // mit; eine explizit ausgewählte Einzelsaison zeigt ihre Zahlen dagegen
+  // unabhängig vom Status (siehe seasonStatus.ts).
+  const eligibleSeasonIds = new Set(seasons.filter((s) => isSeasonBalanceEligible(s.status)).map((s) => s.id))
   const filteredParticipants = seasonFilter
     ? participants.filter((p) => p.season_id === seasonFilter)
-    : participants
-  const filteredZahlungen = seasonFilter ? zahlungen.filter((z) => z.season_id === seasonFilter) : zahlungen
-  const filteredTransactions = seasonFilter ? transactions.filter((t) => t.season_id === seasonFilter) : transactions
+    : participants.filter((p) => eligibleSeasonIds.has(p.season_id))
+  const filteredZahlungen = seasonFilter
+    ? zahlungen.filter((z) => z.season_id === seasonFilter)
+    : zahlungen.filter((z) => eligibleSeasonIds.has(z.season_id))
+  const filteredTransactions = seasonFilter
+    ? transactions.filter((t) => t.season_id === seasonFilter)
+    : transactions.filter((t) => eligibleSeasonIds.has(t.season_id))
 
   const rows = players
     .filter((player) => player.name.toLowerCase().includes(search.trim().toLowerCase()))

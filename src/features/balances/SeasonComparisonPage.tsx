@@ -11,6 +11,7 @@ import { listAllSeasonParticipants } from '../seasons/seasonParticipantsApi'
 import { listMatchdayCountsBySeasonId } from '../seasons/matchdaysApi'
 import { listAllTransactions } from './balancesApi'
 import { computePlayerBalances } from './balanceCalculations'
+import { isSeasonBalanceEligible } from '../seasons/seasonStatus'
 import type { Player, Season, SeasonParticipant, Transaction, Zahlung } from '../../types/database'
 
 const lineColors = ['#0f172a', '#2563eb', '#16a34a', '#d97706', '#dc2626', '#7c3aed', '#0891b2', '#be185d']
@@ -56,7 +57,14 @@ export function SeasonComparisonPage() {
       listAllZahlungen(),
     ])
       .then(([seasonData, playerData, txData, participantData, countsData, zahlungData]) => {
-        setSeasons([...seasonData].sort((a, b) => a.start_date.localeCompare(b.start_date)))
+        // Entwurf/Archiviert zählen nicht in saisonübergreifenden
+        // Geld-Summen mit (siehe seasonStatus.ts) – dieser Vergleich ist per
+        // Definition immer eine Mehrsaison-Aggregation.
+        setSeasons(
+          seasonData
+            .filter((s) => isSeasonBalanceEligible(s.status))
+            .sort((a, b) => a.start_date.localeCompare(b.start_date)),
+        )
         setPlayers(playerData)
         setTransactions(txData)
         setParticipants(participantData)

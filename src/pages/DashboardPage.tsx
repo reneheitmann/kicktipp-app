@@ -12,6 +12,7 @@ import { listAllMatchdays, listMatchdayCountsBySeasonId } from '../features/seas
 import { listZahlungen, listAllZahlungen } from '../features/players/zahlungenApi'
 import { listPlayerTransactions, listAllTransactions } from '../features/balances/balancesApi'
 import { computeAccountBalance, computeTotalOutstanding, type AccountBalance } from '../features/players/accountBalance'
+import { isSeasonBalanceEligible } from '../features/seasons/seasonStatus'
 import type { Player, Season } from '../types/database'
 
 // Ab dieser Anzahl verknüpfter Spieler wird die Liste als kompakte Tabelle
@@ -66,6 +67,10 @@ export function DashboardPage() {
           listPlayerProfileLinks(),
         ])
         setActiveSeasons(seasons.filter((s) => s.status === 'aktiv'))
+        // Entwurf-/archivierte Saisons zählen nicht in saisonübergreifenden
+        // Geld-Summen mit (siehe seasonStatus.ts) – eine explizit aufgerufene
+        // Einzelsaison (SeasonBalancesPage) bleibt davon unberührt.
+        const eligibleSeasonIds = new Set(seasons.filter((s) => isSeasonBalanceEligible(s.status)).map((s) => s.id))
 
         const linkedPlayerIds = new Set(links.filter((l) => l.profile_id === profile!.id).map((l) => l.player_id))
         const linked = players.filter((p) => linkedPlayerIds.has(p.id))
@@ -78,7 +83,12 @@ export function DashboardPage() {
                 listZahlungen(player.id),
                 listPlayerTransactions(player.id),
               ])
-              return { player, participants, zahlungen, transactions }
+              return {
+                player,
+                participants: participants.filter((p) => eligibleSeasonIds.has(p.season_id)),
+                zahlungen: zahlungen.filter((z) => eligibleSeasonIds.has(z.season_id)),
+                transactions: transactions.filter((t) => eligibleSeasonIds.has(t.season_id)),
+              }
             }),
           )
 
@@ -141,10 +151,10 @@ export function DashboardPage() {
             matchdayCount: totalMatchdays,
             totalOutstanding: computeTotalOutstanding(
               players.map((p) => p.id),
-              allParticipants,
+              allParticipants.filter((p) => eligibleSeasonIds.has(p.season_id)),
               matchdayCounts,
-              allZahlungen,
-              allTransactions,
+              allZahlungen.filter((z) => eligibleSeasonIds.has(z.season_id)),
+              allTransactions.filter((t) => eligibleSeasonIds.has(t.season_id)),
             ),
           })
         }
