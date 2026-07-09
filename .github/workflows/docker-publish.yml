@@ -70,13 +70,23 @@ jobs:
         id: bump
         if: github.ref == 'refs/heads/main'
         run: |
-          if [ -n "${{ github.event.before }}" ] \
-            && git cat-file -e "${{ github.event.before }}" 2>/dev/null \
-            && git diff --name-only "${{ github.event.before }}" "${{ github.sha }}" | grep -qx "package.json"; then
-            echo "package.json wurde in diesem Push bereits manuell geändert – keine automatische Erhöhung."
+          CURRENT=$(node -p "require('./package.json').version")
+
+          # Nur das version-Feld selbst zählt als "bereits manuell geändert"
+          # (z. B. bewusster Sprung auf eine neue Major-Version) – ein reiner
+          # `git diff --name-only`-Check auf die ganze Datei würde hier
+          # fälschlich auch dann greifen, wenn package.json sich aus anderem
+          # Grund geändert hat (z. B. eine von beta gemergte neue
+          # devDependency), und den Bump dann stumm überspringen.
+          PREVIOUS_VERSION=""
+          if [ -n "${{ github.event.before }}" ] && git cat-file -e "${{ github.event.before }}" 2>/dev/null; then
+            PREVIOUS_VERSION=$(git show "${{ github.event.before }}:package.json" | node -e "process.stdin.on('data',d=>console.log(JSON.parse(d).version))" 2>/dev/null || echo "")
+          fi
+
+          if [ -n "$PREVIOUS_VERSION" ] && [ "$PREVIOUS_VERSION" != "$CURRENT" ]; then
+            echo "version-Feld wurde in diesem Push bereits manuell geändert ($PREVIOUS_VERSION -> $CURRENT) – keine automatische Erhöhung."
             echo "bumped=false" >> "$GITHUB_OUTPUT"
           else
-            CURRENT=$(node -p "require('./package.json').version")
             IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
 
             HAS_NEW_MIGRATION=false
