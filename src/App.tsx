@@ -40,6 +40,9 @@ const LogsPage = lazy(() => import('./features/logs/LogsPage').then((m) => ({ de
 const PasswordPolicyPage = lazy(() =>
   import('./features/password-policy/PasswordPolicyPage').then((m) => ({ default: m.PasswordPolicyPage })),
 )
+const SessionPolicyPage = lazy(() =>
+  import('./features/session-policy/SessionPolicyPage').then((m) => ({ default: m.SessionPolicyPage })),
+)
 const SeasonRankingPage = lazy(() =>
   import('./features/seasons/SeasonRankingPage').then((m) => ({ default: m.SeasonRankingPage })),
 )
@@ -136,6 +139,7 @@ function AppRoutes() {
               <Route path="/admin/branding" element={<AppSettingsPage />} />
               <Route path="/admin/logs" element={<LogsPage />} />
               <Route path="/admin/password-policy" element={<PasswordPolicyPage />} />
+              <Route path="/admin/session-policy" element={<SessionPolicyPage />} />
             </Route>
           </Route>
         </Route>

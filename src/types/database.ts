@@ -245,6 +245,18 @@ export type PasswordPolicy = {
   updated_by: string | null
 }
 
+// Admin-konfigurierbares Sitzungs-Zeitlimit, siehe
+// supabase/migrations/0043_session_policy.sql und
+// src/features/auth/AuthProvider.tsx (clientseitige Durchsetzung) bzw.
+// current_user_active()/current_session_valid() (serverseitige
+// Durchsetzung über RLS).
+export type SessionPolicy = {
+  id: string
+  max_duration_hours: number
+  updated_at: string
+  updated_by: string | null
+}
+
 // Fehler-/Ereignis-Log für Supportzwecke (unbehandelte Frontend-Fehler +
 // Backend-Fehler aus Edge Functions), siehe supabase/migrations/0030_app_logs.sql
 // und src/lib/logging.ts. INSERT ist bewusst für jeden offen (auch anon),
@@ -629,6 +641,22 @@ export interface Database {
         }
         Relationships: []
       }
+      session_policy: {
+        Row: SessionPolicy
+        Insert: {
+          id?: string
+          max_duration_hours?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          id?: string
+          max_duration_hours?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       app_logs: {
         Row: AppLog
         Insert: {
@@ -760,6 +788,10 @@ export interface Database {
         Returns: undefined
       }
       switch_back_to_base_role: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      register_session: {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }

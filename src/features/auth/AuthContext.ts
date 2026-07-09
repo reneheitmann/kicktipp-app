@@ -26,6 +26,18 @@ export interface AuthContextValue {
    */
   passwordRecovery: boolean
   clearPasswordRecovery: () => void
+  /**
+   * true, sobald AuthProvider die aktuelle Sitzung wegen Überschreitung der
+   * admin-konfigurierten Sitzungsdauer (session_policy, Default 8h)
+   * zwangsweise beendet hat (siehe src/features/session-policy/). LoginPage
+   * zeigt währenddessen einen entsprechenden Hinweis. Bewusst als Context-
+   * Flag statt location.state: AuthProvider selbst (nicht eine Route)
+   * erkennt den Ablauf, ein State-Flag ist robuster als ein möglicher
+   * Wettlauf zwischen einer eigenen Navigation und ProtectedRoutes
+   * reaktivem Redirect bei session === null.
+   */
+  sessionExpired: boolean
+  clearSessionExpired: () => void
   /** Einzige Stelle, die für UI-Gating genutzt werden soll. */
   can: (key: PermissionKey) => boolean
   signIn: (email: string, password: string) => Promise<{ error: string | null }>
