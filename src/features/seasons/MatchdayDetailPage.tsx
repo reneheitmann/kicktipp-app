@@ -149,6 +149,7 @@ export function MatchdayDetailPage() {
         entries={entries.map((e) => ({ id: e.id, player_id: e.player_id, betrag: e.spieltags_einsatz_betrag }))}
         players={players}
         canManage={canManageEntries && !locked}
+        defaultOpen={false}
         onAdd={async (playerId, betrag) => {
           await addMatchdayEntry({ matchday_id: matchday.id, player_id: playerId, spieltags_einsatz_betrag: betrag })
           await reload()
