@@ -7,11 +7,11 @@ import { SortableTh } from '../../components/ui/SortableTh'
 import { currencyFormatter } from '../../lib/format'
 import { centsToEuros } from '../../lib/money'
 import { listPlayers } from './playersApi'
-import { addZahlung, listAllZahlungen } from './zahlungenApi'
-import { listAllSeasonParticipants } from '../seasons/seasonParticipantsApi'
+import { addZahlung, listZahlungenForSeasons } from './zahlungenApi'
+import { listSeasonParticipantsForSeasons } from '../seasons/seasonParticipantsApi'
 import { listMatchdayCountsBySeasonId } from '../seasons/matchdaysApi'
 import { listSeasons } from '../seasons/seasonsApi'
-import { listAllTransactions } from '../balances/balancesApi'
+import { listTransactionsForSeasons } from '../balances/balancesApi'
 import { computeAccountBalance, computeTotalOutstanding } from './accountBalance'
 import { isSeasonBalanceEligible } from '../seasons/seasonStatus'
 import { ZahlungForm } from './ZahlungForm'
@@ -43,23 +43,17 @@ export function AccountsOverviewPage() {
     }
   }
 
-  async function reload() {
+  async function loadBase() {
     setLoading(true)
     try {
-      const [playerData, seasonData, participantData, countsData, zahlungData, transactionData] = await Promise.all([
+      const [playerData, seasonData, countsData] = await Promise.all([
         listPlayers(),
         listSeasons(),
-        listAllSeasonParticipants(),
         listMatchdayCountsBySeasonId(),
-        listAllZahlungen(),
-        listAllTransactions(),
       ])
       setPlayers(playerData)
       setSeasons(seasonData)
-      setParticipants(participantData)
       setMatchdayCounts(countsData)
-      setZahlungen(zahlungData)
-      setTransactions(transactionData)
       setError(null)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Konten konnten nicht geladen werden.')
@@ -69,36 +63,54 @@ export function AccountsOverviewPage() {
   }
 
   useEffect(() => {
-    reload()
+    loadBase()
   }, [])
-
-  if (loading) {
-    return <p className="p-4 text-sm text-slate-500 sm:p-6">Lade...</p>
-  }
 
   // Ohne Filter (Aggregat über alle Saisons) zählen Entwurf/Archiviert nicht
   // mit; eine explizit ausgewählte Einzelsaison zeigt ihre Zahlen dagegen
   // unabhängig vom Status (siehe seasonStatus.ts).
-  const eligibleSeasonIds = new Set(seasons.filter((s) => isSeasonBalanceEligible(s.status)).map((s) => s.id))
-  const filteredParticipants = seasonFilter
-    ? participants.filter((p) => p.season_id === seasonFilter)
-    : participants.filter((p) => eligibleSeasonIds.has(p.season_id))
-  const filteredZahlungen = seasonFilter
-    ? zahlungen.filter((z) => z.season_id === seasonFilter)
-    : zahlungen.filter((z) => eligibleSeasonIds.has(z.season_id))
-  const filteredTransactions = seasonFilter
-    ? transactions.filter((t) => t.season_id === seasonFilter)
-    : transactions.filter((t) => eligibleSeasonIds.has(t.season_id))
+  const eligibleSeasonIds = seasons.filter((s) => isSeasonBalanceEligible(s.status)).map((s) => s.id)
+
+  async function reload() {
+    const targetSeasonIds = seasonFilter ? [seasonFilter] : eligibleSeasonIds
+    try {
+      const [participantData, zahlungData, transactionData] = await Promise.all([
+        listSeasonParticipantsForSeasons(targetSeasonIds),
+        listZahlungenForSeasons(targetSeasonIds),
+        listTransactionsForSeasons(targetSeasonIds),
+      ])
+      setParticipants(participantData)
+      setZahlungen(zahlungData)
+      setTransactions(transactionData)
+      setError(null)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Konten konnten nicht geladen werden.')
+    }
+  }
+
+  // Läuft erneut, sobald die Saisonliste geladen ist oder sich der Filter
+  // ändert – die eigentlichen Konten-Daten sind jetzt serverseitig auf die
+  // relevanten Saison(en) eingegrenzt, statt (wie zuvor) immer die komplette
+  // Tabelle zu laden und erst clientseitig zu filtern.
+  useEffect(() => {
+    if (seasons.length === 0) return
+    reload()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seasons, seasonFilter])
+
+  if (loading) {
+    return <p className="p-4 text-sm text-slate-500 sm:p-6">Lade...</p>
+  }
 
   const rows = players
     .filter((player) => player.name.toLowerCase().includes(search.trim().toLowerCase()))
     .map((player) => ({
       player,
       balance: computeAccountBalance(
-        filteredParticipants.filter((p) => p.player_id === player.id),
+        participants.filter((p) => p.player_id === player.id),
         matchdayCounts,
-        filteredZahlungen.filter((z) => z.player_id === player.id),
-        filteredTransactions.filter((t) => t.player_id === player.id),
+        zahlungen.filter((z) => z.player_id === player.id),
+        transactions.filter((t) => t.player_id === player.id),
       ),
     }))
     .sort((a, b) => {
@@ -107,13 +119,7 @@ export function AccountsOverviewPage() {
       return (a.balance[sortColumn] - b.balance[sortColumn]) * dir
     })
 
-  const totalOffen = computeTotalOutstanding(
-    players.map((p) => p.id),
-    filteredParticipants,
-    matchdayCounts,
-    filteredZahlungen,
-    filteredTransactions,
-  )
+  const totalOffen = computeTotalOutstanding(players.map((p) => p.id), participants, matchdayCounts, zahlungen, transactions)
 
   return (
     <div className="p-4 sm:p-6">

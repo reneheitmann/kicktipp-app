@@ -7,10 +7,10 @@ import { useAuth } from '../features/auth/useAuth'
 import { listSeasons } from '../features/seasons/seasonsApi'
 import { listPlayers } from '../features/players/playersApi'
 import { listPlayerProfileLinks } from '../features/players/playerProfileLinksApi'
-import { listSeasonParticipantsForPlayer, listAllSeasonParticipants } from '../features/seasons/seasonParticipantsApi'
-import { listAllMatchdays, listMatchdayCountsBySeasonId } from '../features/seasons/matchdaysApi'
-import { listZahlungen, listAllZahlungen } from '../features/players/zahlungenApi'
-import { listPlayerTransactions, listAllTransactions } from '../features/balances/balancesApi'
+import { listSeasonParticipantsForPlayer, listSeasonParticipantsForSeasons } from '../features/seasons/seasonParticipantsApi'
+import { listAbgerechneteMatchdayIds, listMatchdayCountsBySeasonId } from '../features/seasons/matchdaysApi'
+import { listZahlungen, listZahlungenForSeasons } from '../features/players/zahlungenApi'
+import { listPlayerTransactions, listTransactionsForSeasons } from '../features/balances/balancesApi'
 import { computeAccountBalance, computeTotalOutstanding, type AccountBalance } from '../features/players/accountBalance'
 import { isSeasonBalanceEligible } from '../features/seasons/seasonStatus'
 import type { Player, Season } from '../types/database'
@@ -112,8 +112,8 @@ export function DashboardPage() {
           // Saison-Detailseite/Saisons-Liste: nur Spieltage mit Status
           // "abgerechnet" zählen, dazu die Gesamtwertung, sofern auch diese
           // schon abgerechnet ist.
-          const matchdays = await listAllMatchdays()
-          const abgerechnetMatchdayIds = new Set(matchdays.filter((m) => m.status === 'abgerechnet').map((m) => m.id))
+          const matchdays = await listAbgerechneteMatchdayIds()
+          const abgerechnetMatchdayIds = new Set(matchdays.map((m) => m.id))
           const gewinnMap = new Map<string, number>()
           for (const { participants, transactions } of perPlayerData) {
             for (const participant of participants) {
@@ -139,10 +139,11 @@ export function DashboardPage() {
         }
 
         if (canManage) {
+          const eligibleSeasonIdList = [...eligibleSeasonIds]
           const [allParticipants, allZahlungen, allTransactions] = await Promise.all([
-            listAllSeasonParticipants(),
-            listAllZahlungen(),
-            listAllTransactions(),
+            listSeasonParticipantsForSeasons(eligibleSeasonIdList),
+            listZahlungenForSeasons(eligibleSeasonIdList),
+            listTransactionsForSeasons(eligibleSeasonIdList),
           ])
           const totalMatchdays = [...matchdayCounts.values()].reduce((sum, c) => sum + c, 0)
           setStats({
@@ -151,10 +152,10 @@ export function DashboardPage() {
             matchdayCount: totalMatchdays,
             totalOutstanding: computeTotalOutstanding(
               players.map((p) => p.id),
-              allParticipants.filter((p) => eligibleSeasonIds.has(p.season_id)),
+              allParticipants,
               matchdayCounts,
-              allZahlungen.filter((z) => eligibleSeasonIds.has(z.season_id)),
-              allTransactions.filter((t) => eligibleSeasonIds.has(t.season_id)),
+              allZahlungen,
+              allTransactions,
             ),
           })
         }

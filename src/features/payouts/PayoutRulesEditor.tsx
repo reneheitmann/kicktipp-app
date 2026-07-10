@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Button } from '../../components/ui/Button'
 import { currencyFormatter } from '../../lib/format'
 import { centsToEuros, type Cents } from '../../lib/money'
-import { getPayoutPool, hasPayouts, listPayoutRules, setPayoutRules } from './payoutRulesApi'
+import { getPayoutPool, listPayoutRules, setPayoutRules } from './payoutRulesApi'
 import type { PayoutTyp } from '../../types/database'
 
 interface PayoutRulesEditorProps {
@@ -47,16 +47,12 @@ export function PayoutRulesEditor({ seasonId, typ, title, canManage }: PayoutRul
   const reload = useCallback(async () => {
     setLoading(true)
     try {
-      const [rules, payoutsExist, poolAmount] = await Promise.all([
-        listPayoutRules(seasonId, typ),
-        hasPayouts(seasonId, typ),
-        getPayoutPool(seasonId, typ),
-      ])
+      const [rules, poolData] = await Promise.all([listPayoutRules(seasonId, typ), getPayoutPool(seasonId, typ)])
       const percents = rules.map((r) => r.prozent_anteil)
       setSavedPercents(percents)
       setDraftPercents(percents.map((p) => String(p)))
-      setPaidOut(payoutsExist)
-      setPool(poolAmount)
+      setPaidOut(poolData.hasPayouts)
+      setPool(poolData.pool)
       setError(null)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Gewinnverteilung konnte nicht geladen werden.')

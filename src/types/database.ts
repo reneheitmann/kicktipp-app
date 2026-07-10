@@ -784,7 +784,7 @@ export interface Database {
       }
       get_payout_pool: {
         Args: { p_season_id: string; p_typ: PayoutTyp }
-        Returns: number
+        Returns: { pool: number; has_payouts: boolean }[]
       }
       switch_to_role: {
         Args: { p_target_role: UserRole }

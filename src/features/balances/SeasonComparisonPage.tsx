@@ -5,11 +5,11 @@ import { SortableTh } from '../../components/ui/SortableTh'
 import { currencyFormatter } from '../../lib/format'
 import { centsToEuros } from '../../lib/money'
 import { listPlayers } from '../players/playersApi'
-import { listAllZahlungen } from '../players/zahlungenApi'
+import { listZahlungenForSeasons } from '../players/zahlungenApi'
 import { listSeasons } from '../seasons/seasonsApi'
-import { listAllSeasonParticipants } from '../seasons/seasonParticipantsApi'
+import { listSeasonParticipantsForSeasons } from '../seasons/seasonParticipantsApi'
 import { listMatchdayCountsBySeasonId } from '../seasons/matchdaysApi'
-import { listAllTransactions } from './balancesApi'
+import { listTransactionsForSeasons } from './balancesApi'
 import { computePlayerBalances } from './balanceCalculations'
 import { isSeasonBalanceEligible } from '../seasons/seasonStatus'
 import type { Player, Season, SeasonParticipant, Transaction, Zahlung } from '../../types/database'
@@ -48,15 +48,8 @@ export function SeasonComparisonPage() {
   }
 
   useEffect(() => {
-    Promise.all([
-      listSeasons(),
-      listPlayers(),
-      listAllTransactions(),
-      listAllSeasonParticipants(),
-      listMatchdayCountsBySeasonId(),
-      listAllZahlungen(),
-    ])
-      .then(([seasonData, playerData, txData, participantData, countsData, zahlungData]) => {
+    Promise.all([listSeasons(), listPlayers(), listMatchdayCountsBySeasonId()])
+      .then(([seasonData, playerData, countsData]) => {
         // Entwurf/Archiviert zählen nicht in saisonübergreifenden
         // Geld-Summen mit (siehe seasonStatus.ts) – dieser Vergleich ist per
         // Definition immer eine Mehrsaison-Aggregation.
@@ -66,15 +59,32 @@ export function SeasonComparisonPage() {
             .sort((a, b) => a.start_date.localeCompare(b.start_date)),
         )
         setPlayers(playerData)
-        setTransactions(txData)
-        setParticipants(participantData)
         setMatchdayCounts(countsData)
-        setZahlungen(zahlungData)
         setError(null)
       })
       .catch((err) => setError(err instanceof Error ? err.message : 'Saisonvergleich konnte nicht geladen werden.'))
       .finally(() => setLoading(false))
   }, [])
+
+  // Geld-Daten serverseitig auf die (bereits auf "eligible" eingegrenzten)
+  // Saisonen beschränkt laden, statt (wie zuvor) die kompletten Tabellen zu
+  // holen und erst clientseitig zu filtern – läuft erneut, sobald `seasons`
+  // geladen ist.
+  useEffect(() => {
+    if (seasons.length === 0) return
+    const seasonIds = seasons.map((s) => s.id)
+    Promise.all([
+      listTransactionsForSeasons(seasonIds),
+      listSeasonParticipantsForSeasons(seasonIds),
+      listZahlungenForSeasons(seasonIds),
+    ])
+      .then(([txData, participantData, zahlungData]) => {
+        setTransactions(txData)
+        setParticipants(participantData)
+        setZahlungen(zahlungData)
+      })
+      .catch((err) => setError(err instanceof Error ? err.message : 'Saisonvergleich konnte nicht geladen werden.'))
+  }, [seasons])
 
   const perSeasonBalances = useMemo(() => {
     return seasons.map((season) => ({

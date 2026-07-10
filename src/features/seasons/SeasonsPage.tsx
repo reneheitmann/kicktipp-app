@@ -6,12 +6,12 @@ import { currencyFormatter, formatGermanDate } from '../../lib/format'
 import { centsToEuros } from '../../lib/money'
 import { useAuth } from '../auth/useAuth'
 import { listPlayerProfileLinks } from '../players/playerProfileLinksApi'
-import { listAllTransactions } from '../balances/balancesApi'
+import { listTransactionsForPlayers } from '../balances/balancesApi'
 import { SeasonForm } from './SeasonForm'
 import { SEASON_STATUS_LABELS, SEASON_STATUS_TONE } from './seasonStatus'
 import { createSeason, listSeasons } from './seasonsApi'
-import { listAllMatchdays } from './matchdaysApi'
-import { listAllSeasonParticipants } from './seasonParticipantsApi'
+import { listAbgerechneteMatchdayIds } from './matchdaysApi'
+import { listSeasonParticipantsForPlayers } from './seasonParticipantsApi'
 import type {
   Matchday,
   PlayerProfileLink,
@@ -29,7 +29,7 @@ export function SeasonsPage() {
 
   const [seasons, setSeasons] = useState<Season[]>([])
   const [profileLinks, setProfileLinks] = useState<PlayerProfileLink[]>([])
-  const [matchdays, setMatchdays] = useState<Matchday[]>([])
+  const [matchdays, setMatchdays] = useState<Pick<Matchday, 'id' | 'season_id'>[]>([])
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [participants, setParticipants] = useState<SeasonParticipant[]>([])
   const [loading, setLoading] = useState(true)
@@ -40,18 +40,14 @@ export function SeasonsPage() {
   async function reload() {
     setLoading(true)
     try {
-      const [seasonData, linkData, matchdayData, transactionData, participantData] = await Promise.all([
+      const [seasonData, linkData, matchdayData] = await Promise.all([
         listSeasons(),
         listPlayerProfileLinks(),
-        listAllMatchdays(),
-        listAllTransactions(),
-        listAllSeasonParticipants(),
+        listAbgerechneteMatchdayIds(),
       ])
       setSeasons(seasonData)
       setProfileLinks(linkData)
       setMatchdays(matchdayData)
-      setTransactions(transactionData)
-      setParticipants(participantData)
       setError(null)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Saisons konnten nicht geladen werden.')
@@ -69,6 +65,26 @@ export function SeasonsPage() {
   // Kicktipp-Profile) – daher wird hier über alle eigenen Spieler summiert.
   const myPlayerIds = new Set(profileLinks.filter((l) => l.profile_id === profile?.id).map((l) => l.player_id))
 
+  // Eigener Gesamtgewinn braucht nur Transaktionen/Teilnahmen der eigenen
+  // Spieler – läuft erst, sobald profileLinks (und damit myPlayerIds)
+  // geladen sind, und lädt serverseitig gefiltert statt (wie zuvor) die
+  // komplette transactions-/season_participants-Tabelle.
+  useEffect(() => {
+    const ids = [...myPlayerIds]
+    if (ids.length === 0) {
+      setTransactions([])
+      setParticipants([])
+      return
+    }
+    Promise.all([listTransactionsForPlayers(ids), listSeasonParticipantsForPlayers(ids)])
+      .then(([transactionData, participantData]) => {
+        setTransactions(transactionData)
+        setParticipants(participantData)
+      })
+      .catch((err) => setError(err instanceof Error ? err.message : 'Saisons konnten nicht geladen werden.'))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profileLinks, profile?.id])
+
   // Eigener Gesamtgewinn je Saison, analog zur Berechnung auf der
   // Saison-Detailseite: nur Spieltage mit Status "abgerechnet" zählen, dazu
   // die Gesamtwertung, sofern auch diese schon abgerechnet ist. Liefert
@@ -82,7 +98,7 @@ export function SeasonsPage() {
     )
     if (ownParticipantIds.size === 0) return undefined
     const abgerechnetMatchdayIds = new Set(
-      matchdays.filter((m) => m.season_id === season.id && m.status === 'abgerechnet').map((m) => m.id),
+      matchdays.filter((m) => m.season_id === season.id).map((m) => m.id),
     )
     const spieltagSumme = transactions
       .filter(
