@@ -10,12 +10,9 @@
 
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { sendSmtpMail, SmtpError } from './smtp.ts'
+import { corsHeadersForOrigin } from '../_shared/cors.ts'
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-}
+type JsonResponder = (body: unknown, status?: number) => Response
 
 const MAX_RECIPIENTS = 200
 
@@ -32,6 +29,16 @@ interface RecipientResult {
 }
 
 Deno.serve(async (req) => {
+  const corsHeaders = corsHeadersForOrigin(req.headers.get('Origin'))
+  if (!corsHeaders) {
+    return new Response(JSON.stringify({ error: 'Origin nicht erlaubt.' }), {
+      status: 403,
+      headers: { 'Content-Type': 'application/json' },
+    })
+  }
+  const jsonResponse: JsonResponder = (body, status = 200) =>
+    new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', ...corsHeaders } })
+
   if (req.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers: corsHeaders })
   }
@@ -43,7 +50,7 @@ Deno.serve(async (req) => {
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
   try {
-    return await handle(req, supabaseUrl, serviceRoleKey)
+    return await handle(req, supabaseUrl, serviceRoleKey, jsonResponse)
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     await logAppError(supabaseUrl, serviceRoleKey, 'send-bulk-email', message)
@@ -51,7 +58,12 @@ Deno.serve(async (req) => {
   }
 })
 
-async function handle(req: Request, supabaseUrl: string, serviceRoleKey: string): Promise<Response> {
+async function handle(
+  req: Request,
+  supabaseUrl: string,
+  serviceRoleKey: string,
+  jsonResponse: JsonResponder,
+): Promise<Response> {
   const authHeader = req.headers.get('Authorization')
   if (!authHeader) {
     return jsonResponse({ error: 'Nicht angemeldet' }, 401)
@@ -181,9 +193,3 @@ async function logAppError(
   }
 }
 
-function jsonResponse(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json', ...corsHeaders },
-  })
-}
