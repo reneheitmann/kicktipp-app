@@ -7,15 +7,20 @@ diese App bildet ausschließlich die Verwaltung/Abrechnung drumherum ab.
 ## Funktionsumfang
 
 - **Saisons & Spieltage** – Anlegen, Kopieren, Spieltag-Import aus Kicktipp,
-  Gesamtwertung, Saisonvergleich (Liniendiagramm über mehrere Saisons)
+  Gesamtwertung, Saisonvergleich (Liniendiagramm über mehrere Saisons).
+  Lebenszyklus Entwurf → Aktiv → Abgeschlossen → Archiviert: Entwurf/Archiviert
+  sind für normale Nutzer unsichtbar und zählen nicht in saisonübergreifenden
+  Geld-Summen mit; Abgeschlossen/Archiviert sperrt weitere Bearbeitung
+  (Teilnehmer, Gewinnregelung, Spieltage) – einzige Ausnahme bleibt der
+  Status-Schalter selbst, um eine Saison wieder zu öffnen
 - **Guthaben & Einsätze** – Kontenübersicht, Transaktionen, Ein-/Auszahlungen,
   automatische Gewinnverteilung nach konfigurierbaren Auszahlungsregeln
 - **Spielerverwaltung** – Spieler-Stammdaten inkl. Kicktipp-Namen-Mapping,
   Verknüpfung mit Benutzerkonten
 - **Kicktipp-Import** – Tabellen-Import aus Kicktipp.de (Teilnehmer/Tipper)
 - **Benutzerverwaltung** – Rollen (`admin`, `spielleiter`, `user`), Sperren,
-  Passwort-Reset, echter Rollenwechsel („als Spieler agieren", keine reine
-  Client-Vorschau)
+  Passwort-Reset, echter Rollenwechsel (Admin → Spielleiter oder Spieler,
+  Spielleiter → Spieler; keine reine Client-Vorschau, jederzeit rückgängig)
 - **Feingranulare Berechtigungen** – rollenbasierte Rechte pro Seite/Aktion,
   unabhängig von den drei Basisrollen konfigurierbar
 - **E-Mail-Versand** – Einzel-/Massen-Mails an Spieler mit Vorlagen, eigener
@@ -23,6 +28,8 @@ diese App bildet ausschließlich die Verwaltung/Abrechnung drumherum ab.
 - **Erscheinungsbild** – App-Name, Icon/Favicon und Primärfarbe zur Laufzeit
   admin-konfigurierbar
 - **Passwort-Richtlinie** – Mindestlänge, Zeichenklassen, Wiederverwendungssperre
+- **Sitzungsdauer** – admin-konfigurierbares Session-Timeout (Standard 8h),
+  client- und serverseitig erzwungen
 - **Logs & Diagnose** – client- und serverseitige Fehlerprotokollierung, einsehbar
   im Admin-Bereich
 - **Excel-Export** für Auswertungen
@@ -88,6 +95,7 @@ src/
   features/balances/       Kontenstände, Transaktionen, Saisonvergleich
   features/players/        Spielerverwaltung, Kicktipp-Namen-Mapping
   features/payouts/        Auszahlungsregeln
+  features/rankings/       Platzierungen & Gewinnberechnung (Spieltag + Gesamtwertung)
   features/kicktipp-import/ Tabellen-Import aus Kicktipp.de
   features/admin-users/    Benutzerverwaltung (Rolle, Sperren, Passwort-Reset, Anlegen)
   features/permissions/    Feingranulare Rollen-/Rechteverwaltung
@@ -95,6 +103,7 @@ src/
   features/email-settings/ SMTP-Konfiguration
   features/app-settings/   Erscheinungsbild (Name, Icon, Primärfarbe), Branding-Provider
   features/password-policy/ Passwort-Richtlinie
+  features/session-policy/ Admin-konfigurierbares Session-Timeout
   features/logs/           Fehler-/Diagnose-Logs
   lib/                     Supabase-Client, Formatierung, Logging, Validierung
   pages/                   Einfache Seiten ohne eigenes Feature-Modul
@@ -114,9 +123,10 @@ RLS abgesichert (nicht nur im Frontend versteckt) – siehe
 `supabase/migrations/0001_roles_profiles.sql`. Zusätzlich existiert ein
 feingranulares Berechtigungssystem (`role_permissions`-Tabelle), über das
 einzelne Seiten/Aktionen unabhängig von der Basisrolle freigeschaltet werden
-können (**Rollen & Berechtigungen** im Admin-Bereich). Admins und Spielleiter
-können sich zudem real in die Rolle „Spieler" versetzen und wieder zurück,
-um die App aus Nutzersicht zu sehen.
+können (**Rollen & Berechtigungen** im Admin-Bereich). Admins können sich
+zudem real in die Rolle „Spielleiter" oder „Spieler" versetzen, Spielleiter
+nur in „Spieler" (kein Weg zu „Admin" – das wäre eine Rechteausweitung statt
+einer Vorschau „nach unten"), jeweils jederzeit rückgängig zu machen.
 
 ## Branches & Deployment
 
