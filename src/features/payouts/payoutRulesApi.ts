@@ -33,24 +33,14 @@ export async function setPayoutRules(
 }
 
 /**
- * Nur die Summe der Einsätze (der "Topf") für diesen Verteilungstyp, per RPC
- * (SECURITY DEFINER) – die zugrunde liegenden season_participants-Zeilen
- * bleiben dabei privat, nur die Gesamtsumme wird für alle aktiven User
- * offengelegt (siehe Migration 0021).
+ * Summe der Einsätze (der "Topf") UND ob für diesen Verteilungstyp bereits
+ * Gewinne verbucht wurden, in einem RPC-Roundtrip (SECURITY DEFINER, siehe
+ * Migration 0047 – vorher zwei getrennte Requests mit identischen Parametern).
+ * Die zugrunde liegenden season_participants-Zeilen bleiben dabei privat, nur
+ * die Gesamtsumme wird für alle aktiven User offengelegt (siehe Migration 0021).
  */
-export async function getPayoutPool(seasonId: string, typ: PayoutTyp): Promise<Cents> {
-  const { data, error } = await supabase.rpc('get_payout_pool', { p_season_id: seasonId, p_typ: typ })
+export async function getPayoutPool(seasonId: string, typ: PayoutTyp): Promise<{ pool: Cents; hasPayouts: boolean }> {
+  const { data, error } = await supabase.rpc('get_payout_pool', { p_season_id: seasonId, p_typ: typ }).single()
   if (error) throw error
-  return eurosToCents(data)
-}
-
-export async function hasPayouts(seasonId: string, typ: PayoutTyp): Promise<boolean> {
-  const gewinnTyp = typ === 'spieltag' ? 'gewinn_spieltag' : 'gewinn_gesamt'
-  const { count, error } = await supabase
-    .from('transactions')
-    .select('id', { count: 'exact', head: true })
-    .eq('season_id', seasonId)
-    .eq('typ', gewinnTyp)
-  if (error) throw error
-  return (count ?? 0) > 0
+  return { pool: eurosToCents(data.pool), hasPayouts: data.has_payouts }
 }

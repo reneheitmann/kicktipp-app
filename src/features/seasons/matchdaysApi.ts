@@ -12,8 +12,13 @@ export async function listMatchdays(seasonId: string): Promise<Matchday[]> {
   return data
 }
 
-export async function listAllMatchdays(): Promise<Matchday[]> {
-  return fetchAllRows((from, to) => supabase.from('matchdays').select('*').range(from, to))
+/** Nur id+season_id abgerechneter Spieltage – reicht für die "eigener Gesamtgewinn
+ * je Saison"-Berechnung (DashboardPage/SeasonsPage), ohne die komplette Tabelle
+ * (alle Spalten, alle Status) laden zu müssen. */
+export async function listAbgerechneteMatchdayIds(): Promise<Pick<Matchday, 'id' | 'season_id'>[]> {
+  const { data, error } = await supabase.from('matchdays').select('id, season_id').eq('status', 'abgerechnet')
+  if (error) throw error
+  return data
 }
 
 /** Anzahl angelegter Spieltage je Saison – Basis für die Spieltags-Beitragsberechnung. */

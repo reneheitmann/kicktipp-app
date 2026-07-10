@@ -30,9 +30,22 @@ export async function listSeasonParticipantsForPlayer(playerId: string): Promise
   return rows.map(toCents)
 }
 
-export async function listAllSeasonParticipants(): Promise<SeasonParticipant[]> {
+/** Wie listSeasonParticipants, aber für mehrere Saisons auf einmal – serverseitig
+ * gefiltert statt (wie zuvor per listAllSeasonParticipants) die komplette Tabelle
+ * zu laden und erst clientseitig einzugrenzen. */
+export async function listSeasonParticipantsForSeasons(seasonIds: string[]): Promise<SeasonParticipant[]> {
+  if (seasonIds.length === 0) return []
   const rows = await fetchAllRows<SeasonParticipant>((from, to) =>
-    supabase.from('season_participants').select('*').range(from, to),
+    supabase.from('season_participants').select('*').in('season_id', seasonIds).range(from, to),
+  )
+  return rows.map(toCents)
+}
+
+/** Wie listSeasonParticipantsForPlayer, aber für mehrere Spieler auf einmal. */
+export async function listSeasonParticipantsForPlayers(playerIds: string[]): Promise<SeasonParticipant[]> {
+  if (playerIds.length === 0) return []
+  const rows = await fetchAllRows<SeasonParticipant>((from, to) =>
+    supabase.from('season_participants').select('*').in('player_id', playerIds).range(from, to),
   )
   return rows.map(toCents)
 }

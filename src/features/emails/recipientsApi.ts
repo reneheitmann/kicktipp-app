@@ -3,7 +3,7 @@ import type { Cents } from '../../lib/money'
 import { supabase } from '../../lib/supabaseClient'
 import { listSeasonTransactions } from '../balances/balancesApi'
 import { computeAccountBalance } from '../players/accountBalance'
-import { listAllZahlungen } from '../players/zahlungenApi'
+import { listZahlungenForSeason } from '../players/zahlungenApi'
 import { listMatchdayPayouts } from '../rankings/matchdayRankingsApi'
 import { listSeasonPayouts } from '../rankings/seasonRankingsApi'
 import { listMatchdayCountsBySeasonId } from '../seasons/matchdaysApi'
@@ -50,13 +50,12 @@ export interface PlayerSeasonBalance {
  * da die Bezugssaison für den ganzen Versand einheitlich gewählt wird.
  */
 export async function computeSeasonBalancesByPlayerId(seasonId: string): Promise<Map<string, PlayerSeasonBalance>> {
-  const [participants, matchdayCounts, zahlungen, transactions] = await Promise.all([
+  const [participants, matchdayCounts, seasonZahlungen, transactions] = await Promise.all([
     listSeasonParticipants(seasonId),
     listMatchdayCountsBySeasonId(),
-    listAllZahlungen(),
+    listZahlungenForSeason(seasonId),
     listSeasonTransactions(seasonId),
   ])
-  const seasonZahlungen = zahlungen.filter((z) => z.season_id === seasonId)
 
   const result = new Map<string, PlayerSeasonBalance>()
   for (const participant of participants) {
