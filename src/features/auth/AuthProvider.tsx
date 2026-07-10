@@ -195,13 +195,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return permissions.has(key)
   }
 
-  // Echter Rollenwechsel statt Vorschau: ruft die SECURITY DEFINER-Funktionen
-  // aus 0036_real_role_switch.sql auf (die prüfen Berechtigung/Zustand selbst
-  // serverseitig), lädt danach Profil+Rechte für die neue, echte Rolle neu –
-  // ab da greifen alle RLS-Policies ganz normal, keine Sonderfälle im
-  // Frontend nötig.
-  async function switchToUserRole(): Promise<{ error: string | null }> {
-    const { error } = await supabase.rpc('switch_to_user_role')
+  // Echter Rollenwechsel statt Vorschau: ruft die SECURITY DEFINER-Funktion
+  // switch_to_role() aus 0046_switch_to_spielleiter_role.sql auf (prüft
+  // Berechtigung/Hierarchie/Zustand selbst serverseitig), lädt danach
+  // Profil+Rechte für die neue, echte Rolle neu – ab da greifen alle
+  // RLS-Policies ganz normal, keine Sonderfälle im Frontend nötig.
+  async function switchToRole(role: UserRole): Promise<{ error: string | null }> {
+    const { error } = await supabase.rpc('switch_to_role', { p_target_role: role })
     if (error) return { error: error.message }
     await refreshProfile()
     return { error: null }
@@ -221,7 +221,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         profile,
         loading,
         permissions,
-        switchToUserRole,
+        switchToRole,
         switchBackToBaseRole,
         passwordRecovery,
         clearPasswordRecovery,

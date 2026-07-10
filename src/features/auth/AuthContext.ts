@@ -1,6 +1,6 @@
 import { createContext } from 'react'
 import type { Session } from '@supabase/supabase-js'
-import type { PermissionKey, Profile } from '../../types/database'
+import type { PermissionKey, Profile, UserRole } from '../../types/database'
 
 export interface AuthContextValue {
   session: Session | null
@@ -10,11 +10,12 @@ export interface AuthContextValue {
   permissions: Set<PermissionKey>
   /**
    * Echter Rollenwechsel (ändert profiles.role tatsächlich, keine reine
-   * Vorschau) – nur für admin/spielleiter, um kurzzeitig als "user" zu
-   * agieren. profile.base_role != null zeigt an, dass ein Wechsel aktiv ist
-   * (enthält die ursprüngliche Rolle zum Zurückwechseln).
+   * Vorschau) – admin kann in "spielleiter" oder "user" wechseln,
+   * spielleiter nur in "user" (serverseitig in switch_to_role() geprüft,
+   * siehe Migration 0046). profile.base_role != null zeigt an, dass ein
+   * Wechsel aktiv ist (enthält die ursprüngliche Rolle zum Zurückwechseln).
    */
-  switchToUserRole: () => Promise<{ error: string | null }>
+  switchToRole: (role: UserRole) => Promise<{ error: string | null }>
   switchBackToBaseRole: () => Promise<{ error: string | null }>
   /**
    * true, sobald Supabase beim Öffnen eines Passwort-Reset-Links (Self-Service

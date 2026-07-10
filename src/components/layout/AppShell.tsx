@@ -81,7 +81,7 @@ export function AppShell() {
             </button>
             {profile?.base_role && (
               <RoleSwitchBadge
-                label={`Du agierst als Spieler (eigentliche Rolle: ${roleLabels[profile.base_role]})`}
+                label={`Du agierst als ${roleLabels[profile.role]} (eigentliche Rolle: ${roleLabels[profile.base_role]})`}
                 className="absolute right-1 top-0"
               />
             )}
@@ -305,9 +305,9 @@ function UserFooter({
           <p className="text-sm font-medium text-slate-900">{name}</p>
           <p className="text-xs text-slate-500">{role && roleLabels[role]}</p>
         </NavLink>
-        {baseRole && (
+        {baseRole && role && (
           <RoleSwitchBadge
-            label={`Du agierst als Spieler (eigentliche Rolle: ${roleLabels[baseRole]})`}
+            label={`Du agierst als ${roleLabels[role]} (eigentliche Rolle: ${roleLabels[baseRole]})`}
             className="absolute right-2 top-1.5"
           />
         )}
