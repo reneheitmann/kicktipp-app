@@ -7,12 +7,12 @@ import { getPasswordPolicy } from '../password-policy/passwordPolicyApi'
 import { describePasswordPolicy, validatePasswordAgainstPolicy } from '../../lib/passwordValidation'
 import { listPlayers } from '../players/playersApi'
 import { listPlayerProfileLinks } from '../players/playerProfileLinksApi'
-import type { PasswordPolicy, Player } from '../../types/database'
+import type { PasswordPolicy, Player, UserRole } from '../../types/database'
 
 const roleLabels = { admin: 'Administrator', spielleiter: 'Spielleiter', user: 'Spieler' } as const
 
 export function MyAccountPage() {
-  const { profile, refreshProfile, switchToUserRole, switchBackToBaseRole } = useAuth()
+  const { profile, refreshProfile, switchToRole, switchBackToBaseRole } = useAuth()
 
   const [name, setName] = useState(profile?.name ?? '')
   const [nameError, setNameError] = useState<string | null>(null)
@@ -22,10 +22,10 @@ export function MyAccountPage() {
   const [switching, setSwitching] = useState(false)
   const [switchError, setSwitchError] = useState<string | null>(null)
 
-  async function handleSwitchToUser() {
+  async function handleSwitchTo(role: UserRole) {
     setSwitching(true)
     setSwitchError(null)
-    const { error } = await switchToUserRole()
+    const { error } = await switchToRole(role)
     if (error) setSwitchError(error)
     setSwitching(false)
   }
@@ -175,23 +175,30 @@ export function MyAccountPage() {
 
       {(profile.role === 'admin' || profile.role === 'spielleiter') && !profile.base_role && (
         <div className="mb-6 rounded-xl border border-slate-200 bg-white p-4">
-          <h2 className="mb-1 text-base font-semibold text-slate-900">Als Spieler agieren</h2>
+          <h2 className="mb-1 text-base font-semibold text-slate-900">Als andere Rolle agieren</h2>
           <p className="mb-3 text-sm text-slate-500">
-            Wechselt deine Rolle tatsächlich auf „Spieler" – Admin-/Spielleiter-Funktionen sind währenddessen
-            wirklich nicht mehr nutzbar (kein Vorschau-Modus). Jederzeit über diese Seite rückgängig zu machen.
+            Wechselt deine Rolle tatsächlich – die Funktionen deiner jetzigen Rolle sind währenddessen wirklich
+            nicht mehr nutzbar (kein Vorschau-Modus). Jederzeit über diese Seite rückgängig zu machen.
           </p>
           {switchError && <p role="alert" className="mb-3 text-sm text-red-600">{switchError}</p>}
-          <Button variant="secondary" onClick={handleSwitchToUser} disabled={switching}>
-            {switching ? 'Wechsle...' : 'Als Spieler agieren'}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            {profile.role === 'admin' && (
+              <Button variant="secondary" onClick={() => handleSwitchTo('spielleiter')} disabled={switching}>
+                {switching ? 'Wechsle...' : 'Als Spielleiter agieren'}
+              </Button>
+            )}
+            <Button variant="secondary" onClick={() => handleSwitchTo('user')} disabled={switching}>
+              {switching ? 'Wechsle...' : 'Als Spieler agieren'}
+            </Button>
+          </div>
         </div>
       )}
 
       {profile.base_role && (
         <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4">
-          <h2 className="mb-1 text-base font-semibold text-amber-900">Du agierst als Spieler</h2>
+          <h2 className="mb-1 text-base font-semibold text-amber-900">Du agierst als {roleLabels[profile.role]}</h2>
           <p className="mb-3 text-sm text-amber-800">
-            Eigentliche Rolle: {roleLabels[profile.base_role]}. Admin-/Spielleiter-Funktionen sind bis zum
+            Eigentliche Rolle: {roleLabels[profile.base_role]}. Funktionen der eigentlichen Rolle sind bis zum
             Zurückwechseln nicht sichtbar.
           </p>
           {switchError && <p role="alert" className="mb-3 text-sm text-red-600">{switchError}</p>}

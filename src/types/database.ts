@@ -54,7 +54,7 @@ export type Profile = {
   email: string | null
   role: UserRole
   /** Ursprüngliche Rolle, während ein echter Rollenwechsel aktiv ist (siehe
-   *  switch_to_user_role()/switch_back_to_base_role()); null im Normalzustand. */
+   *  switch_to_role()/switch_back_to_base_role()); null im Normalzustand. */
   base_role: UserRole | null
   is_active: boolean
   created_at: string
@@ -786,8 +786,8 @@ export interface Database {
         Args: { p_season_id: string; p_typ: PayoutTyp }
         Returns: number
       }
-      switch_to_user_role: {
-        Args: Record<PropertyKey, never>
+      switch_to_role: {
+        Args: { p_target_role: UserRole }
         Returns: undefined
       }
       switch_back_to_base_role: {

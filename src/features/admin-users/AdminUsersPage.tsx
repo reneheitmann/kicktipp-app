@@ -122,7 +122,7 @@ export function AdminUsersPage() {
                   {p.base_role && (
                     <span className="text-xs font-normal text-amber-600">
                       {' '}
-                      (agiert aktuell als Spieler, eigentlich {p.base_role})
+                      (agiert aktuell als {roleLabels[p.role]}, eigentlich {roleLabels[p.base_role]})
                     </span>
                   )}
                 </p>
