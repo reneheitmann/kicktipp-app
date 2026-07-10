@@ -15,16 +15,21 @@
 
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { sendSmtpMail, SmtpError } from './smtp.ts'
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-}
+import { corsHeadersForOrigin } from '../_shared/cors.ts'
 
 const THROTTLE_MS = 5 * 60_000
 
 Deno.serve(async (req) => {
+  const corsHeaders = corsHeadersForOrigin(req.headers.get('Origin'))
+  if (!corsHeaders) {
+    return new Response(JSON.stringify({ error: 'Origin nicht erlaubt.' }), {
+      status: 403,
+      headers: { 'Content-Type': 'application/json' },
+    })
+  }
+  const jsonResponse = (body: unknown, status = 200) =>
+    new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', ...corsHeaders } })
+
   if (req.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers: corsHeaders })
   }
@@ -151,9 +156,3 @@ async function logAppError(
   }
 }
 
-function jsonResponse(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json', ...corsHeaders },
-  })
-}
