@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Button } from '../../components/ui/Button'
+import { CollapsibleSection } from '../../components/ui/CollapsibleSection'
 import { currencyFormatter } from '../../lib/format'
 import { centsToEuros, type Cents } from '../../lib/money'
 import type { Player } from '../../types/database'
@@ -23,6 +24,8 @@ interface RankingsSectionProps {
   rankings: RankingEntry[]
   payouts: PayoutAmount[]
   canManage: boolean
+  /** Standard-Auf-/Zuklappzustand, siehe CollapsibleSection.tsx (Default: aufgeklappt). */
+  defaultOpen?: boolean
   onSetRang: (playerId: string, rang: number) => Promise<void>
   onRemoveRang: (rankingId: string) => Promise<void>
   onCalculate: () => Promise<void>
@@ -35,6 +38,7 @@ export function RankingsSection({
   rankings,
   payouts,
   canManage,
+  defaultOpen = true,
   onSetRang,
   onRemoveRang,
   onCalculate,
@@ -111,16 +115,18 @@ export function RankingsSection({
   }
 
   return (
-    <div className="mb-6">
-      <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-base font-semibold text-slate-900">{heading}</h2>
-        {canManage && (
+    <CollapsibleSection
+      title={heading}
+      count={sortedPlayerIds.length}
+      defaultOpen={defaultOpen}
+      actions={
+        canManage ? (
           <Button onClick={handleCalculate} disabled={calculating}>
             {calculating ? 'Berechne...' : 'Gewinne berechnen'}
           </Button>
-        )}
-      </div>
-
+        ) : undefined
+      }
+    >
       {canManage && (
         <p className="mb-2 text-xs text-slate-500">
           Bei Gleichstand (mehrere Spieler auf demselben Platz) bitte den nächsten freien Platz für den
@@ -167,6 +173,6 @@ export function RankingsSection({
           })}
         </ul>
       )}
-    </div>
+    </CollapsibleSection>
   )
 }

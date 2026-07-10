@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Button } from '../../components/ui/Button'
+import { CollapsibleSection } from '../../components/ui/CollapsibleSection'
 import { StakeEntryForm } from './StakeEntryForm'
 import { currencyFormatter } from '../../lib/format'
 import { centsToEuros, type Cents } from '../../lib/money'
@@ -17,6 +18,8 @@ interface StakeEntriesSectionProps {
   entries: StakeEntry[]
   players: Player[]
   canManage: boolean
+  /** Standard-Auf-/Zuklappzustand, siehe CollapsibleSection.tsx (Default: aufgeklappt). */
+  defaultOpen?: boolean
   onAdd: (playerId: string, betrag: Cents) => Promise<void>
   onUpdate: (id: string, betrag: Cents) => Promise<void>
   onRemove: (id: string) => Promise<void>
@@ -28,6 +31,7 @@ export function StakeEntriesSection({
   entries,
   players,
   canManage,
+  defaultOpen = true,
   onAdd,
   onUpdate,
   onRemove,
@@ -51,14 +55,14 @@ export function StakeEntriesSection({
   }
 
   return (
-    <div className="mb-6">
-      <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-base font-semibold text-slate-900">{heading}</h2>
-        {canManage && availablePlayers.length > 0 && (
-          <Button onClick={() => setShowAddForm(true)}>+ Spieler</Button>
-        )}
-      </div>
-
+    <CollapsibleSection
+      title={heading}
+      count={entries.length}
+      defaultOpen={defaultOpen}
+      actions={
+        canManage && availablePlayers.length > 0 ? <Button onClick={() => setShowAddForm(true)}>+ Spieler</Button> : undefined
+      }
+    >
       {error && <p role="alert" className="mb-2 text-sm text-red-600">{error}</p>}
 
       {entries.length === 0 ? (
@@ -108,6 +112,6 @@ export function StakeEntriesSection({
           onSubmit={async ({ betrag }) => onUpdate(editingEntry.id, betrag)}
         />
       )}
-    </div>
+    </CollapsibleSection>
   )
 }

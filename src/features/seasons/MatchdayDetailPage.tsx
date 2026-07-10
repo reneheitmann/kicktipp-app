@@ -6,6 +6,8 @@ import { useAuth } from '../auth/useAuth'
 import { listPlayers } from '../players/playersApi'
 import { StakeEntriesSection } from './StakeEntriesSection'
 import { getMatchday } from './matchdaysApi'
+import { getSeason } from './seasonsApi'
+import { isSeasonLocked } from './seasonStatus'
 import {
   addMatchdayEntry,
   bulkAddMatchdayEntries,
@@ -22,7 +24,7 @@ import {
   removeMatchdayRanking,
   setMatchdayRanking,
 } from '../rankings/matchdayRankingsApi'
-import type { Matchday, MatchdayEntry, MatchdayRanking, Player, SeasonParticipant, Transaction } from '../../types/database'
+import type { Matchday, MatchdayEntry, MatchdayRanking, Player, Season, SeasonParticipant, Transaction } from '../../types/database'
 
 export function MatchdayDetailPage() {
   const { seasonId, matchdayId } = useParams<{ seasonId: string; matchdayId: string }>()
@@ -31,6 +33,7 @@ export function MatchdayDetailPage() {
   const canManageRankings = can('rankings.manage')
 
   const [matchday, setMatchday] = useState<Matchday | null>(null)
+  const [season, setSeason] = useState<Season | null>(null)
   const [entries, setEntries] = useState<MatchdayEntry[]>([])
   const [players, setPlayers] = useState<Player[]>([])
   const [seasonParticipants, setSeasonParticipants] = useState<SeasonParticipant[]>([])
@@ -50,12 +53,13 @@ export function MatchdayDetailPage() {
         setError(null)
         return
       }
-      const [entryData, playerData, participantData, rankingData, payoutData] = await Promise.all([
+      const [entryData, playerData, participantData, rankingData, payoutData, seasonData] = await Promise.all([
         listMatchdayEntries(matchdayId),
         listPlayers(),
         listSeasonParticipants(matchdayData.season_id),
         listMatchdayRankings(matchdayId),
         listMatchdayPayouts(matchdayId),
+        getSeason(matchdayData.season_id),
       ])
       setMatchday(matchdayData)
       setEntries(entryData)
@@ -63,6 +67,7 @@ export function MatchdayDetailPage() {
       setSeasonParticipants(participantData)
       setRankings(rankingData)
       setPayouts(payoutData)
+      setSeason(seasonData)
       setError(null)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Spieltag konnte nicht geladen werden.')
@@ -85,6 +90,10 @@ export function MatchdayDetailPage() {
 
   const entryPlayerIds = new Set(entries.map((e) => e.player_id))
   const missingParticipants = seasonParticipants.filter((p) => !entryPlayerIds.has(p.player_id))
+
+  // Gesperrt, wenn entweder die Saison abgeschlossen/archiviert ist oder
+  // dieser Spieltag selbst schon abgerechnet wurde (siehe Migration 0045).
+  const locked = matchday.status === 'abgerechnet' || (season ? isSeasonLocked(season.status) : false)
 
   async function handleBulkAdd() {
     if (missingParticipants.length === 0) return
@@ -116,7 +125,15 @@ export function MatchdayDetailPage() {
 
       {error && <p role="alert" className="mb-4 text-sm text-red-600">{error}</p>}
 
-      {canManageEntries && missingParticipants.length > 0 && (
+      {locked && (canManageEntries || canManageRankings) && (
+        <p className="mb-4 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          {matchday.status === 'abgerechnet'
+            ? 'Dieser Spieltag ist abgerechnet und kann nicht mehr geändert werden.'
+            : 'Die Saison dieses Spieltags ist abgeschlossen/archiviert – keine Änderungen mehr möglich.'}
+        </p>
+      )}
+
+      {canManageEntries && !locked && missingParticipants.length > 0 && (
         <div className="mb-3 flex justify-end">
           <Button variant="secondary" onClick={handleBulkAdd} disabled={bulkAdding}>
             {bulkAdding
@@ -131,7 +148,8 @@ export function MatchdayDetailPage() {
         betragLabel="Spieltags-Einsatz"
         entries={entries.map((e) => ({ id: e.id, player_id: e.player_id, betrag: e.spieltags_einsatz_betrag }))}
         players={players}
-        canManage={canManageEntries}
+        canManage={canManageEntries && !locked}
+        defaultOpen={false}
         onAdd={async (playerId, betrag) => {
           await addMatchdayEntry({ matchday_id: matchday.id, player_id: playerId, spieltags_einsatz_betrag: betrag })
           await reload()
@@ -146,7 +164,7 @@ export function MatchdayDetailPage() {
         }}
       />
 
-      {canManageRankings && (
+      {canManageRankings && !locked && (
         <div className="mb-3 flex justify-end">
           <Link
             to={`/import?seasonId=${seasonId}&matchdayId=${matchday.id}`}
@@ -168,7 +186,7 @@ export function MatchdayDetailPage() {
         players={players}
         rankings={rankings}
         payouts={payouts.map((p) => ({ player_id: p.player_id, betrag: p.betrag }))}
-        canManage={canManageRankings}
+        canManage={canManageRankings && !locked}
         onSetRang={async (playerId, rang) => {
           await setMatchdayRanking(matchday.id, playerId, rang)
           await reload()

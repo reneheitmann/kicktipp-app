@@ -11,7 +11,7 @@ import { useAuth } from '../auth/useAuth'
 import { listPlayers } from '../players/playersApi'
 import { listPlayerProfileLinks } from '../players/playerProfileLinksApi'
 import { SeasonForm } from './SeasonForm'
-import { SEASON_STATUS_LABELS, SEASON_STATUS_TONE } from './seasonStatus'
+import { SEASON_STATUS_LABELS, SEASON_STATUS_TONE, isSeasonLocked } from './seasonStatus'
 import { MatchdayForm } from './MatchdayForm'
 import { DeleteSeasonDialog } from './DeleteSeasonDialog'
 import { CopySeasonDialog } from './CopySeasonDialog'
@@ -278,6 +278,16 @@ export function SeasonDetailPage() {
   const selectedOverallRanking = selectedPlayerId ? rankings.find((r) => r.player_id === selectedPlayerId) : undefined
   const selectedOverallPayout = selectedPlayerId ? payouts.find((p) => p.player_id === selectedPlayerId) : undefined
 
+  // Saison ist gesperrt (siehe Migration 0045): Teilnehmer, Gewinnregelung
+  // und Spieltage (inkl. deren Status-Umschalter) lassen sich nicht mehr
+  // ändern – einzige Ausnahme bleibt der Saison-Status-Schalter selbst.
+  const seasonLocked = isSeasonLocked(season.status)
+  const totalGesamtsiegEinsatz = participants.reduce((sum, p) => sum + p.gesamtsieg_einsatz_betrag, 0)
+  const totalSpieltagsEinsatz = participants.reduce(
+    (sum, p) => sum + p.spieltags_einsatz_betrag * matchdays.length,
+    0,
+  )
+
   const nextNummer = matchdays.length > 0 ? Math.max(...matchdays.map((m) => m.nummer)) + 1 : 1
 
   const matchdaySearchTerm = matchdaySearch.trim().toLowerCase()
@@ -328,6 +338,12 @@ export function SeasonDetailPage() {
             <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
               Diese Saison ist aktuell {season.status === 'entwurf' ? 'ein Entwurf' : 'archiviert'} und für normale
               Nutzer nicht sichtbar.
+            </p>
+          )}
+          {canManageSeason && seasonLocked && (
+            <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
+              Diese Saison ist {season.status} – Teilnehmer, Gewinnregelung und Spieltage können nicht mehr
+              geändert werden. Nur der Status-Schalter oben rechts bleibt bedienbar.
             </p>
           )}
           {season.kicktipp_link && (
@@ -383,16 +399,31 @@ export function SeasonDetailPage() {
 
       <CollapsibleSection title="Gewinnverteilung" defaultOpen={false}>
         <div className="grid gap-4 sm:grid-cols-2">
-          <PayoutRulesEditor seasonId={season.id} typ="spieltag" title="Spieltag" canManage={canManagePayouts} />
-          <PayoutRulesEditor seasonId={season.id} typ="gesamtsieg" title="Gesamtwertung" canManage={canManagePayouts} />
+          <PayoutRulesEditor seasonId={season.id} typ="spieltag" title="Spieltag" canManage={canManagePayouts && !seasonLocked} />
+          <PayoutRulesEditor
+            seasonId={season.id}
+            typ="gesamtsieg"
+            title="Gesamtwertung"
+            canManage={canManagePayouts && !seasonLocked}
+          />
         </div>
       </CollapsibleSection>
+
+      {(canManageSeason || canManageParticipants) && (
+        <p className="mb-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700">
+          Summe Gesamtwertung-Einsätze:{' '}
+          <span className="font-medium text-slate-900">{currencyFormatter.format(centsToEuros(totalGesamtsiegEinsatz))}</span>
+          {' · '}
+          Summe Spieltags-Einsätze:{' '}
+          <span className="font-medium text-slate-900">{currencyFormatter.format(centsToEuros(totalSpieltagsEinsatz))}</span>
+        </p>
+      )}
 
       <SeasonParticipantsSection
         participants={participants}
         players={players}
         matchdayCount={matchdays.length}
-        canManage={canManageParticipants}
+        canManage={canManageParticipants && !seasonLocked}
         favoritePlayerId={favoritePlayerId}
         onToggleFavorite={toggleFavoritePlayer}
         onAdd={async ({ playerId, gesamtsiegBetrag, spieltagsBetrag }) => {
@@ -463,7 +494,7 @@ export function SeasonDetailPage() {
                 <span className="font-medium text-emerald-700">{currencyFormatter.format(centsToEuros(selectedGesamtgewinnsumme))}</span>
               </span>
             )}
-            {canManageMatchdays && (
+            {canManageMatchdays && !seasonLocked && (
               <>
                 <Button variant="secondary" onClick={() => setShowImportSpieltageDialog(true)}>
                   Aus dem Internet importieren
@@ -521,7 +552,7 @@ export function SeasonDetailPage() {
                 <Badge tone={season.gesamtwertung_status === 'abgerechnet' ? 'positive' : 'warning'}>
                   {season.gesamtwertung_status}
                 </Badge>
-                {canManageSeason && (
+                {canManageSeason && !seasonLocked && (
                   <Button variant="secondary" onClick={handleToggleGesamtwertungStatus}>
                     {season.gesamtwertung_status === 'offen' ? 'Abrechnen' : 'Öffnen'}
                   </Button>
@@ -570,7 +601,7 @@ export function SeasonDetailPage() {
                     {selectedPayout ? currencyFormatter.format(centsToEuros(selectedPayout.betrag)) : '–'}
                   </span>
                   <Badge tone={matchday.status === 'abgerechnet' ? 'positive' : 'warning'}>{matchday.status}</Badge>
-                  {canManageMatchdays && (
+                  {canManageMatchdays && !seasonLocked && (
                     <>
                       <Button
                         variant="secondary"
