@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from '../../lib/supabaseClient'
 import { getSessionPolicy, registerSession } from '../session-policy/sessionPolicyApi'
@@ -61,9 +61,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [passwordRecovery, setPasswordRecovery] = useState(false)
   const [maxSessionHours, setMaxSessionHours] = useState(DEFAULT_MAX_SESSION_HOURS)
   const [sessionExpired, setSessionExpired] = useState(false)
+  // Verhindert doppeltes Laden von Profil/Rechten/Sitzungsrichtlinie für
+  // denselben User: supabase-js ruft den onAuthStateChange-Listener beim
+  // Registrieren selbst einmal sofort mit der aktuellen Sitzung auf –
+  // zusätzlich zum expliziten getSession()-Aufruf unten – und danach bei
+  // jedem stillen Token-Refresh erneut. Ohne diese Sperre lädt die App bei
+  // jedem Seitenaufruf (und stündlich beim Refresh) Profil/Rechte/Richtlinie
+  // doppelt bzw. unnötig neu (empirisch im Network-Waterfall bestätigt: alle
+  // Dashboard-Anfragen liefen zweimal direkt hintereinander).
+  const loadedUserIdRef = useRef<string | null>(null)
+  // getSession() und der onAuthStateChange-Erstaufruf feuern beide synchron
+  // kurz nacheinander, bevor loadedUserIdRef gesetzt werden kann – ein reiner
+  // Ref-Vergleich käme daher zu spät (klassisches Race). Der zweite Aufrufer
+  // wartet stattdessen auf denselben bereits laufenden Fetch, statt einen
+  // eigenen zu starten.
+  const loadingPromiseRef = useRef<Promise<void> | null>(null)
 
   useEffect(() => {
     let isMounted = true
+
+    function loadProfileDataIfNeeded(userId: string): Promise<void> {
+      if (loadedUserIdRef.current === userId) return Promise.resolve()
+      if (loadingPromiseRef.current) return loadingPromiseRef.current
+
+      const promise = (async () => {
+        const [loadedProfile, hours] = await Promise.all([fetchProfile(userId), fetchMaxSessionHours()])
+        if (!isMounted) return
+        setProfile(loadedProfile)
+        setMaxSessionHours(hours)
+        setPermissions(loadedProfile ? await fetchPermissions(loadedProfile.role) : new Set())
+        loadedUserIdRef.current = userId
+      })().finally(() => {
+        loadingPromiseRef.current = null
+      })
+      loadingPromiseRef.current = promise
+      return promise
+    }
 
     supabase.auth.getSession().then(async ({ data }) => {
       if (!isMounted) return
@@ -78,16 +111,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Serverseitige Registrierung ist idempotent (on conflict do
         // nothing) – fire-and-forget, darf den Ladevorgang nicht blockieren.
         registerSession().catch((err) => console.error('Sitzung konnte nicht registriert werden', err))
-        const [loadedProfile, hours] = await Promise.all([
-          fetchProfile(data.session.user.id),
-          fetchMaxSessionHours(),
-        ])
-        if (!isMounted) return
-        setProfile(loadedProfile)
-        setMaxSessionHours(hours)
-        if (loadedProfile) setPermissions(await fetchPermissions(loadedProfile.role))
+        await loadProfileDataIfNeeded(data.session.user.id)
       }
-      setLoading(false)
+      if (isMounted) setLoading(false)
     })
 
     const { data: subscription } = supabase.auth.onAuthStateChange(async (event, newSession) => {
@@ -117,14 +143,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // leeren/veralteten permissions rendern (can() liefert dann für jedes
         // Recht fälschlich false) – bei jedem Login sichtbar, sobald eine Route
         // wie "/" selbst über ein Recht (page.dashboard.view) gesteuert wird.
-        setLoading(true)
-        const [loadedProfile, hours] = await Promise.all([fetchProfile(newSession.user.id), fetchMaxSessionHours()])
-        setProfile(loadedProfile)
-        setMaxSessionHours(hours)
-        setPermissions(loadedProfile ? await fetchPermissions(loadedProfile.role) : new Set())
+        // loadProfileDataIfNeeded() überspringt das erneute Laden selbst,
+        // falls es sich (Doppel-Aufruf durch getSession() oben, oder ein
+        // Token-Refresh) um denselben User handelt.
+        if (loadedUserIdRef.current !== newSession.user.id) setLoading(true)
+        await loadProfileDataIfNeeded(newSession.user.id)
       } else {
         setProfile(null)
         setPermissions(new Set())
+        loadedUserIdRef.current = null
       }
       setLoading(false)
     })

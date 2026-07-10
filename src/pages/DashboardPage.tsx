@@ -60,38 +60,56 @@ export function DashboardPage() {
       setLoading(true)
       setError(null)
       try {
-        const [seasons, players, matchdayCounts, links] = await Promise.all([
+        const [seasons, players, matchdayCounts, links, abgerechneteMatchdays] = await Promise.all([
           listSeasons(),
           listPlayers(),
           listMatchdayCountsBySeasonId(),
           listPlayerProfileLinks(),
+          listAbgerechneteMatchdayIds(),
         ])
         setActiveSeasons(seasons.filter((s) => s.status === 'aktiv'))
         // Entwurf-/archivierte Saisons zählen nicht in saisonübergreifenden
         // Geld-Summen mit (siehe seasonStatus.ts) – eine explizit aufgerufene
         // Einzelsaison (SeasonBalancesPage) bleibt davon unberührt.
         const eligibleSeasonIds = new Set(seasons.filter((s) => isSeasonBalanceEligible(s.status)).map((s) => s.id))
+        const abgerechnetMatchdayIds = new Set(abgerechneteMatchdays.map((m) => m.id))
 
         const linkedPlayerIds = new Set(links.filter((l) => l.profile_id === profile!.id).map((l) => l.player_id))
         const linked = players.filter((p) => linkedPlayerIds.has(p.id))
         setLinkedPlayers(linked)
-        if (linked.length > 0) {
-          const perPlayerData = await Promise.all(
-            linked.map(async (player) => {
-              const [participants, zahlungen, transactions] = await Promise.all([
-                listSeasonParticipantsForPlayer(player.id),
-                listZahlungen(player.id),
-                listPlayerTransactions(player.id),
-              ])
-              return {
-                player,
-                participants: participants.filter((p) => eligibleSeasonIds.has(p.season_id)),
-                zahlungen: zahlungen.filter((z) => eligibleSeasonIds.has(z.season_id)),
-                transactions: transactions.filter((t) => eligibleSeasonIds.has(t.season_id)),
-              }
-            }),
-          )
 
+        // Eigenes Konto (perPlayerData) und Admin-Statistik (statsData) hängen
+        // nicht voneinander ab – parallel statt nacheinander laden (vorher:
+        // erst alle Spieler-Daten fertig, danach erst die Admin-Summen).
+        const eligibleSeasonIdList = [...eligibleSeasonIds]
+        const [perPlayerData, statsData] = await Promise.all([
+          linked.length > 0
+            ? Promise.all(
+                linked.map(async (player) => {
+                  const [participants, zahlungen, transactions] = await Promise.all([
+                    listSeasonParticipantsForPlayer(player.id),
+                    listZahlungen(player.id),
+                    listPlayerTransactions(player.id),
+                  ])
+                  return {
+                    player,
+                    participants: participants.filter((p) => eligibleSeasonIds.has(p.season_id)),
+                    zahlungen: zahlungen.filter((z) => eligibleSeasonIds.has(z.season_id)),
+                    transactions: transactions.filter((t) => eligibleSeasonIds.has(t.season_id)),
+                  }
+                }),
+              )
+            : Promise.resolve([]),
+          canManage
+            ? Promise.all([
+                listSeasonParticipantsForSeasons(eligibleSeasonIdList),
+                listZahlungenForSeasons(eligibleSeasonIdList),
+                listTransactionsForSeasons(eligibleSeasonIdList),
+              ])
+            : Promise.resolve(null),
+        ])
+
+        if (linked.length > 0) {
           // Gesamtkonto: dieselbe computeAccountBalance()-Funktion wie für
           // einen einzelnen Spieler, nur mit den zusammengeführten Rohdaten
           // aller verknüpften Spieler – rechnerisch identisch zum Aufsummieren
@@ -112,8 +130,6 @@ export function DashboardPage() {
           // Saison-Detailseite/Saisons-Liste: nur Spieltage mit Status
           // "abgerechnet" zählen, dazu die Gesamtwertung, sofern auch diese
           // schon abgerechnet ist.
-          const matchdays = await listAbgerechneteMatchdayIds()
-          const abgerechnetMatchdayIds = new Set(matchdays.map((m) => m.id))
           const gewinnMap = new Map<string, number>()
           for (const { participants, transactions } of perPlayerData) {
             for (const participant of participants) {
@@ -138,13 +154,8 @@ export function DashboardPage() {
           setMyGewinnBySeasonId(gewinnMap)
         }
 
-        if (canManage) {
-          const eligibleSeasonIdList = [...eligibleSeasonIds]
-          const [allParticipants, allZahlungen, allTransactions] = await Promise.all([
-            listSeasonParticipantsForSeasons(eligibleSeasonIdList),
-            listZahlungenForSeasons(eligibleSeasonIdList),
-            listTransactionsForSeasons(eligibleSeasonIdList),
-          ])
+        if (canManage && statsData) {
+          const [allParticipants, allZahlungen, allTransactions] = statsData
           const totalMatchdays = [...matchdayCounts.values()].reduce((sum, c) => sum + c, 0)
           setStats({
             playerCount: players.length,
