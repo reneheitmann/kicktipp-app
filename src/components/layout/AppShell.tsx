@@ -146,6 +146,8 @@ export function AppShell() {
  * Einträge gebündelt unter einer "Administration"-Überschrift mit
  * Untergruppen (siehe navItems.ts) – von Desktop-Sidebar und Mobile-Menü
  * gemeinsam genutzt, damit die Gruppierungs-Logik nicht doppelt existiert. */
+const ADMIN_NAV_STORAGE_KEY = 'kicktipp_nav_admin_open'
+
 function NavLinks({
   items,
   variant,
@@ -156,6 +158,29 @@ function NavLinks({
   onNavigate?: () => void
 }) {
   const { main, adminGroups } = groupNavItems(items)
+  // Default eingeklappt, Zustand persistiert wie bei CollapsibleSection.tsx
+  // (personliche Vorliebe, kein Reset bei jedem Seitenaufruf).
+  const [adminOpen, setAdminOpen] = useState(() => {
+    try {
+      return localStorage.getItem(ADMIN_NAV_STORAGE_KEY) === 'true'
+    } catch {
+      return false
+    }
+  })
+
+  function toggleAdminOpen() {
+    setAdminOpen((prev) => {
+      const next = !prev
+      try {
+        localStorage.setItem(ADMIN_NAV_STORAGE_KEY, String(next))
+      } catch {
+        // z. B. privates Fenster ohne Storage-Zugriff – Zustand bleibt dann
+        // nur für die aktuelle Sitzung erhalten, kein Absturz nötig.
+      }
+      return next
+    })
+  }
+
   const linkClassName = ({ isActive }: { isActive: boolean }) =>
     variant === 'desktop'
       ? `${linkBaseClasses} ${isActive ? linkActiveClasses : linkInactiveClasses}`
@@ -171,18 +196,27 @@ function NavLinks({
         </NavLink>
       ))}
       {adminGroups.length > 0 && (
-        <p className="mt-4 px-3 text-xs font-semibold uppercase tracking-wide text-slate-400">Administration</p>
+        <button
+          type="button"
+          onClick={toggleAdminOpen}
+          aria-expanded={adminOpen}
+          className="mt-4 flex items-center gap-1.5 px-3 text-xs font-semibold uppercase tracking-wide text-slate-400"
+        >
+          <span className={`inline-block transition-transform ${adminOpen ? 'rotate-90' : ''}`}>▶</span>
+          Administration
+        </button>
       )}
-      {adminGroups.map(([group, groupItems]) => (
-        <div key={group}>
-          <p className="mt-2 px-3 text-xs font-medium text-slate-400">{group}</p>
-          {groupItems.map((item) => (
-            <NavLink key={item.to} to={item.to} end={item.to === '/'} onClick={onNavigate} className={linkClassName}>
-              <span>{item.label}</span>
-            </NavLink>
-          ))}
-        </div>
-      ))}
+      {adminOpen &&
+        adminGroups.map(([group, groupItems]) => (
+          <div key={group}>
+            <p className="mt-2 px-3 text-xs font-medium text-slate-400">{group}</p>
+            {groupItems.map((item) => (
+              <NavLink key={item.to} to={item.to} end={item.to === '/'} onClick={onNavigate} className={linkClassName}>
+                <span>{item.label}</span>
+              </NavLink>
+            ))}
+          </div>
+        ))}
     </>
   )
 }
