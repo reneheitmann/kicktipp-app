@@ -1,0 +1,79 @@
+name: Dev-Datenbank aus Prod befüllen
+
+# Manuell auslösbarer Workflow, der die "Kicktipp Dev"-Datenbank
+# (project-ref evbpltahndvboskmflfq) komplett mit den aktuellen Daten aus
+# Prod ("Kicktipp", rmfvzbmxcwccnezqqnen) überschreibt – schema+public+auth,
+# echte Nutzerdaten inklusive (bewusst so gewählt, siehe README/Doku zur
+# lokalen Entwicklung).
+#
+# Läuft in GitHub Actions statt lokal, aus demselben Grund wie
+# db-backup.yml: `supabase db dump` braucht Docker (Postgres-Version-genauer
+# pg_dump), das auf GitHub-Runnern vorinstalliert ist, lokal aber nicht
+# überall verfügbar ist.
+#
+# Quelle (Prod) und Ziel (Dev) sind bewusst fest im Workflow verdrahtet statt
+# als Eingabe-Parameter, um ein versehentliches Vertauschen (z. B. Dev
+# überschreibt Prod) strukturell auszuschließen.
+#
+# ACHTUNG: überschreibt den kompletten Dev-Datenbestand (TRUNCATE aller
+# public-Tabellen + auth.users, dann Neubefüllung aus dem Prod-Dump). Für
+# Dev ist das gewünscht (immer eine frische Kopie), nicht für ein Projekt,
+# an dem eigene Testdaten dauerhaft erhalten bleiben sollen.
+#
+# Voraussetzung (bereits vorhanden aus db-backup.yml):
+#   SUPABASE_ACCESS_TOKEN – Personal Access Token, siehe
+#                            https://supabase.com/dashboard/account/tokens
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  PROD_PROJECT_REF: rmfvzbmxcwccnezqqnen
+  DEV_PROJECT_REF: evbpltahndvboskmflfq
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Code auschecken
+        uses: actions/checkout@v4
+
+      - name: Supabase CLI einrichten
+        uses: supabase/setup-cli@v2
+        with:
+          version: latest
+          github-token: ${{ github.token }}
+
+      - name: Prod verlinken und Daten exportieren
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          supabase link --project-ref "$PROD_PROJECT_REF"
+          supabase db dump --linked --data-only --schema public,auth -f prod_data.sql
+
+      - name: Dev-Datenbank leeren und neu befüllen
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          supabase link --project-ref "$DEV_PROJECT_REF"
+          cat > truncate.sql <<'SQL'
+          do $$
+          declare
+            r record;
+          begin
+            for r in (select tablename from pg_tables where schemaname = 'public') loop
+              execute format('truncate table public.%I cascade', r.tablename);
+            end loop;
+          end $$;
+
+          truncate table auth.users cascade;
+          SQL
+          supabase db query --linked --file truncate.sql
+          supabase db query --linked --file prod_data.sql
+
+      - name: Aufräumen
+        if: always()
+        run: rm -f prod_data.sql truncate.sql
