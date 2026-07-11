@@ -136,9 +136,16 @@ einer Vorschau „nach unten"), jeweils jederzeit rückgängig zu machen.
   Baut das Docker-Image mit Tag `:latest`; die Version in `package.json`
   wird dabei automatisch erhöht (Minor bei neuer DB-Migration, sonst Patch).
 
-`main` und `beta` teilen sich ein einzelnes Supabase-Projekt (keine getrennten
-Umgebungen) – vor jeder Migration wird über den manuellen GitHub-Actions-Workflow
+`main` und `beta` teilen sich weiterhin ein einzelnes Supabase-Projekt (ein
+eigenes Beta-Projekt scheiterte am 2-Projekte-Limit des Free-Tiers) – vor
+jeder Migration wird über den manuellen GitHub-Actions-Workflow
 `db-backup.yml` ein GPG-verschlüsseltes Backup gezogen.
+
+Für lokale Entwicklung gibt es ein drittes, eigenständiges Supabase-Projekt
+("Kicktipp Dev"), auf das `.env` lokal zeigt (siehe `.env.example`). Seine
+Daten (inkl. `auth.users`, echte Nutzerdaten) lassen sich jederzeit per
+manuellem GitHub-Actions-Workflow `sync-dev-from-prod.yml` komplett aus Prod
+auffrischen – überschreibt dabei den kompletten Dev-Datenbestand.
 
 Beide Branches werden bei jedem Push automatisch als Docker-Image gebaut und
 zu GHCR veröffentlicht (`.github/workflows/docker-publish.yml`); ein
