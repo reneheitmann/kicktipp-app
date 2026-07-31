@@ -14,6 +14,15 @@ export async function updateOwnPassword(newPassword: string): Promise<void> {
   if (error) throw await toDetailedError(error)
 }
 
+// Läuft über eine Edge Function statt direkt supabase.auth.updateUser(), da
+// eine E-Mail-Änderung auch den Login (auth.users.email) betrifft und den
+// service_role-Key benötigt – ein reines profiles-Update würde den
+// Login-Namen nicht ändern (analog admin-update-user).
+export async function updateOwnEmail(newEmail: string): Promise<void> {
+  const { error } = await supabase.functions.invoke('update-own-email', { body: { email: newEmail } })
+  if (error) throw await toDetailedError(error)
+}
+
 // supabase-js wirft bei einer Nicht-2xx-Antwort der Edge Function nur die
 // generische Meldung "Edge Function returned a non-2xx status code" – die
 // eigentliche Fehlermeldung (z. B. "Passwort muss mindestens ... Zeichen ...")

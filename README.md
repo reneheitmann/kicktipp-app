@@ -78,7 +78,7 @@ supabase functions deploy <function-name>
 ```
 
 Alle Edge Functions (`admin-create-user`, `admin-update-user`,
-`update-own-password`, `send-email`, `send-bulk-email`,
+`update-own-password`, `update-own-email`, `send-email`, `send-bulk-email`,
 `send-password-reset`) benötigen keine zusätzlichen Secrets –
 `SUPABASE_URL` und `SUPABASE_SERVICE_ROLE_KEY` stehen Supabase Edge Functions
 automatisch zur Verfügung.
