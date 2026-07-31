@@ -2,7 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { useAuth } from './useAuth'
-import { updateOwnName, updateOwnPassword } from './myAccountApi'
+import { requestOwnEmailChange, updateOwnName, updateOwnPassword } from './myAccountApi'
 import { getPasswordPolicy } from '../password-policy/passwordPolicyApi'
 import { describePasswordPolicy, validatePasswordAgainstPolicy } from '../../lib/passwordValidation'
 import { listPlayers } from '../players/playersApi'
@@ -18,6 +18,11 @@ export function MyAccountPage() {
   const [nameError, setNameError] = useState<string | null>(null)
   const [nameSuccess, setNameSuccess] = useState<string | null>(null)
   const [savingName, setSavingName] = useState(false)
+
+  const [email, setEmail] = useState(profile?.email ?? '')
+  const [emailError, setEmailError] = useState<string | null>(null)
+  const [emailSuccess, setEmailSuccess] = useState<string | null>(null)
+  const [savingEmail, setSavingEmail] = useState(false)
 
   const [switching, setSwitching] = useState(false)
   const [switchError, setSwitchError] = useState<string | null>(null)
@@ -88,6 +93,25 @@ export function MyAccountPage() {
     }
   }
 
+  async function handleEmailSubmit(e: FormEvent) {
+    e.preventDefault()
+    if (!email.trim()) {
+      setEmailError('E-Mail darf nicht leer sein.')
+      return
+    }
+    setSavingEmail(true)
+    setEmailError(null)
+    setEmailSuccess(null)
+    try {
+      await requestOwnEmailChange(email.trim())
+      setEmailSuccess('Bestätigungsmail verschickt. Bitte den Link in der Mail an die neue Adresse anklicken.')
+    } catch (err) {
+      setEmailError(err instanceof Error ? err.message : 'Speichern fehlgeschlagen.')
+    } finally {
+      setSavingEmail(false)
+    }
+  }
+
   async function handlePasswordSubmit(e: FormEvent) {
     e.preventDefault()
     if (passwordPolicy) {
@@ -137,10 +161,6 @@ export function MyAccountPage() {
             />
           </div>
           <div>
-            <p className="mb-1 text-sm font-medium text-slate-700">E-Mail</p>
-            <p className="rounded-lg bg-slate-50 px-3 py-2 text-base text-slate-500">{profile.email}</p>
-          </div>
-          <div>
             <p className="mb-1 text-sm font-medium text-slate-700">Rolle</p>
             <p className="rounded-lg bg-slate-50 px-3 py-2 text-base text-slate-500">
               {roleLabels[profile.role]}
@@ -153,6 +173,34 @@ export function MyAccountPage() {
 
           <Button type="submit" disabled={savingName}>
             {savingName ? 'Speichern...' : 'Name speichern'}
+          </Button>
+        </form>
+      </div>
+
+      <div className="mb-6 rounded-xl border border-slate-200 bg-white p-4">
+        <h2 className="mb-3 text-base font-semibold text-slate-900">E-Mail-Adresse</h2>
+        <form className="space-y-4" onSubmit={handleEmailSubmit}>
+          <div>
+            <label htmlFor="account-email" className="mb-1 block text-sm font-medium text-slate-700">
+              E-Mail
+            </label>
+            <input
+              id="account-email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base focus:border-slate-900 focus:outline-none"
+            />
+            <p className="mt-1 text-xs text-slate-500">
+              Diese Adresse wird auch für die Anmeldung verwendet. Wird erst nach Bestätigung per E-Mail übernommen.
+            </p>
+          </div>
+
+          {emailError && <p role="alert" className="text-sm text-red-600">{emailError}</p>}
+          {emailSuccess && <p className="text-sm text-emerald-700">{emailSuccess}</p>}
+
+          <Button type="submit" disabled={savingEmail}>
+            {savingEmail ? 'Wird verschickt...' : 'Bestätigungsmail senden'}
           </Button>
         </form>
       </div>

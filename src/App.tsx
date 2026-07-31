@@ -6,6 +6,7 @@ import { useAuth } from './features/auth/useAuth'
 import { ProtectedRoute } from './features/auth/ProtectedRoute'
 import { LoginPage } from './features/auth/LoginPage'
 import { ResetPasswordPage } from './features/auth/ResetPasswordPage'
+import { ConfirmEmailChangePage } from './features/auth/ConfirmEmailChangePage'
 import { AppShell } from './components/layout/AppShell'
 import { DashboardPage } from './pages/DashboardPage'
 import { AboutPage } from './pages/AboutPage'
@@ -86,6 +87,7 @@ function AppRoutes() {
     <Suspense fallback={<PageLoading />}>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/email-bestaetigen" element={<ConfirmEmailChangePage />} />
         <Route path="/unauthorized" element={<UnauthorizedPage />} />
 
         <Route element={<ProtectedRoute />}>
