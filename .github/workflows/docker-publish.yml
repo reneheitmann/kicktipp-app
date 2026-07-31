@@ -172,20 +172,19 @@ jobs:
       - name: Änderungsprotokoll (Prod) ermitteln
         id: changelog_prod
         working-directory: build-main
-        env:
-          GITHUB_REF_NAME: main
+        # Branch als CLI-Argument statt env: GITHUB_REF_NAME – siehe
+        # Kommentar in generate-changelog.cjs, ein step-level env-Override
+        # dieser vordefinierten Variable griff nicht zuverlässig.
         run: |
-          JSON=$(node .github/scripts/generate-changelog.cjs)
+          JSON=$(node .github/scripts/generate-changelog.cjs main)
           ENCODED=$(printf '%s' "$JSON" | base64 | tr -d '\n')
           echo "changelog=$ENCODED" >> "$GITHUB_OUTPUT"
 
       - name: Änderungsprotokoll (Beta) ermitteln
         id: changelog_beta
         working-directory: build-beta
-        env:
-          GITHUB_REF_NAME: beta
         run: |
-          JSON=$(node .github/scripts/generate-changelog.cjs)
+          JSON=$(node .github/scripts/generate-changelog.cjs beta)
           ENCODED=$(printf '%s' "$JSON" | base64 | tr -d '\n')
           echo "changelog=$ENCODED" >> "$GITHUB_OUTPUT"
 

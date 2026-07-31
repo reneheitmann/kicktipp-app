@@ -26,7 +26,15 @@ const { execSync } = require('node:child_process')
 const path = require('node:path')
 
 const repoRoot = path.resolve(__dirname, '..', '..')
-const branch = process.env.GITHUB_REF_NAME || 'main'
+// Explizites CLI-Argument statt process.env.GITHUB_REF_NAME: der Workflow
+// baut main UND beta in einem Lauf (siehe docker-publish.yml) und braucht
+// das Skript für beide mit je einem festen Branch-Namen, unabhängig davon,
+// welcher Branch den Lauf ausgelöst hat – ein Versuch, das per
+// step-level env: GITHUB_REF_NAME zu überschreiben, griff nicht (GitHub
+// Actions injiziert diese vordefinierte Variable pro Step neu und gewinnt
+// gegen den eigenen env:-Override), das Skript las dadurch faktisch immer
+// den auslösenden statt den gemeinten Branch.
+const branch = process.argv[2] || 'main'
 
 function git(args) {
   return execSync(`git ${args}`, { cwd: repoRoot, encoding: 'utf8' }).trim()
