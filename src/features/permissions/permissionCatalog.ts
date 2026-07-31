@@ -138,4 +138,11 @@ export const permissionCatalog: PermissionCatalogEntry[] = [
     page: 'Benutzerverwaltung',
     description: 'Blendet die Benutzerverwaltung im Menü und als Route zusätzlich zum Recht "Benutzer verwalten" aus.',
   },
+  {
+    key: 'beta.access',
+    label: 'Beta-Version nutzen',
+    page: 'Beta-Zugang',
+    description:
+      'Schaltet den Wechsel zur Beta-Version im eigenen Profil frei (dieselbe Anmeldung, dieselben Daten wie die Produktivversion, nur mit neueren, noch nicht final freigegebenen Funktionen).',
+  },
 ]

@@ -10,30 +10,38 @@ separat angegangen werden.
 ## Funktionsweise
 
 1. Bei jedem Push nach `main` **oder `beta`** baut **GitHub Actions**
-   automatisch ein Docker-Image (statischer React-Build, ausgeliefert über
-   nginx) und lädt es in die **GitHub Container Registry** (`ghcr.io`) hoch –
-   `main` als `:latest`, `beta` als `:beta` (jeweils zusätzlich mit dem
-   Commit-Hash als eigenem Tag).
-2. Auf Unraid laufen **zwei** Container dauerhaft: `kicktipp-app` (Produktion,
-   zieht `:latest`) und `kicktipp-app-beta` (zum Testen, zieht `:beta`) –
-   Einrichtung für den zweiten Container siehe 2.1b.
+   automatisch **ein einziges** Docker-Image, das BEIDE Versionen enthält:
+   main (Produktion) unter `/`, beta (zum Testen) unter `/beta/` – jeweils
+   ein eigener, unabhängig gebauter statischer React-Build, gemeinsam über
+   nginx ausgeliefert. Veröffentlicht als `:latest` (zusätzlich mit dem
+   Commit-Hash als eigenem Tag) in der **GitHub Container Registry**
+   (`ghcr.io`).
+2. Auf Unraid läuft dafür **ein einziger** Container, `kicktipp-app`, der
+   `:latest` zieht – keine zweite IP/kein zweiter Container mehr nötig.
 3. **Watchtower** (ein weiterer, kleiner Container auf Unraid) prüft
-   regelmäßig, ob eines der beiden Images neu ist, zieht es automatisch und
-   startet den jeweiligen Container neu – ganz ohne manuellen Schritt auf dem
-   Server.
+   regelmäßig, ob das Image neu ist, zieht es automatisch und startet den
+   Container neu – ganz ohne manuellen Schritt auf dem Server.
+4. **Wer die Beta-Version sehen darf, entscheidet die App selbst**: im
+   eigenen Profil gibt es einen Link "Beta-Version testen", sichtbar nur mit
+   dem Recht `beta.access` (vergeben über **Rollen & Berechtigungen** im
+   Admin-Bereich). Von dort zurück zur Produktivversion geht jederzeit ohne
+   weitere Berechtigung.
 
 ```
-Code-Änderung (lokal) → git push nach beta → GitHub Actions baut :beta → ghcr.io
+Code-Änderung (lokal) → git push nach beta → GitHub Actions baut EIN Image
+                                              (main + beta zusammen) → ghcr.io
                                                                              │
-                                                          Watchtower aktualisiert kicktipp-app-beta
+                                                    Watchtower aktualisiert kicktipp-app
                                                                              │
-                                                              (auf beta testen)
+                                        (unter .../beta/ im eigenen Profil testen,
+                                         sichtbar nur mit beta.access-Recht)
                                                                              │
                                           "auf Prod übernehmen" → beta wird nach main gemerged
                                                                              │
-                                              GitHub Actions baut :latest → ghcr.io
+                                              GitHub Actions baut das Image erneut → ghcr.io
                                                                              │
-                                                            Watchtower aktualisiert kicktipp-app
+                                                    Watchtower aktualisiert kicktipp-app
+                                                          (Prod unter / jetzt aktuell)
 ```
 
 ## Teil 1 – Einmalige Einrichtung in GitHub
@@ -206,35 +214,6 @@ Geräte im Netzwerk können). Für den Zugriff per Browser von einem PC/Handy
 im selben WLAN/LAN ist das unerheblich – nur ein `curl` direkt vom
 Unraid-Server aus auf die Container-IP würde nicht funktionieren.
 
-### 2.1b Beta-Container (optional, zum Testen vor Prod)
-
-Läuft parallel zum Produktions-Container, genau nach demselben Muster wie
-2.1 – nur mit anderem Namen, eigener IP und dem `:beta`-Tag statt `:latest`.
-So lassen sich Änderungen auf `beta` erst live ausprobieren, bevor sie nach
-`main` übernommen werden.
-
-**Über die WebGUI**: wie in 2.1 Variante A, aber:
-- **Name**: `kicktipp-app-beta`
-- **Repository**: `ghcr.io/reneheitmann/kicktipp-app:beta`
-- **Fixed IP address**: eine *andere* freie IP als der Prod-Container (z. B.
-  `192.168.1.51`)
-- `LISTEN_PORT` und Icon URL wie in 2.1 Schritt 6/7
-
-**Über die Konsole/SSH**:
-```bash
-docker run -d \
-  --name kicktipp-app-beta \
-  --restart unless-stopped \
-  --network br0 \
-  --ip 192.168.1.51 \
-  -e LISTEN_PORT=8080 \
-  ghcr.io/reneheitmann/kicktipp-app:beta
-```
-
-Beide Container zeigen auf dasselbe Supabase-Backend (dieselbe Datenbank) –
-für getrennte Testdaten wäre ein eigenes Supabase-Projekt nötig, das ist
-nicht Teil dieser Einrichtung.
-
 ### 2.2 Watchtower für automatische Updates installieren
 
 ```bash
@@ -245,18 +224,16 @@ docker run -d \
   containrrr/watchtower \
   --interval 300 \
   --cleanup \
-  kicktipp-app kicktipp-app-beta
+  kicktipp-app
 ```
 
 - `--interval 300` prüft alle 5 Minuten auf ein neues Image (nach Bedarf
   anpassen, z. B. `3600` für stündlich).
 - `--cleanup` löscht alte, nicht mehr genutzte Images automatisch, damit
   der Unraid-Speicher nicht vollläuft.
-- Die Container-Namen `kicktipp-app kicktipp-app-beta` am Ende sorgen dafür,
-  dass Watchtower **ausschließlich** diese beiden Container überwacht –
-  andere, unabhängig auf Unraid laufende Container bleiben unangetastet.
-  Läuft nur der Prod-Container (kein Beta-Container eingerichtet), einfach
-  `kicktipp-app-beta` weglassen.
+- Der Container-Name `kicktipp-app` am Ende sorgt dafür, dass Watchtower
+  **ausschließlich** diesen Container überwacht – andere, unabhängig auf
+  Unraid laufende Container bleiben unangetastet.
 - Watchtower selbst bleibt bewusst im normalen Docker-Netzwerk (kein
   `--network br0`) – er braucht nur Zugriff auf den Docker-Socket, um
   Images zu ziehen und Container neu zu starten, keine eigene Erreichbarkeit
@@ -267,10 +244,14 @@ docker run -d \
 suchen) – dort lassen sich dieselben Optionen über Eingabefelder statt der
 Kommandozeile setzen.
 
-**Bereits laufende Watchtower-Instanz um den Beta-Container erweitern:**
-Container `watchtower` → **Edit** → im Feld mit den Extra-Parametern/dem
-Kommandozeilen-Argument `kicktipp-app-beta` hinter `kicktipp-app` ergänzen
-→ **Apply** (Container wird neu gestartet, überwacht danach beide).
+**Bisher zwei Container betrieben (`kicktipp-app` + `kicktipp-app-beta`)?**
+Beide lieferten dasselbe Supabase-Backend aus, ein einzelnes Image enthält
+jetzt beide Versionen (Prod unter `/`, Beta unter `/beta/`, siehe
+„Funktionsweise“ oben) – `kicktipp-app-beta` kann gestoppt und gelöscht
+werden (Docker-Tab → Container anklicken → **Stop**, dann **Remove**), das
+Watchtower-Kommando oben überwacht nur noch `kicktipp-app`. Wer testen
+möchte, ruft künftig `http://<Prod-IP>:8080/beta/` auf bzw. nutzt den Link
+im eigenen Profil (siehe „Funktionsweise“).
 
 ### 2.3 Testen
 
@@ -281,21 +262,28 @@ Kommandozeilen-Argument `kicktipp-app-beta` hinter `kicktipp-app` ergänzen
 3. Eine Unterseite direkt per URL aufrufen und neu laden (z. B.
    `http://192.168.1.50:8080/seasons`) – muss funktionieren, nicht mit 404
    fehlschlagen (Test für die nginx-SPA-Konfiguration).
+4. Dasselbe für den Beta-Pfad: `http://192.168.1.50:8080/beta/seasons`
+   direkt aufrufen und neu laden – auch hier kein 404 (eigener
+   `try_files`-Block in `nginx.conf.template`). Ohne `beta.access`-Recht
+   für den eingeloggten Account leitet die App von dort automatisch zurück
+   auf `/`.
 
 ## Teil 3 – Ein Update auslösen (zum Ausprobieren)
 
 1. Eine kleine Änderung im Code machen, committen, `git push` **nach `beta`**.
-2. Im GitHub-Repo unter **Actions** den Workflow-Lauf beobachten (dauert je
-   nach Build ca. 1–3 Minuten) – baut `:beta`.
+2. Im GitHub-Repo unter **Actions** den Workflow-Lauf beobachten (dauert
+   etwas länger als früher, da main UND beta in einem Lauf gebaut werden) –
+   baut das eine, gemeinsame Image neu.
 3. Nach Abschluss: bis zu `--interval`-Sekunden warten (siehe 2.2), dann
    `docker logs watchtower` auf Unraid prüfen – dort erscheint ein Eintrag,
-   sobald das neue Image gezogen und `kicktipp-app-beta` neu gestartet wurde.
-4. Die Änderung sollte danach unter `http://192.168.1.51:8080` (Beta-IP)
-   sichtbar sein.
+   sobald das neue Image gezogen und `kicktipp-app` neu gestartet wurde.
+4. Die Änderung sollte danach unter `http://192.168.1.50:8080/beta/`
+   sichtbar sein (mit einem Account, der das `beta.access`-Recht hat, bzw.
+   über den Link im eigenen Profil).
 5. Passt alles: `beta` nach `main` mergen und pushen (z. B.
    `git checkout main && git merge beta && git push origin main`) – das
-   baut `:latest` neu, Watchtower aktualisiert danach `kicktipp-app`
-   (Produktion) unter `http://192.168.1.50:8080`.
+   baut das Image erneut, Watchtower aktualisiert danach `kicktipp-app`
+   erneut, Prod unter `http://192.168.1.50:8080/` ist danach aktuell.
 
 ## Teil 4 – Datenbank-Backup vor Migrationen
 

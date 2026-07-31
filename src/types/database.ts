@@ -16,6 +16,10 @@ export type UserRole = 'admin' | 'spielleiter' | 'user'
 // Route), unabhängig von den *.manage/*.use/email.send-Aktionsrechten – für
 // Seiten mit bereits bestehendem Aktionsrecht (Spieler/Konten/Import/
 // E-Mail versenden) verknüpfen navItems.ts/ProtectedRoute.tsx beide mit UND.
+//
+// beta.access (0052) ist keine Seite *innerhalb* der App, sondern schaltet
+// den Zugriff auf das separate Beta-Bundle frei (ausgeliefert unter /beta/
+// desselben Containers, siehe App.tsx) – daher ohne page.*.view-Pendant.
 export type PermissionKey =
   | 'seasons.manage'
   | 'matchdays.manage'
@@ -37,6 +41,7 @@ export type PermissionKey =
   | 'page.import.view'
   | 'page.email_send.view'
   | 'page.users.view'
+  | 'beta.access'
 
 export type RolePermission = {
   role: UserRole

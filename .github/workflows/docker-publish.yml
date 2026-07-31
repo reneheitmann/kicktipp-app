@@ -1,33 +1,38 @@
 name: Docker Image bauen und veröffentlichen
 
-# Baut bei jedem Push nach main ODER beta automatisch ein neues Docker-Image
-# und lädt es zur GitHub Container Registry hoch:
-#   main -> Tags :latest und :<sha>       (Produktion, Watchtower zieht :latest)
-#   beta -> Tags :beta und :beta-<sha>    (zweiter Unraid-Container zum Testen)
-# Auf Unraid zieht Watchtower das jeweilige Image periodisch und startet den
-# Container neu, sobald ein neues verfügbar ist – kein manueller Schritt nötig.
+# Baut bei jedem Push nach main ODER beta automatisch ein neues, EINZIGES
+# Docker-Image, das beide Versionen gleichzeitig enthält: main unter /, beta
+# unter /beta/ (siehe Dockerfile/nginx.conf.template) – ein Container/eine
+# Adresse statt vormals zwei getrennter Images/Container. Wer welchen Pfad
+# sehen darf, entscheidet die App selbst (siehe beta.access-Recht,
+# src/App.tsx). Tags: immer :latest und :<sha>, unabhängig davon, welcher
+# Branch den Build ausgelöst hat.
 #
-# Nur auf main wird zusätzlich automatisch die Version in package.json
-# erhöht, außer package.json wurde im selben Push bereits selbst geändert
-# (z. B. um bewusst auf eine neue Major-Version zu springen) – dann bleibt
-# die manuell gesetzte Version unangetastet. Enthält der Push neue Dateien
-# unter supabase/migrations/ (also ein DB-Update), wird die MINOR-Version
-# erhöht (z. B. 1.1.9 -> 1.2.0), sonst nur die Patch-Version (z. B.
-# 1.1.9 -> 1.1.10) – so ist an der Versionsnummer selbst ablesbar, ob ein
-# Release ein Datenbank-Update enthielt. Der Versions-Bump wird mit
+# Dafür werden main UND beta in JEDEM Lauf unabhängig voneinander in eigene
+# Unterverzeichnisse ausgecheckt und einzeln gebaut (build-main/build-beta) –
+# der jeweils NICHT gepushte Branch wird dabei einfach in seinem aktuellen
+# Stand mitgebaut, nicht neu verifiziert (der hat seine eigene Lint/Test-
+# Prüfung schon bei seinem letzten Push durchlaufen).
+#
+# Nur beim Bauen von main wird zusätzlich automatisch die Version in
+# package.json erhöht, außer package.json wurde im selben Push bereits selbst
+# geändert (z. B. um bewusst auf eine neue Major-Version zu springen) – dann
+# bleibt die manuell gesetzte Version unangetastet. Enthält der Push neue
+# Dateien unter supabase/migrations/ (also ein DB-Update), wird die
+# MINOR-Version erhöht (z. B. 1.1.9 -> 1.2.0), sonst nur die Patch-Version
+# (z. B. 1.1.9 -> 1.1.10) – so ist an der Versionsnummer selbst ablesbar, ob
+# ein Release ein Datenbank-Update enthielt. Der Versions-Bump wird mit
 # "[skip ci]" zurückcommitted, damit das keinen weiteren Workflow-Lauf
 # auslöst (von GitHub Actions nativ unterstützt).
 #
 # Beta-Builds bumpen package.json bewusst NIE (würde bei jedem Merge mit main
-# zu Versions-Konflikten in der Datei führen) – stattdessen hängt vite.config.ts
-# an die zuletzt von main gemergte Versionsnummer "_beta.<Commit-Anzahl auf
-# beta>" an, sodass die angezeigte Version trotzdem bei jedem Beta-Push sichtbar
-# hochzählt (z. B. "1.1.7_beta.42").
+# zu Versions-Konflikten in der Datei führen) – stattdessen hängt
+# vite.config.ts an die zuletzt von main gemergte Versionsnummer
+# "_beta.<Commit-Anzahl auf beta>" an, sodass die angezeigte Version trotzdem
+# bei jedem Beta-Push sichtbar hochzählt (z. B. "1.1.7_beta.42").
 #
 # Lint (oxlint) und Tests (vitest) laufen vor dem eigentlichen Image-Build und
-# blockieren ihn bei Fehlern – zuvor prüfte die Pipeline nur implizit über
-# `tsc -b` als Teil von `npm run build` innerhalb des Dockerfiles, oxlint-
-# Verstöße blieben dadurch folgenlos.
+# blockieren ihn bei Fehlern.
 
 on:
   push:
@@ -46,9 +51,18 @@ jobs:
       packages: write
 
     steps:
-      - name: Code auschecken
+      - name: main auschecken
         uses: actions/checkout@v4
         with:
+          ref: main
+          path: build-main
+          fetch-depth: 0
+
+      - name: beta auschecken
+        uses: actions/checkout@v4
+        with:
+          ref: beta
+          path: build-beta
           fetch-depth: 0
 
       - name: Node einrichten
@@ -56,19 +70,37 @@ jobs:
         with:
           node-version: 24
           cache: npm
+          # Beide Checkouts liegen in Unterordnern (build-main/build-beta,
+          # siehe oben) statt im Workspace-Root – ohne explizite Pfade findet
+          # setup-node dort kein package-lock.json.
+          cache-dependency-path: |
+            build-main/package-lock.json
+            build-beta/package-lock.json
 
-      - name: Abhängigkeiten installieren
+      - name: Abhängigkeiten installieren (main)
+        working-directory: build-main
         run: npm ci
 
+      - name: Abhängigkeiten installieren (beta)
+        working-directory: build-beta
+        run: npm ci
+
+      - name: Getriggerten Checkout ermitteln
+        id: triggered
+        run: echo "dir=${{ github.ref_name == 'main' && 'build-main' || 'build-beta' }}" >> "$GITHUB_OUTPUT"
+
       - name: Lint prüfen
+        working-directory: ${{ steps.triggered.outputs.dir }}
         run: npm run lint
 
       - name: Tests ausführen
+        working-directory: ${{ steps.triggered.outputs.dir }}
         run: npm run test
 
       - name: Version automatisch erhöhen (nur main)
         id: bump
         if: github.ref == 'refs/heads/main'
+        working-directory: build-main
         run: |
           CURRENT=$(node -p "require('./package.json').version")
 
@@ -108,6 +140,11 @@ jobs:
             echo "bumped=true" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Prod-Version ermitteln (Basis für die Beta-Versionsanzeige)
+        id: prod_version
+        working-directory: build-main
+        run: echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+
       - name: Bei GitHub Container Registry anmelden
         uses: docker/login-action@v3
         with:
@@ -121,75 +158,94 @@ jobs:
       - name: Build-Metadaten ermitteln
         id: meta
         run: |
-          echo "commit_sha=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+          echo "commit_sha_main=$(git -C build-main rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+          echo "commit_sha_beta=$(git -C build-beta rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
           echo "build_date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
 
-      - name: main-Historie nachladen (für Versions-Changelog)
+      - name: main-Historie in build-beta nachladen (für Versions-Changelog)
         # .github/scripts/generate-changelog.cjs braucht origin/main als
-        # verlässliche Versions-Historie, auch wenn dieser Build auf beta
-        # läuft (dessen eigene Historie Mains spätere Bump-Commits nicht
-        # enthält – beta wird nie in main zurückgemerged, nur umgekehrt).
+        # verlässliche Versions-Historie (siehe dortiger Kommentar) – beim
+        # main-Checkout automatisch vorhanden, beim beta-Checkout nicht.
+        working-directory: build-beta
         run: git fetch origin main
 
-      - name: Änderungsprotokoll ermitteln
-        id: changelog
+      - name: Änderungsprotokoll (Prod) ermitteln
+        id: changelog_prod
+        working-directory: build-main
+        env:
+          GITHUB_REF_NAME: main
         run: |
           JSON=$(node .github/scripts/generate-changelog.cjs)
-          # Base64 statt roher Einbettung: der Wert landet unten ungeschützt in
-          # der build-args-YAML – Anführungszeichen/Zeilenumbrüche in
-          # Commit-Nachrichten (im JSON enthalten) würden das sonst brechen.
-          # AboutPage.tsx decodiert per atob() wieder.
           ENCODED=$(printf '%s' "$JSON" | base64 | tr -d '\n')
           echo "changelog=$ENCODED" >> "$GITHUB_OUTPUT"
 
-      - name: Image-Tags bestimmen
-        id: tags
+      - name: Änderungsprotokoll (Beta) ermitteln
+        id: changelog_beta
+        working-directory: build-beta
+        env:
+          GITHUB_REF_NAME: beta
         run: |
-          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
-            {
-              echo "tags<<EOF"
-              echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
-              echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"
-              echo "EOF"
-            } >> "$GITHUB_OUTPUT"
-            echo "channel=production" >> "$GITHUB_OUTPUT"
-          else
-            {
-              echo "tags<<EOF"
-              echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:beta"
-              echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:beta-${{ github.sha }}"
-              echo "EOF"
-            } >> "$GITHUB_OUTPUT"
-            echo "channel=beta" >> "$GITHUB_OUTPUT"
-            # Gesamtzahl der Commits auf beta als "hochzählende" Versionszahl,
-            # da package.json hier nie gebumpt wird (siehe vite.config.ts).
-            echo "beta_build_number=$(git rev-list --count HEAD)" >> "$GITHUB_OUTPUT"
-            # Zuletzt tatsächlich veröffentlichte Version aus origin/mains
-            # package.json (NICHT dem lokalen, das auf beta nie aktualisiert
-            # wird) – Basis für die "_beta.<n>"-Anzeige, siehe vite.config.ts.
-            echo "beta_base_version=$(git show origin/main:package.json | node -e "process.stdin.on('data',d=>console.log(JSON.parse(d).version))")" >> "$GITHUB_OUTPUT"
-          fi
+          JSON=$(node .github/scripts/generate-changelog.cjs)
+          ENCODED=$(printf '%s' "$JSON" | base64 | tr -d '\n')
+          echo "changelog=$ENCODED" >> "$GITHUB_OUTPUT"
+
+      - name: Prod-Bundle bauen (main)
+        working-directory: build-main
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_APP_COMMIT_SHA: ${{ steps.meta.outputs.commit_sha_main }}
+          VITE_APP_BUILD_DATE: ${{ steps.meta.outputs.build_date }}
+          VITE_APP_CHANNEL: production
+          VITE_APP_CHANGELOG: ${{ steps.changelog_prod.outputs.changelog }}
+        run: npm run build
+
+      - name: Beta-Build-Metadaten ermitteln
+        id: beta_meta
+        working-directory: build-beta
+        run: echo "build_number=$(git rev-list --count HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Beta-Bundle bauen (beta)
+        working-directory: build-beta
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_APP_COMMIT_SHA: ${{ steps.meta.outputs.commit_sha_beta }}
+          VITE_APP_BUILD_DATE: ${{ steps.meta.outputs.build_date }}
+          VITE_APP_CHANNEL: beta
+          VITE_APP_CHANGELOG: ${{ steps.changelog_beta.outputs.changelog }}
+          VITE_APP_BETA_BUILD_NUMBER: ${{ steps.beta_meta.outputs.build_number }}
+          VITE_APP_BETA_BASE_VERSION: ${{ steps.prod_version.outputs.version }}
+        run: npm run build
+
+      - name: Builds für den Docker-Kontext bereitstellen
+        # Der Workspace-Root selbst hat kein eigenes Checkout mehr (beide
+        # Branches liegen nur unter build-main/build-beta) – Dockerfile und
+        # nginx.conf.template müssen daher explizit hierher kopiert werden,
+        # sonst findet docker/build-push-action mit context: . kein
+        # Dockerfile. Quelle ist bewusst der Checkout des AUSLÖSENDEN Branches
+        # (wie beim Lint/Test-Schritt oben), nicht immer build-main: solange
+        # diese Umstellung selbst noch nicht nach main gemergt ist, hat nur
+        # build-beta das neue, schlanke Dockerfile – build-main hätte hier
+        # noch die alte Node-Build-Stage-Version.
+        run: |
+          cp -r build-main/dist ./dist-prod
+          cp -r build-beta/dist ./dist-beta
+          cp ${{ steps.triggered.outputs.dir }}/Dockerfile ./Dockerfile
+          cp ${{ steps.triggered.outputs.dir }}/nginx.conf.template ./nginx.conf.template
 
       - name: Image bauen und veröffentlichen
         uses: docker/build-push-action@v6
         with:
           context: .
           push: true
-          tags: ${{ steps.tags.outputs.tags }}
-          build-args: |
-            VITE_SUPABASE_URL=${{ secrets.VITE_SUPABASE_URL }}
-            VITE_SUPABASE_ANON_KEY=${{ secrets.VITE_SUPABASE_ANON_KEY }}
-            VITE_APP_COMMIT_SHA=${{ steps.meta.outputs.commit_sha }}
-            VITE_APP_BUILD_DATE=${{ steps.meta.outputs.build_date }}
-            VITE_APP_CHANNEL=${{ steps.tags.outputs.channel }}
-            VITE_APP_CHANGELOG=${{ steps.changelog.outputs.changelog }}
-            VITE_APP_BETA_BUILD_NUMBER=${{ steps.tags.outputs.beta_build_number }}
-            VITE_APP_BETA_BASE_VERSION=${{ steps.tags.outputs.beta_base_version }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
 
       - name: Versions-Bump zurück ins Repo committen
         if: github.ref == 'refs/heads/main' && steps.bump.outputs.bumped == 'true'
+        working-directory: build-main
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"

@@ -15,6 +15,14 @@ server {
     root /usr/share/nginx/html;
     index index.html;
 
+    # Beta-Bundle unter /beta/ (eigenes, unter diesem Präfix gebautes SPA,
+    # siehe vite.config.ts base/Dockerfile) – eigener SPA-Fallback, da ein
+    # Reload auf z. B. /beta/seasons sonst mit 404 fehlschlagen würde.
+    location /beta/ {
+        alias /usr/share/nginx/html/beta/;
+        try_files $uri $uri/ /beta/index.html;
+    }
+
     location / {
         try_files $uri $uri/ /index.html;
     }
