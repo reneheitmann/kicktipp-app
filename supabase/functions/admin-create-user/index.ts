@@ -1,7 +1,9 @@
 // Edge Function: legt einen neuen Supabase-Auth-User inkl. Profil an.
 // Läuft serverseitig mit dem service_role-Key (nur als Function-Secret hinterlegt,
-// niemals im Frontend-Bundle). Prüft selbst, dass der Aufrufer ein aktiver Admin ist,
-// bevor er die privilegierte Admin-API von Supabase Auth verwendet.
+// niemals im Frontend-Bundle). Prüft selbst, dass der Aufrufer aktiver Admin
+// ist ODER das granulare users.manage-Recht hat (siehe role_permissions),
+// bevor er die privilegierte Admin-API von Supabase Auth verwendet. Nur
+// echte Admins dürfen dabei die Rolle 'admin' vergeben.
 
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { corsHeadersForOrigin } from '../_shared/cors.ts'
@@ -76,8 +78,27 @@ async function handle(
     .eq('id', callerUser.id)
     .single()
 
-  if (profileError || !callerProfile || callerProfile.role !== 'admin' || !callerProfile.is_active) {
+  if (profileError || !callerProfile || !callerProfile.is_active) {
     return jsonResponse({ error: 'Nur aktive Administratoren dürfen Benutzer anlegen.' }, 403)
+  }
+
+  // Admins dürfen immer; alle anderen nur mit explizit gewährtem
+  // users.manage-Recht (siehe Rollen & Berechtigungen) – und selbst dann nie
+  // mit der Ziel-Rolle 'admin' (siehe Prüfung weiter unten), um eine
+  // Rechteausweitung über die Benutzerverwaltung auszuschließen.
+  const isAdmin = callerProfile.role === 'admin'
+  let canManageUsers = isAdmin
+  if (!isAdmin) {
+    const { data: perm } = await callerClient
+      .from('role_permissions')
+      .select('granted')
+      .eq('role', callerProfile.role)
+      .eq('permission_key', 'users.manage')
+      .maybeSingle()
+    canManageUsers = perm?.granted === true
+  }
+  if (!canManageUsers) {
+    return jsonResponse({ error: 'Keine Berechtigung, Benutzer anzulegen.' }, 403)
   }
 
   let body: {
@@ -102,6 +123,9 @@ async function handle(
   }
   if (!role || !ALLOWED_ROLES.includes(role)) {
     return jsonResponse({ error: 'Ungültige Rolle.' }, 400)
+  }
+  if (!isAdmin && role === 'admin') {
+    return jsonResponse({ error: 'Nur Administratoren dürfen Administratoren anlegen.' }, 403)
   }
 
   // Admin-Client mit service_role, um den eigentlichen Auth-User anzulegen.
