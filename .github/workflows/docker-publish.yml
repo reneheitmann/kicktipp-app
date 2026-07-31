@@ -219,9 +219,16 @@ jobs:
         run: npm run build
 
       - name: Builds für den Docker-Kontext bereitstellen
+        # Der Workspace-Root selbst hat kein eigenes Checkout mehr (beide
+        # Branches liegen nur unter build-main/build-beta) – Dockerfile und
+        # nginx.conf.template müssen daher explizit aus build-main (main als
+        # kanonische Quelle) hierher kopiert werden, sonst findet
+        # docker/build-push-action mit context: . kein Dockerfile.
         run: |
           cp -r build-main/dist ./dist-prod
           cp -r build-beta/dist ./dist-beta
+          cp build-main/Dockerfile ./Dockerfile
+          cp build-main/nginx.conf.template ./nginx.conf.template
 
       - name: Image bauen und veröffentlichen
         uses: docker/build-push-action@v6
