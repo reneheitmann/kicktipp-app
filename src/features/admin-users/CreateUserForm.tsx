@@ -8,7 +8,15 @@ import { getPasswordPolicy } from '../password-policy/passwordPolicyApi'
 import { describePasswordPolicy, validatePasswordAgainstPolicy } from '../../lib/passwordValidation'
 import type { PasswordPolicy, UserRole } from '../../types/database'
 
-export function CreateUserForm({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
+export function CreateUserForm({
+  onClose,
+  onCreated,
+  allowAdminRole,
+}: {
+  onClose: () => void
+  onCreated: () => void
+  allowAdminRole: boolean
+}) {
   const [name, setName] = useState('')
   const [vorname, setVorname] = useState('')
   const [nachname, setNachname] = useState('')
@@ -181,7 +189,7 @@ export function CreateUserForm({ onClose, onCreated }: { onClose: () => void; on
           >
             <option value="user">Spieler (User)</option>
             <option value="spielleiter">Spielleiter</option>
-            <option value="admin">Administrator</option>
+            {allowAdminRole && <option value="admin">Administrator</option>}
           </select>
         </div>
 

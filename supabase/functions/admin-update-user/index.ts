@@ -3,8 +3,10 @@
 // den Login (auth.users.email) betrifft – das kann nur die privilegierte
 // Admin-API von Supabase Auth, nicht die profiles-Tabelle allein. Ohne diese
 // Function würde profiles.email vom tatsächlichen Login-Namen abweichen.
-// Prüft selbst, dass der Aufrufer ein aktiver Admin ist, analog zu
-// admin-create-user.
+// Prüft selbst, dass der Aufrufer aktiver Admin ist ODER das granulare
+// users.manage-Recht hat, analog zu admin-create-user. Wer kein echter Admin
+// ist, darf dabei kein Admin-Konto bearbeiten – sonst ließe sich dessen
+// Login-E-Mail auf eine eigene Adresse ändern und per Passwort-Reset kapern.
 
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { corsHeadersForOrigin } from '../_shared/cors.ts'
@@ -71,8 +73,23 @@ async function handle(
     .eq('id', callerUser.id)
     .single()
 
-  if (profileError || !callerProfile || callerProfile.role !== 'admin' || !callerProfile.is_active) {
+  if (profileError || !callerProfile || !callerProfile.is_active) {
     return jsonResponse({ error: 'Nur aktive Administratoren dürfen Benutzer bearbeiten.' }, 403)
+  }
+
+  const isAdmin = callerProfile.role === 'admin'
+  let canManageUsers = isAdmin
+  if (!isAdmin) {
+    const { data: perm } = await callerClient
+      .from('role_permissions')
+      .select('granted')
+      .eq('role', callerProfile.role)
+      .eq('permission_key', 'users.manage')
+      .maybeSingle()
+    canManageUsers = perm?.granted === true
+  }
+  if (!canManageUsers) {
+    return jsonResponse({ error: 'Keine Berechtigung, Benutzer zu bearbeiten.' }, 403)
   }
 
   let body: { userId?: string; name?: string; vorname?: string; nachname?: string; email?: string }
@@ -88,6 +105,14 @@ async function handle(
   }
 
   const adminClient = createClient(supabaseUrl, serviceRoleKey)
+
+  if (!isAdmin) {
+    const { data: targetProfile } = await adminClient.from('profiles').select('role').eq('id', userId).maybeSingle()
+    if (targetProfile?.role === 'admin') {
+      return jsonResponse({ error: 'Nur Administratoren dürfen Administrator-Konten bearbeiten.' }, 403)
+    }
+  }
+
   const trimmedVorname = vorname?.trim() || null
   const trimmedNachname = nachname?.trim() || null
 

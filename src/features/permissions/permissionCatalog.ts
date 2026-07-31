@@ -82,6 +82,14 @@ export const permissionCatalog: PermissionCatalogEntry[] = [
     description: 'Bulk-E-Mails an Spieler senden (Empfängerauswahl, Vorlagen verwalten).',
   },
   {
+    key: 'users.manage',
+    label: 'Benutzer verwalten',
+    page: 'Benutzerverwaltung',
+    description:
+      'Benutzer anlegen, bearbeiten, sperren/entsperren, Rolle zwischen Spieler und Spielleiter ändern. ' +
+      'Administrator-Konten bleiben davon ausgenommen – die dürfen weiterhin nur echte Admins bearbeiten.',
+  },
+  {
     key: 'page.dashboard.view',
     label: 'Seite sichtbar',
     page: 'Übersicht',
@@ -123,5 +131,11 @@ export const permissionCatalog: PermissionCatalogEntry[] = [
     label: 'Seite sichtbar',
     page: 'E-Mail versenden',
     description: 'Blendet den E-Mail-Versand im Menü und als Route zusätzlich zum Recht "E-Mails versenden" aus.',
+  },
+  {
+    key: 'page.users.view',
+    label: 'Seite sichtbar',
+    page: 'Benutzerverwaltung',
+    description: 'Blendet die Benutzerverwaltung im Menü und als Route zusätzlich zum Recht "Benutzer verwalten" aus.',
   },
 ]

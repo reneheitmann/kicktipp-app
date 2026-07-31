@@ -4,11 +4,13 @@ export type UserRole = 'admin' | 'spielleiter' | 'user'
 
 // Die konfigurierbaren Rechte, siehe supabase/migrations/0022_role_permissions.sql
 // (Basis), 0024_email_send_permission_and_templates.sql (email.send),
-// 0029_page_visibility.sql (page.*.view) und
-// src/features/permissions/permissionCatalog.ts (dort mit Label/Seite/Beschreibung).
-// Benutzerverwaltung, E-Mail-Einstellungen (SMTP), dieses Modul selbst und
-// Erscheinungsbild bleiben bewusst außerhalb dieses Katalogs (hart admin-only,
-// siehe Migrationskommentar in 0029).
+// 0029_page_visibility.sql (page.*.view), 0050_users_manage_permission.sql
+// (users.manage) und src/features/permissions/permissionCatalog.ts (dort mit
+// Label/Seite/Beschreibung). E-Mail-Einstellungen (SMTP), dieses Modul selbst
+// und Erscheinungsbild bleiben bewusst außerhalb dieses Katalogs (hart
+// admin-only, siehe Migrationskommentar in 0029) – Benutzerverwaltung ist
+// seit 0050 Teil des Katalogs, dort aber mit Admin-Konten als fester
+// Ausnahme (RLS + Trigger + Edge Functions verhindern jede Rechteausweitung).
 //
 // page.*.view steuert die Sichtbarkeit einer ganzen Seite (Menüpunkt +
 // Route), unabhängig von den *.manage/*.use/email.send-Aktionsrechten – für
@@ -26,6 +28,7 @@ export type PermissionKey =
   | 'balance_transfer.manage'
   | 'import.use'
   | 'email.send'
+  | 'users.manage'
   | 'page.dashboard.view'
   | 'page.seasons.view'
   | 'page.vergleich.view'
@@ -33,6 +36,7 @@ export type PermissionKey =
   | 'page.accounts.view'
   | 'page.import.view'
   | 'page.email_send.view'
+  | 'page.users.view'
 
 export type RolePermission = {
   role: UserRole

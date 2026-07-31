@@ -13,6 +13,11 @@ const roleLabels: Record<UserRole, string> = { admin: 'Administrator', spielleit
 
 export function AdminUsersPage() {
   const { profile: ownProfile } = useAuth()
+  // Serverseitig (RLS + Trigger + Edge Functions) ist ein berechtigter
+  // Spielleiter bereits daran gehindert, Admin-Konten anzufassen oder
+  // jemanden zum Admin zu machen (siehe 0050_users_manage_permission.sql) –
+  // isTrueAdmin blendet diese ohnehin fehlschlagenden Aktionen nur im UI aus.
+  const isTrueAdmin = ownProfile?.role === 'admin'
   const [profiles, setProfiles] = useState<Profile[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -129,22 +134,34 @@ export function AdminUsersPage() {
                 <p className="truncate text-sm text-slate-500">{p.email}</p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <select
-                  value={p.role}
-                  onChange={(e) => requestRoleChange(p, e.target.value as UserRole)}
-                  className="rounded-lg border border-slate-300 px-2 py-2 text-sm focus:border-slate-900 focus:outline-none"
+                {!isTrueAdmin && p.role === 'admin' ? (
+                  <span className="px-2 py-2 text-sm text-slate-500">{roleLabels[p.role]}</span>
+                ) : (
+                  <select
+                    value={p.role}
+                    onChange={(e) => requestRoleChange(p, e.target.value as UserRole)}
+                    className="rounded-lg border border-slate-300 px-2 py-2 text-sm focus:border-slate-900 focus:outline-none"
+                  >
+                    <option value="user">Spieler</option>
+                    <option value="spielleiter">Spielleiter</option>
+                    {isTrueAdmin && <option value="admin">Administrator</option>}
+                  </select>
+                )}
+                <Button
+                  variant="secondary"
+                  onClick={() => setEditingProfile(p)}
+                  disabled={!isTrueAdmin && p.role === 'admin'}
                 >
-                  <option value="user">Spieler</option>
-                  <option value="spielleiter">Spielleiter</option>
-                  <option value="admin">Administrator</option>
-                </select>
-                <Button variant="secondary" onClick={() => setEditingProfile(p)}>
                   Bearbeiten
                 </Button>
                 <Button variant="secondary" onClick={() => handlePasswordReset(p)}>
                   Passwort-Reset
                 </Button>
-                <Button variant={p.is_active ? 'danger' : 'secondary'} onClick={() => requestToggleActive(p)}>
+                <Button
+                  variant={p.is_active ? 'danger' : 'secondary'}
+                  onClick={() => requestToggleActive(p)}
+                  disabled={!isTrueAdmin && p.role === 'admin'}
+                >
                   {p.is_active ? 'Sperren' : 'Entsperren'}
                 </Button>
               </div>
@@ -153,7 +170,9 @@ export function AdminUsersPage() {
         </ul>
       )}
 
-      {showCreate && <CreateUserForm onClose={() => setShowCreate(false)} onCreated={reload} />}
+      {showCreate && (
+        <CreateUserForm onClose={() => setShowCreate(false)} onCreated={reload} allowAdminRole={isTrueAdmin} />
+      )}
 
       {editingProfile && (
         <EditUserForm profile={editingProfile} onClose={() => setEditingProfile(null)} onSaved={reload} />

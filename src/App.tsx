@@ -134,8 +134,11 @@ function AppRoutes() {
               <Route path="/emails/vorlagen" element={<EmailTemplatesPage />} />
             </Route>
 
-            <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
+            <Route element={<ProtectedRoute requiredPermission={['users.manage', 'page.users.view']} />}>
               <Route path="/admin/users" element={<AdminUsersPage />} />
+            </Route>
+
+            <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
               <Route path="/admin/email" element={<EmailSettingsPage />} />
               <Route path="/admin/roles" element={<RolesPermissionsPage />} />
               <Route path="/admin/branding" element={<AppSettingsPage />} />
