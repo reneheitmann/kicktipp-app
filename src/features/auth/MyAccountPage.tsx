@@ -2,7 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { useAuth } from './useAuth'
-import { updateOwnEmail, updateOwnName, updateOwnPassword } from './myAccountApi'
+import { requestOwnEmailChange, updateOwnName, updateOwnPassword } from './myAccountApi'
 import { getPasswordPolicy } from '../password-policy/passwordPolicyApi'
 import { describePasswordPolicy, validatePasswordAgainstPolicy } from '../../lib/passwordValidation'
 import { listPlayers } from '../players/playersApi'
@@ -103,9 +103,8 @@ export function MyAccountPage() {
     setEmailError(null)
     setEmailSuccess(null)
     try {
-      await updateOwnEmail(email.trim())
-      await refreshProfile()
-      setEmailSuccess('E-Mail-Adresse geändert.')
+      await requestOwnEmailChange(email.trim())
+      setEmailSuccess('Bestätigungsmail verschickt. Bitte den Link in der Mail an die neue Adresse anklicken.')
     } catch (err) {
       setEmailError(err instanceof Error ? err.message : 'Speichern fehlgeschlagen.')
     } finally {
@@ -192,14 +191,16 @@ export function MyAccountPage() {
               onChange={(e) => setEmail(e.target.value)}
               className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base focus:border-slate-900 focus:outline-none"
             />
-            <p className="mt-1 text-xs text-slate-500">Diese Adresse wird auch für die Anmeldung verwendet.</p>
+            <p className="mt-1 text-xs text-slate-500">
+              Diese Adresse wird auch für die Anmeldung verwendet. Wird erst nach Bestätigung per E-Mail übernommen.
+            </p>
           </div>
 
           {emailError && <p role="alert" className="text-sm text-red-600">{emailError}</p>}
           {emailSuccess && <p className="text-sm text-emerald-700">{emailSuccess}</p>}
 
           <Button type="submit" disabled={savingEmail}>
-            {savingEmail ? 'Speichern...' : 'E-Mail speichern'}
+            {savingEmail ? 'Wird verschickt...' : 'Bestätigungsmail senden'}
           </Button>
         </form>
       </div>

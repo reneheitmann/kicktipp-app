@@ -1,11 +1,17 @@
-// Edge Function: ändert die eigene E-Mail-Adresse des angemeldeten Users.
-// Läuft serverseitig mit dem service_role-Key, da eine E-Mail-Änderung auch
-// den Login (auth.users.email) betrifft – das kann nur die privilegierte
-// Admin-API von Supabase Auth, nicht die profiles-Tabelle allein (analog
-// admin-update-user.ts, nur ohne die dortige Admin-Berechtigungsprüfung).
+// Edge Function: stößt eine E-Mail-Änderung des angemeldeten Users an.
+// Ändert auth.users.email NICHT direkt, sondern legt eine Anfrage in
+// email_change_requests an und verschickt einen Bestätigungslink an die NEUE
+// Adresse (per eigener SMTP-Konfiguration, siehe send-password-reset für die
+// Begründung) – erst der Klick auf den Link (confirm-email-change) übernimmt
+// die Änderung wirklich. So ist sichergestellt, dass die neue Adresse
+// tatsächlich dem User gehört und erreichbar ist, statt sich vertippen zu
+// können oder fremde Postfächer als eigenes Login zu kapern.
 
 import { createClient } from 'jsr:@supabase/supabase-js@2'
+import { sendSmtpMail, SmtpError } from './smtp.ts'
 import { corsHeadersForOrigin } from '../_shared/cors.ts'
+
+type JsonResponder = (body: unknown, status?: number) => Response
 
 Deno.serve(async (req) => {
   const corsHeaders = corsHeadersForOrigin(req.headers.get('Origin'))
@@ -15,7 +21,7 @@ Deno.serve(async (req) => {
       headers: { 'Content-Type': 'application/json' },
     })
   }
-  const jsonResponse = (body: unknown, status = 200) =>
+  const jsonResponse: JsonResponder = (body, status = 200) =>
     new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', ...corsHeaders } })
 
   if (req.method === 'OPTIONS') {
@@ -41,7 +47,7 @@ async function handle(
   req: Request,
   supabaseUrl: string,
   serviceRoleKey: string,
-  jsonResponse: (body: unknown, status?: number) => Response,
+  jsonResponse: JsonResponder,
 ): Promise<Response> {
   const authHeader = req.headers.get('Authorization')
   if (!authHeader) {
@@ -71,7 +77,7 @@ async function handle(
     return jsonResponse({ error: 'Konto ist nicht aktiv.' }, 403)
   }
 
-  let body: { email?: string }
+  let body: { email?: string; redirectTo?: string }
   try {
     body = await req.json()
   } catch {
@@ -82,22 +88,85 @@ async function handle(
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return jsonResponse({ error: 'Bitte eine gültige E-Mail-Adresse angeben.' }, 400)
   }
+  if (!body.redirectTo) {
+    return jsonResponse({ error: 'Ungültiger Request-Body' }, 400)
+  }
 
   const adminClient = createClient(supabaseUrl, serviceRoleKey)
 
-  const { error: updateAuthError } = await adminClient.auth.admin.updateUserById(callerUser.id, { email })
-  if (updateAuthError) {
-    return jsonResponse({ error: updateAuthError.message }, 400)
+  const { data: settings, error: settingsError } = await adminClient
+    .from('email_settings')
+    .select('*')
+    .eq('id', '00000000-0000-0000-0000-000000000001')
+    .maybeSingle()
+  if (settingsError || !settings) {
+    return jsonResponse({ error: 'E-Mail-Versand ist nicht konfiguriert.' }, 500)
   }
 
-  // handle_new_user() synchronisiert profiles.email nur bei INSERT, nicht bei
-  // einer späteren Änderung – daher hier explizit auch profiles aktualisieren.
-  const { error: updateProfileError } = await adminClient.from('profiles').update({ email }).eq('id', callerUser.id)
-  if (updateProfileError) {
-    return jsonResponse({ error: updateProfileError.message }, 400)
+  const { data: appSettings } = await adminClient
+    .from('app_settings')
+    .select('app_name')
+    .eq('id', '00000000-0000-0000-0000-000000000002')
+    .maybeSingle()
+  const appName = appSettings?.app_name ?? 'Kicktipp Spielrunde'
+
+  const rawToken = randomToken()
+  const tokenHash = await sha256Hex(rawToken)
+
+  const { error: upsertError } = await adminClient
+    .from('email_change_requests')
+    .upsert({ profile_id: callerUser.id, new_email: email, token_hash: tokenHash, requested_at: new Date().toISOString() })
+  if (upsertError) {
+    return jsonResponse({ error: upsertError.message }, 500)
+  }
+
+  const confirmLink = `${body.redirectTo.replace(/\/+$/, '')}/email-bestaetigen?token=${rawToken}`
+  const escapedConfirmLink = escapeHtml(confirmLink)
+
+  try {
+    await sendSmtpMail(
+      {
+        hostname: settings.smtp_host,
+        port: settings.smtp_port,
+        encryption: settings.smtp_encryption,
+        username: settings.smtp_username,
+        password: settings.smtp_password,
+      },
+      {
+        fromEmail: settings.sender_email,
+        fromName: settings.sender_name,
+        to: email,
+        subject: `E-Mail-Adresse bestätigen – ${appName}`,
+        html: [
+          '<p>Hallo,</p>',
+          `<p>bitte bestätige über diesen Link deine neue E-Mail-Adresse für ${escapeHtml(appName)}:</p>`,
+          `<p><a href="${escapedConfirmLink}">${escapedConfirmLink}</a></p>`,
+          '<p>Der Link ist 24 Stunden gültig. Falls du das nicht angefordert hast, kannst du diese E-Mail ignorieren.</p>',
+        ].join('\n'),
+      },
+    )
+  } catch (err) {
+    const message = err instanceof SmtpError ? err.message : err instanceof Error ? err.message : String(err)
+    await logAppError(supabaseUrl, serviceRoleKey, 'update-own-email', message, { email })
+    return jsonResponse({ error: 'Bestätigungsmail konnte nicht verschickt werden.' }, 500)
   }
 
   return jsonResponse({ ok: true })
+}
+
+function randomToken(): string {
+  const bytes = new Uint8Array(32)
+  crypto.getRandomValues(bytes)
+  return [...bytes].map((b) => b.toString(16).padStart(2, '0')).join('')
+}
+
+async function sha256Hex(text: string): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text))
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('')
+}
+
+function escapeHtml(text: string): string {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 }
 
 async function logAppError(
