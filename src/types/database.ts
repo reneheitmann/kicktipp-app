@@ -67,6 +67,9 @@ export type Profile = {
   base_role: UserRole | null
   is_active: boolean
   created_at: string
+  /** Aus auth.users gespiegelt (siehe 0053_profiles_last_sign_in_at.sql),
+   *  null solange der User sich noch nie angemeldet hat. */
+  last_sign_in_at: string | null
 }
 
 export type Player = {

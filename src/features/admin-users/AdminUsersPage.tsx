@@ -10,6 +10,7 @@ import { useAuth } from '../auth/useAuth'
 import type { Profile, UserRole } from '../../types/database'
 
 const roleLabels: Record<UserRole, string> = { admin: 'Administrator', spielleiter: 'Spielleiter', user: 'Spieler' }
+const lastSignInFormatter = new Intl.DateTimeFormat('de-DE', { dateStyle: 'medium', timeStyle: 'short' })
 
 export function AdminUsersPage() {
   const { profile: ownProfile } = useAuth()
@@ -132,6 +133,9 @@ export function AdminUsersPage() {
                   )}
                 </p>
                 <p className="truncate text-sm text-slate-500">{p.email}</p>
+                <p className="truncate text-xs text-slate-400">
+                  Letzter Login: {p.last_sign_in_at ? lastSignInFormatter.format(new Date(p.last_sign_in_at)) : 'noch nie'}
+                </p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 {!isTrueAdmin && p.role === 'admin' ? (
