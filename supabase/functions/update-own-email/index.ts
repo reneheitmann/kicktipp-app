@@ -9,7 +9,7 @@
 
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { sendSmtpMail, SmtpError } from './smtp.ts'
-import { corsHeadersForOrigin } from '../_shared/cors.ts'
+import { corsHeadersForOrigin, isAllowedOrigin } from '../_shared/cors.ts'
 
 type JsonResponder = (body: unknown, status?: number) => Response
 
@@ -88,7 +88,17 @@ async function handle(
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return jsonResponse({ error: 'Bitte eine gültige E-Mail-Adresse angeben.' }, 400)
   }
-  if (!body.redirectTo) {
+
+  // redirectTo kommt vom Client, wird aber nie roh in den verschickten Link
+  // übernommen (Open-Redirect-Risiko) – nur der Origin-Teil wird verwendet,
+  // und auch nur, wenn er in derselben Allowlist wie CORS steht.
+  let redirectOrigin: string
+  try {
+    redirectOrigin = new URL(body.redirectTo ?? '').origin
+  } catch {
+    return jsonResponse({ error: 'Ungültiger Request-Body' }, 400)
+  }
+  if (!isAllowedOrigin(redirectOrigin)) {
     return jsonResponse({ error: 'Ungültiger Request-Body' }, 400)
   }
 
@@ -120,7 +130,7 @@ async function handle(
     return jsonResponse({ error: upsertError.message }, 500)
   }
 
-  const confirmLink = `${body.redirectTo.replace(/\/+$/, '')}/email-bestaetigen?token=${rawToken}`
+  const confirmLink = `${redirectOrigin}/email-bestaetigen?token=${rawToken}`
   const escapedConfirmLink = escapeHtml(confirmLink)
 
   try {

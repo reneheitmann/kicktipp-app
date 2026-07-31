@@ -32,3 +32,13 @@ export function corsHeadersForOrigin(origin: string | null): Record<string, stri
   if (!allowedOrigins.includes(origin)) return null
   return { ...BASE_HEADERS, 'Access-Control-Allow-Origin': origin, Vary: 'Origin' }
 }
+
+// Für Functions, die aus Client-Input einen Link bauen, der per Mail
+// verschickt wird (z. B. update-own-email): ein client-gelieferter Origin
+// darf dort NIE roh übernommen werden (Open Redirect – jeder eingeloggte
+// User könnte sonst über die eigene, vertrauenswürdige Absenderadresse
+// dieser App Phishing-Links an beliebige Adressen verschicken lassen).
+// Dieselbe ALLOWED_ORIGINS-Liste wie für CORS dient hier als Allowlist.
+export function isAllowedOrigin(origin: string): boolean {
+  return allowedOrigins.includes(origin)
+}
