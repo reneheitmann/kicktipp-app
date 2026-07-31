@@ -115,6 +115,13 @@ export function AppShell() {
                 Mein Profil
               </NavLink>
               <NavLink
+                to="/kontakt"
+                onClick={() => setAccountMenuOpen(false)}
+                className="block rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-100"
+              >
+                Kontakt
+              </NavLink>
+              <NavLink
                 to="/ueber"
                 onClick={() => setAccountMenuOpen(false)}
                 className="block rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-100"
@@ -312,6 +319,12 @@ function UserFooter({
           />
         )}
       </div>
+      <NavLink
+        to="/kontakt"
+        className="mt-1 block rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100"
+      >
+        Kontakt
+      </NavLink>
       <NavLink
         to="/ueber"
         className="mt-1 block rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100"

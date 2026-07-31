@@ -16,6 +16,7 @@ import { PlayerDetailPage } from './features/players/PlayerDetailPage'
 import { SeasonsPage } from './features/seasons/SeasonsPage'
 import { SeasonDetailPage } from './features/seasons/SeasonDetailPage'
 import { MyAccountPage } from './features/auth/MyAccountPage'
+import { ContactPage } from './features/contact/ContactPage'
 
 // Lazy geladen: Admin-/Import-/E-Mail-/Konten-Verwaltungsseiten sind
 // rollenbeschränkt und werden von den meisten Logins nie geöffnet – jeder
@@ -120,6 +121,7 @@ function AppRoutes() {
                 Saisons- oder Konten-Übersichtsseite für seine Rolle ausgeblendet ist. */}
             <Route path="/players/:playerId" element={<PlayerDetailPage />} />
             <Route path="/profil" element={<MyAccountPage />} />
+            <Route path="/kontakt" element={<ContactPage />} />
             <Route path="/ueber" element={<AboutPage />} />
 
             <Route element={<ProtectedRoute requiredPermission="page.vergleich.view" />}>
