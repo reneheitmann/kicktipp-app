@@ -1,56 +1,15 @@
-# Baut die statische Vite/React-Produktions-Version und liefert sie über
-# nginx aus. Das Supabase-Backend läuft weiterhin in der Cloud – dieser
-# Container enthält ausschließlich das Frontend, keine Server-Logik.
+# Liefert die statischen Vite/React-Produktions-Builds über nginx aus. Das
+# Supabase-Backend läuft weiterhin in der Cloud – dieser Container enthält
+# ausschließlich das Frontend, keine Server-Logik.
 #
-# VITE_SUPABASE_URL/VITE_SUPABASE_ANON_KEY werden von Vite zur Build-Zeit fest
-# ins JS-Bundle eingebaut (kein Laufzeit-Env möglich) – daher als Build-Args,
-# nicht als normale Container-Umgebungsvariablen.
-
-FROM node:24-alpine AS build
-WORKDIR /app
-
-COPY package.json package-lock.json ./
-RUN npm ci
-
-COPY . .
-
-ARG VITE_SUPABASE_URL
-ARG VITE_SUPABASE_ANON_KEY
-ENV VITE_SUPABASE_URL=$VITE_SUPABASE_URL
-ENV VITE_SUPABASE_ANON_KEY=$VITE_SUPABASE_ANON_KEY
-
-# Nur für die "Über"-Seite (Commit/Build-Datum/Änderungsprotokoll) – .git ist
-# per .dockerignore nicht im Build-Kontext, daher von GitHub Actions als
-# Build-Arg hereingereicht statt hier per `git log` ermittelt (siehe
-# docker-publish.yml).
-ARG VITE_APP_COMMIT_SHA
-ARG VITE_APP_BUILD_DATE
-ARG VITE_APP_CHANGELOG
-ENV VITE_APP_COMMIT_SHA=$VITE_APP_COMMIT_SHA
-ENV VITE_APP_BUILD_DATE=$VITE_APP_BUILD_DATE
-ENV VITE_APP_CHANGELOG=$VITE_APP_CHANGELOG
-
-# "production" oder "beta" – von GitHub Actions je nach Branch gesetzt (siehe
-# docker-publish.yml), zeigt eine BETA-Kennzeichnung in der App an.
-ARG VITE_APP_CHANNEL=production
-ENV VITE_APP_CHANNEL=$VITE_APP_CHANNEL
-
-# Nur auf beta gesetzt (siehe docker-publish.yml): Gesamtzahl der Commits auf
-# dem beta-Branch. package.json bumpt dort bewusst nie (würde bei jedem Merge
-# mit main zu Versions-Konflikten führen) – dieser Zähler sorgt trotzdem für
-# eine sich sichtbar erhöhende Versionsanzeige ("1.1.7_beta.42" statt
-# dauerhaft der letzten von main gemergten Zahl). Siehe vite.config.ts.
-ARG VITE_APP_BETA_BUILD_NUMBER
-ENV VITE_APP_BETA_BUILD_NUMBER=$VITE_APP_BETA_BUILD_NUMBER
-
-# Ebenfalls nur auf beta: die zuletzt tatsächlich von main veröffentlichte
-# Versionsnummer (aus origin/mains package.json gelesen, siehe
-# docker-publish.yml) – NICHT das lokale package.json, das auf beta nie
-# aktualisiert wird und sonst dauerhaft eine veraltete Zahl zeigen würde.
-ARG VITE_APP_BETA_BASE_VERSION
-ENV VITE_APP_BETA_BASE_VERSION=$VITE_APP_BETA_BASE_VERSION
-
-RUN npm run build
+# Anders als früher baut dieses Image nicht mehr selbst per npm/Vite: der
+# GitHub-Actions-Workflow (docker-publish.yml) checkt main UND beta separat
+# aus, baut beide Branches getrennt (unterschiedliche VITE_APP_CHANNEL/
+# base-Pfade, siehe vite.config.ts) und liefert die fertigen dist-Ordner als
+# dist-prod/dist-beta in den Build-Kontext – ein Container liefert dadurch
+# beide Versionen gleichzeitig aus (Prod unter /, Beta unter /beta/, siehe
+# nginx.conf.template), statt zwei komplett getrennte Container/Images zu
+# brauchen.
 
 FROM nginx:alpine AS runtime
 
@@ -63,7 +22,8 @@ FROM nginx:alpine AS runtime
 RUN apk add --no-cache tzdata
 ENV TZ=Europe/Berlin
 
-COPY --from=build /app/dist /usr/share/nginx/html
+COPY dist-prod /usr/share/nginx/html
+COPY dist-beta /usr/share/nginx/html/beta
 
 # .template statt direkt nach conf.d – das offizielle nginx-Image ersetzt
 # ${LISTEN_PORT} beim Container-Start automatisch per envsubst (siehe

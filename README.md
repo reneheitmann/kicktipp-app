@@ -131,10 +131,16 @@ einer Vorschau „nach unten"), jeweils jederzeit rückgängig zu machen.
 ## Branches & Deployment
 
 - **`beta`** – aktiver Entwicklungsbranch, Standard-Ziel für Commits/Pushes.
-  Baut ein Docker-Image mit Tag `:beta` (eigener Test-Container).
-- **`main`** – Produktion, wird bewusst per Merge von `beta` befördert.
-  Baut das Docker-Image mit Tag `:latest`; die Version in `package.json`
-  wird dabei automatisch erhöht (Minor bei neuer DB-Migration, sonst Patch).
+- **`main`** – Produktion, wird bewusst per Merge von `beta` befördert. Die
+  Version in `package.json` wird dabei automatisch erhöht (Minor bei neuer
+  DB-Migration, sonst Patch).
+
+Ein Push nach `main` **oder** `beta` baut immer **ein einziges** Docker-Image
+(`:latest`), das beide Versionen gleichzeitig enthält: `main` unter `/`,
+`beta` unter `/beta/` – ausgeliefert von einem einzelnen Container, kein
+separates Beta-Deployment mehr. Wer die Beta-Version sehen darf, entscheidet
+das granulare Recht `beta.access` (vergeben über **Rollen & Berechtigungen**);
+der Wechsel passiert über einen Link im eigenen Profil.
 
 `main` und `beta` teilen sich weiterhin ein einzelnes Supabase-Projekt (ein
 eigenes Beta-Projekt scheiterte am 2-Projekte-Limit des Free-Tiers) – vor
@@ -147,7 +153,7 @@ Daten (inkl. `auth.users`, echte Nutzerdaten) lassen sich jederzeit per
 manuellem GitHub-Actions-Workflow `sync-dev-from-prod.yml` komplett aus Prod
 auffrischen – überschreibt dabei den kompletten Dev-Datenbestand.
 
-Beide Branches werden bei jedem Push automatisch als Docker-Image gebaut und
-zu GHCR veröffentlicht (`.github/workflows/docker-publish.yml`); ein
-Watchtower-Container auf dem Ziel-Unraid-Host zieht neue Images automatisch.
-Details zum Deployment: [`docs/unraid-deployment.md`](docs/unraid-deployment.md).
+Bei jedem Push nach `main` oder `beta` baut `.github/workflows/docker-publish.yml`
+beide Branches unabhängig voneinander und veröffentlicht das gemeinsame Image
+zu GHCR; ein Watchtower-Container auf dem Ziel-Unraid-Host zieht neue Images
+automatisch. Details zum Deployment: [`docs/unraid-deployment.md`](docs/unraid-deployment.md).

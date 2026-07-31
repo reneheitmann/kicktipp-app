@@ -77,10 +77,20 @@ function PageLoading() {
 // Route/restlicher Session die normale App überdecken können, siehe
 // AuthContext.ts.
 function AppRoutes() {
-  const { passwordRecovery } = useAuth()
+  const { passwordRecovery, profile, loading, can } = useAuth()
 
   if (passwordRecovery) {
     return <ResetPasswordPage />
+  }
+
+  // Läuft dieses Bundle als Beta-Build (siehe vite.config.ts, ausgeliefert
+  // unter /beta/ desselben Containers, siehe nginx.conf.template) – ohne
+  // beta.access-Recht landet man zurück auf der Produktivversion, statt die
+  // Beta-UI überhaupt zu sehen. Erst nach dem Laden des Profils prüfbar
+  // (siehe ProtectedRoute.tsx für dasselbe Ladezustands-Muster).
+  if (import.meta.env.VITE_APP_CHANNEL === 'beta' && !loading && profile && !can('beta.access')) {
+    window.location.replace('/')
+    return null
   }
 
   return (
@@ -157,7 +167,7 @@ function AppRoutes() {
 
 export default function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={import.meta.env.BASE_URL}>
       <AppBrandingProvider>
         <AuthProvider>
           <AppRoutes />

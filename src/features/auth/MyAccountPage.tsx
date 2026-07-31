@@ -12,7 +12,8 @@ import type { PasswordPolicy, Player, UserRole } from '../../types/database'
 const roleLabels = { admin: 'Administrator', spielleiter: 'Spielleiter', user: 'Spieler' } as const
 
 export function MyAccountPage() {
-  const { profile, refreshProfile, switchToRole, switchBackToBaseRole } = useAuth()
+  const { profile, refreshProfile, switchToRole, switchBackToBaseRole, can } = useAuth()
+  const isBetaBuild = import.meta.env.VITE_APP_CHANNEL === 'beta'
 
   const [name, setName] = useState(profile?.name ?? '')
   const [nameError, setNameError] = useState<string | null>(null)
@@ -218,6 +219,41 @@ export function MyAccountPage() {
               </li>
             ))}
           </ul>
+        </div>
+      )}
+
+      {(isBetaBuild || can('beta.access')) && (
+        <div className="mb-6 rounded-xl border border-slate-200 bg-white p-4">
+          <h2 className="mb-1 text-base font-semibold text-slate-900">Beta-Version</h2>
+          {isBetaBuild ? (
+            <>
+              <p className="mb-3 text-sm text-slate-500">
+                Du nutzt gerade die Beta-Version mit neueren, noch nicht final freigegebenen Funktionen – dieselbe
+                Anmeldung, dieselben Daten wie die Produktivversion.
+              </p>
+              {/* Normaler Link statt React-Router-Link: /beta/ ist ein eigenes
+                  Bundle, ein Wechsel braucht einen echten Seitenaufruf. */}
+              <a
+                href="/"
+                className="inline-block rounded-lg bg-[var(--color-primary)] px-4 py-2.5 text-sm font-medium text-white transition hover:bg-[var(--color-primary-hover)]"
+              >
+                Zurück zur Produktivversion
+              </a>
+            </>
+          ) : (
+            <>
+              <p className="mb-3 text-sm text-slate-500">
+                Teste neue, noch nicht final freigegebene Funktionen – dieselbe Anmeldung, dieselben Daten wie die
+                Produktivversion.
+              </p>
+              <a
+                href="/beta/"
+                className="inline-block rounded-lg bg-[var(--color-primary)] px-4 py-2.5 text-sm font-medium text-white transition hover:bg-[var(--color-primary-hover)]"
+              >
+                Beta-Version testen
+              </a>
+            </>
+          )}
         </div>
       )}
 

@@ -33,6 +33,13 @@ export default defineConfig({
   server: {
     host: true,
   },
+  // Beta läuft im selben Container/derselben Origin wie Prod, nur unter dem
+  // Unterpfad /beta/ (siehe nginx.conf.template) – dafür müssen Asset-URLs
+  // relativ zu diesem Pfad aufgelöst werden. Vite rewritet dafür sowohl
+  // index.html-Referenzen (z. B. <link href="/icon.png">) als auch alle
+  // Bundle-Assets automatisch und setzt import.meta.env.BASE_URL passend,
+  // das App.tsx wiederum als React-Router-basename verwendet.
+  base: process.env.VITE_APP_CHANNEL === 'beta' ? '/beta/' : '/',
   define: {
     __APP_VERSION__: JSON.stringify(displayVersion),
   },

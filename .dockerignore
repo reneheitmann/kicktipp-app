@@ -8,3 +8,9 @@ dist-ssr
 .claude
 supabase/.temp
 *.log
+
+# Volle Branch-Checkouts, die docker-publish.yml vor dem Docker-Build anlegt,
+# um main und beta getrennt zu bauen (siehe Dockerfile) – nur die daraus
+# erzeugten dist-prod/dist-beta-Ordner werden im Image gebraucht.
+build-main
+build-beta
