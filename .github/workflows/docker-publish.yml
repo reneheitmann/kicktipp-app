@@ -70,6 +70,12 @@ jobs:
         with:
           node-version: 24
           cache: npm
+          # Beide Checkouts liegen in Unterordnern (build-main/build-beta,
+          # siehe oben) statt im Workspace-Root – ohne explizite Pfade findet
+          # setup-node dort kein package-lock.json.
+          cache-dependency-path: |
+            build-main/package-lock.json
+            build-beta/package-lock.json
 
       - name: Abhängigkeiten installieren (main)
         working-directory: build-main
