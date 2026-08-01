@@ -19,12 +19,18 @@ diese App bildet ausschließlich die Verwaltung/Abrechnung drumherum ab.
   Verknüpfung mit Benutzerkonten
 - **Kicktipp-Import** – Tabellen-Import aus Kicktipp.de (Teilnehmer/Tipper)
 - **Benutzerverwaltung** – Rollen (`admin`, `spielleiter`, `user`), Sperren,
-  Passwort-Reset, echter Rollenwechsel (Admin → Spielleiter oder Spieler,
-  Spielleiter → Spieler; keine reine Client-Vorschau, jederzeit rückgängig)
+  Passwort-Reset, letzter Login; per granularem Recht (`users.manage`) auch
+  an Spielleiter delegierbar, Admin-Konten bleiben davon immer ausgenommen;
+  echter Rollenwechsel (Admin → Spielleiter oder Spieler, Spielleiter →
+  Spieler; keine reine Client-Vorschau, jederzeit rückgängig)
+- **Mein Profil** – Name, Passwort und E-Mail-Adresse (per Bestätigungslink)
+  selbst ändern
 - **Feingranulare Berechtigungen** – rollenbasierte Rechte pro Seite/Aktion,
   unabhängig von den drei Basisrollen konfigurierbar
 - **E-Mail-Versand** – Einzel-/Massen-Mails an Spieler mit Vorlagen, eigener
   SMTP-Client (kein Drittanbieter-Mailversand)
+- **Kontakt** – Formular für jeden User, verschickt eine Nachricht per E-Mail
+  an den Spielleiter (Antworten geht direkt an den Absender)
 - **Erscheinungsbild** – App-Name, Icon/Favicon und Primärfarbe zur Laufzeit
   admin-konfigurierbar
 - **Passwort-Richtlinie** – Mindestlänge, Zeichenklassen, Wiederverwendungssperre
@@ -79,7 +85,8 @@ supabase functions deploy <function-name>
 
 Alle Edge Functions (`admin-create-user`, `admin-update-user`,
 `update-own-password`, `update-own-email`, `confirm-email-change`, `send-email`,
-`send-bulk-email`, `send-password-reset`) benötigen keine zusätzlichen Secrets –
+`send-bulk-email`, `send-password-reset`, `send-contact-message`) benötigen
+keine zusätzlichen Secrets –
 `SUPABASE_URL` und `SUPABASE_SERVICE_ROLE_KEY` stehen Supabase Edge Functions
 automatisch zur Verfügung.
 
@@ -105,6 +112,7 @@ src/
   features/password-policy/ Passwort-Richtlinie
   features/session-policy/ Admin-konfigurierbares Session-Timeout
   features/logs/           Fehler-/Diagnose-Logs
+  features/contact/        Kontaktformular (Mail an den Spielleiter)
   lib/                     Supabase-Client, Formatierung, Logging, Validierung
   pages/                   Einfache Seiten ohne eigenes Feature-Modul
   types/                   Handgepflegte DB-Typen
@@ -123,7 +131,11 @@ RLS abgesichert (nicht nur im Frontend versteckt) – siehe
 `supabase/migrations/0001_roles_profiles.sql`. Zusätzlich existiert ein
 feingranulares Berechtigungssystem (`role_permissions`-Tabelle), über das
 einzelne Seiten/Aktionen unabhängig von der Basisrolle freigeschaltet werden
-können (**Rollen & Berechtigungen** im Admin-Bereich). Admins können sich
+können (**Rollen & Berechtigungen** im Admin-Bereich) – das schließt die
+Benutzerverwaltung selbst mit ein (`users.manage`): ein Spielleiter mit
+diesem Recht kann Benutzer anlegen/bearbeiten/sperren, Admin-Konten bleiben
+dabei serverseitig (RLS + Trigger + Edge Functions) immer ausgenommen, auch
+vor einer Rechteausweitung zum Admin. Admins können sich
 zudem real in die Rolle „Spielleiter" oder „Spieler" versetzen, Spielleiter
 nur in „Spieler" (kein Weg zu „Admin" – das wäre eine Rechteausweitung statt
 einer Vorschau „nach unten"), jeweils jederzeit rückgängig zu machen.
