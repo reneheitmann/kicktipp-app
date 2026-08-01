@@ -18,6 +18,10 @@ diese App bildet ausschließlich die Verwaltung/Abrechnung drumherum ab.
 - **Spielerverwaltung** – Spieler-Stammdaten inkl. Kicktipp-Namen-Mapping,
   Verknüpfung mit Benutzerkonten
 - **Kicktipp-Import** – Tabellen-Import aus Kicktipp.de (Teilnehmer/Tipper)
+- **Kicktipp-Seite** – bettet die Kicktipp-Gruppenseite direkt per offiziellem
+  Kicktipp-Widget-Script ein (eigener Menüpunkt, kein separater Tab nötig)
+- **Menü verwalten** – admin-editierbare Reihenfolge und Bezeichnungen der
+  Menüpunkte, gilt app-weit für alle Rollen
 - **Benutzerverwaltung** – Rollen (`admin`, `spielleiter`, `user`), Sperren,
   Passwort-Reset, letzter Login; per granularem Recht (`users.manage`) auch
   an Spielleiter delegierbar, Admin-Konten bleiben davon immer ausgenommen;
@@ -113,6 +117,8 @@ src/
   features/session-policy/ Admin-konfigurierbares Session-Timeout
   features/logs/           Fehler-/Diagnose-Logs
   features/contact/        Kontaktformular (Mail an den Spielleiter)
+  features/kicktipp-widget/ Eingebettete Kicktipp-Seite (offizielles Widget-Script)
+  features/nav-settings/   Admin-editierbare Menü-Reihenfolge
   lib/                     Supabase-Client, Formatierung, Logging, Validierung
   pages/                   Einfache Seiten ohne eigenes Feature-Modul
   types/                   Handgepflegte DB-Typen

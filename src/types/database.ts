@@ -42,6 +42,7 @@ export type PermissionKey =
   | 'page.email_send.view'
   | 'page.users.view'
   | 'beta.access'
+  | 'page.kicktipp.view'
 
 export type RolePermission = {
   role: UserRole
@@ -268,6 +269,22 @@ export type PasswordPolicy = {
 export type SessionPolicy = {
   id: string
   max_duration_hours: number
+  updated_at: string
+  updated_by: string | null
+}
+
+// Admin-editierbare Menü-Reihenfolge + -Bezeichnungen, siehe
+// supabase/migrations/0054_nav_settings_and_kicktipp_permission.sql,
+// 0055_nav_settings_item_labels.sql und src/features/nav-settings/.
+// item_order ist ein Array von navItems.ts-"to"-Pfaden; Einträge, die hier
+// nicht vorkommen, behalten ihre ursprüngliche Code-Reihenfolge (siehe
+// applyCustomOrder()). item_labels ist eine Map von "to"-Pfad auf
+// überschriebenen Anzeigetext; fehlt ein Pfad, gilt das Code-Label (siehe
+// applyCustomLabels()).
+export type NavSettings = {
+  id: string
+  item_order: string[]
+  item_labels: Record<string, string>
   updated_at: string
   updated_by: string | null
 }
@@ -667,6 +684,24 @@ export interface Database {
         Update: {
           id?: string
           max_duration_hours?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      nav_settings: {
+        Row: NavSettings
+        Insert: {
+          id?: string
+          item_order?: string[]
+          item_labels?: Record<string, string>
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          id?: string
+          item_order?: string[]
+          item_labels?: Record<string, string>
           updated_at?: string
           updated_by?: string | null
         }
