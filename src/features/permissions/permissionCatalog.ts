@@ -145,4 +145,10 @@ export const permissionCatalog: PermissionCatalogEntry[] = [
     description:
       'Schaltet den Wechsel zur Beta-Version im eigenen Profil frei (dieselbe Anmeldung, dieselben Daten wie die Produktivversion, nur mit neueren, noch nicht final freigegebenen Funktionen).',
   },
+  {
+    key: 'page.kicktipp.view',
+    label: 'Seite sichtbar',
+    page: 'Kicktipp',
+    description: 'Blendet die eingebettete Kicktipp-Seite im Menü und als Route komplett aus.',
+  },
 ]

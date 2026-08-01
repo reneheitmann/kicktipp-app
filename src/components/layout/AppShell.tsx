@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { useAuth } from '../../features/auth/useAuth'
 import { useAppBranding } from '../../features/app-settings/useAppBranding'
+import { getNavSettings, type NavSettingsValue } from '../../features/nav-settings/navSettingsApi'
 import { Modal } from '../ui/Modal'
-import { groupNavItems, visibleNavItems, type NavItem } from './navItems'
+import { applyCustomLabels, applyCustomOrder, groupNavItems, navItems, visibleNavItems, type NavItem } from './navItems'
 
 const linkBaseClasses = 'flex items-center rounded-lg px-3 py-2.5 text-sm font-medium transition'
 const linkActiveClasses = 'bg-[var(--color-primary)] text-white'
@@ -14,7 +15,21 @@ const roleLabels = { admin: 'Administrator', spielleiter: 'Spielleiter', user: '
 export function AppShell() {
   const { profile, signOut, can } = useAuth()
   const { appName } = useAppBranding()
-  const items = visibleNavItems(profile?.role, can)
+  // Admin-konfigurierbare Reihenfolge/Bezeichnungen (siehe nav-settings-
+  // Feature) – einmal pro Shell-Mount geladen, kein globaler Context nötig,
+  // da AppShell der einzige Ort ist, der navItems rendert. Leerer Zustand
+  // vor dem Laden lässt applyCustomOrder/applyCustomLabels unverändert.
+  const [navSettings, setNavSettings] = useState<NavSettingsValue>({ order: [], labels: {} })
+  useEffect(() => {
+    getNavSettings()
+      .then(setNavSettings)
+      .catch(() => {
+        // Einstellungen konnten nicht geladen werden – Navigation fällt auf
+        // die Code-Reihenfolge/-Labels zurück, kein Grund, die App zu blockieren.
+      })
+  }, [])
+  const customizedItems = applyCustomLabels(applyCustomOrder(navItems, navSettings.order), navSettings.labels)
+  const items = visibleNavItems(profile?.role, can, customizedItems)
   const [accountMenuOpen, setAccountMenuOpen] = useState(false)
   const [navMenuOpen, setNavMenuOpen] = useState(false)
 

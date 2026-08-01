@@ -17,6 +17,7 @@ import { SeasonsPage } from './features/seasons/SeasonsPage'
 import { SeasonDetailPage } from './features/seasons/SeasonDetailPage'
 import { MyAccountPage } from './features/auth/MyAccountPage'
 import { ContactPage } from './features/contact/ContactPage'
+import { KicktippWidgetPage } from './features/kicktipp-widget/KicktippWidgetPage'
 
 // Lazy geladen: Admin-/Import-/E-Mail-/Konten-Verwaltungsseiten sind
 // rollenbeschränkt und werden von den meisten Logins nie geöffnet – jeder
@@ -44,6 +45,9 @@ const PasswordPolicyPage = lazy(() =>
 )
 const SessionPolicyPage = lazy(() =>
   import('./features/session-policy/SessionPolicyPage').then((m) => ({ default: m.SessionPolicyPage })),
+)
+const NavSettingsPage = lazy(() =>
+  import('./features/nav-settings/NavSettingsPage').then((m) => ({ default: m.NavSettingsPage })),
 )
 const SeasonRankingPage = lazy(() =>
   import('./features/seasons/SeasonRankingPage').then((m) => ({ default: m.SeasonRankingPage })),
@@ -128,6 +132,10 @@ function AppRoutes() {
               <Route path="/vergleich" element={<SeasonComparisonPage />} />
             </Route>
 
+            <Route element={<ProtectedRoute requiredPermission="page.kicktipp.view" />}>
+              <Route path="/kicktipp" element={<KicktippWidgetPage />} />
+            </Route>
+
             <Route element={<ProtectedRoute requiredPermission={['players.manage', 'page.players.view']} />}>
               <Route path="/players" element={<PlayersPage />} />
             </Route>
@@ -157,6 +165,7 @@ function AppRoutes() {
               <Route path="/admin/logs" element={<LogsPage />} />
               <Route path="/admin/password-policy" element={<PasswordPolicyPage />} />
               <Route path="/admin/session-policy" element={<SessionPolicyPage />} />
+              <Route path="/admin/menu" element={<NavSettingsPage />} />
             </Route>
           </Route>
         </Route>
