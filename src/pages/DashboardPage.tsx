@@ -71,7 +71,9 @@ export function DashboardPage() {
         // Entwurf-/archivierte Saisons zählen nicht in saisonübergreifenden
         // Geld-Summen mit (siehe seasonStatus.ts) – eine explizit aufgerufene
         // Einzelsaison (SeasonBalancesPage) bleibt davon unberührt.
-        const eligibleSeasonIds = new Set(seasons.filter((s) => isSeasonBalanceEligible(s.status)).map((s) => s.id))
+        const eligibleSeasonIds = new Set(
+          seasons.filter((s) => isSeasonBalanceEligible(s.status, canManage)).map((s) => s.id),
+        )
         const abgerechnetMatchdayIds = new Set(abgerechneteMatchdays.map((m) => m.id))
 
         const linkedPlayerIds = new Set(links.filter((l) => l.profile_id === profile!.id).map((l) => l.player_id))

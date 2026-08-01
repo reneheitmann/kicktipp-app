@@ -17,12 +17,18 @@ export const SEASON_STATUS_TONE: Record<SeasonStatus, 'positive' | 'neutral'> = 
   archiviert: 'neutral',
 }
 
-/** Nur Entwurf/Archiviert werden aus saisonübergreifenden Geld-Summen
- * ausgeklammert (Dashboard, Konten-Übersicht, Saisonvergleich) – eine
- * explizit aufgerufene Einzelsaison zeigt ihre eigenen Zahlen unabhängig
- * davon weiterhin an, siehe SeasonDetailPage.tsx/SeasonBalancesPage.tsx. */
-export function isSeasonBalanceEligible(status: SeasonStatus): boolean {
-  return status === 'aktiv' || status === 'abgeschlossen'
+/** Entwurf/Archiviert werden aus saisonübergreifenden Geld-Summen
+ * ausgeklammert (Dashboard, Konten-Übersicht, Saisonvergleich, Spieler-
+ * Detail) – eine explizit aufgerufene Einzelsaison zeigt ihre eigenen Zahlen
+ * unabhängig davon weiterhin an, siehe SeasonDetailPage.tsx/
+ * SeasonBalancesPage.tsx. Ausnahme: wer Konten verwalten darf
+ * (accounts.manage, siehe useAuth().can), muss Zahlungen/Auszahlungen einer
+ * Entwurf-Saison bereits während der Vorbereitung sehen können, um sie dort
+ * erfassen/prüfen zu können – Archiviert bleibt für alle ausgeklammert
+ * (abgeschlossen und bewusst aus laufenden Aggregaten entfernt). */
+export function isSeasonBalanceEligible(status: SeasonStatus, canManageAccounts: boolean): boolean {
+  if (status === 'aktiv' || status === 'abgeschlossen') return true
+  return canManageAccounts && status === 'entwurf'
 }
 
 /** Nur diese Status erlauben noch Änderungen an Teilnehmern, Gewinnregelung

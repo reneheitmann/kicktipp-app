@@ -12,6 +12,7 @@ import { listMatchdayCountsBySeasonId } from '../seasons/matchdaysApi'
 import { listTransactionsForSeasons } from './balancesApi'
 import { computePlayerBalances } from './balanceCalculations'
 import { isSeasonBalanceEligible } from '../seasons/seasonStatus'
+import { useAuth } from '../auth/useAuth'
 import type { Player, Season, SeasonParticipant, Transaction, Zahlung } from '../../types/database'
 
 const lineColors = ['#0f172a', '#2563eb', '#16a34a', '#d97706', '#dc2626', '#7c3aed', '#0891b2', '#be185d']
@@ -23,6 +24,8 @@ const lineColors = ['#0f172a', '#2563eb', '#16a34a', '#d97706', '#dc2626', '#7c3
 const DEFAULT_CHART_PLAYER_COUNT = 4
 
 export function SeasonComparisonPage() {
+  const { can } = useAuth()
+  const canManageAccounts = can('accounts.manage')
   const [seasons, setSeasons] = useState<Season[]>([])
   const [players, setPlayers] = useState<Player[]>([])
   const [transactions, setTransactions] = useState<Transaction[]>([])
@@ -55,7 +58,7 @@ export function SeasonComparisonPage() {
         // Definition immer eine Mehrsaison-Aggregation.
         setSeasons(
           seasonData
-            .filter((s) => isSeasonBalanceEligible(s.status))
+            .filter((s) => isSeasonBalanceEligible(s.status, canManageAccounts))
             .sort((a, b) => a.start_date.localeCompare(b.start_date)),
         )
         setPlayers(playerData)
@@ -64,7 +67,7 @@ export function SeasonComparisonPage() {
       })
       .catch((err) => setError(err instanceof Error ? err.message : 'Saisonvergleich konnte nicht geladen werden.'))
       .finally(() => setLoading(false))
-  }, [])
+  }, [canManageAccounts])
 
   // Geld-Daten serverseitig auf die (bereits auf "eligible" eingegrenzten)
   // Saisonen beschränkt laden, statt (wie zuvor) die kompletten Tabellen zu

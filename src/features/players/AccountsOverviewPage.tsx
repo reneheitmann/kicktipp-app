@@ -14,10 +14,12 @@ import { listSeasons } from '../seasons/seasonsApi'
 import { listTransactionsForSeasons } from '../balances/balancesApi'
 import { computeAccountBalance, computeTotalOutstanding } from './accountBalance'
 import { isSeasonBalanceEligible } from '../seasons/seasonStatus'
+import { useAuth } from '../auth/useAuth'
 import { ZahlungForm } from './ZahlungForm'
 import type { Player, Season, SeasonParticipant, Transaction, Zahlung } from '../../types/database'
 
 export function AccountsOverviewPage() {
+  const { can } = useAuth()
   const [players, setPlayers] = useState<Player[]>([])
   const [seasons, setSeasons] = useState<Season[]>([])
   const [participants, setParticipants] = useState<SeasonParticipant[]>([])
@@ -69,7 +71,9 @@ export function AccountsOverviewPage() {
   // Ohne Filter (Aggregat über alle Saisons) zählen Entwurf/Archiviert nicht
   // mit; eine explizit ausgewählte Einzelsaison zeigt ihre Zahlen dagegen
   // unabhängig vom Status (siehe seasonStatus.ts).
-  const eligibleSeasonIds = seasons.filter((s) => isSeasonBalanceEligible(s.status)).map((s) => s.id)
+  const eligibleSeasonIds = seasons
+    .filter((s) => isSeasonBalanceEligible(s.status, can('accounts.manage')))
+    .map((s) => s.id)
 
   async function reload() {
     const targetSeasonIds = seasonFilter ? [seasonFilter] : eligibleSeasonIds
