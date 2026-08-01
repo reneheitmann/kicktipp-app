@@ -25,10 +25,5 @@ export function KicktippWidgetPage() {
     }
   }, [])
 
-  return (
-    <div className="p-4 sm:p-6">
-      <h1 className="mb-6 text-xl font-semibold text-slate-900">Kicktipp</h1>
-      <div ref={containerRef} />
-    </div>
-  )
+  return <div ref={containerRef} />
 }
