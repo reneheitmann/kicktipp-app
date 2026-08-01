@@ -10,7 +10,9 @@ diese App bildet ausschließlich die Verwaltung/Abrechnung drumherum ab.
   Gesamtwertung, Saisonvergleich (Liniendiagramm über mehrere Saisons).
   Lebenszyklus Entwurf → Aktiv → Abgeschlossen → Archiviert: Entwurf/Archiviert
   sind für normale Nutzer unsichtbar und zählen nicht in saisonübergreifenden
-  Geld-Summen mit; Abgeschlossen/Archiviert sperrt weitere Bearbeitung
+  Geld-Summen mit (Ausnahme: Nutzer mit `accounts.manage` sehen Entwurf-Saisons
+  bereits in den Geld-Summen, um Zahlungen während der Vorbereitung zu
+  erfassen); Abgeschlossen/Archiviert sperrt weitere Bearbeitung
   (Teilnehmer, Gewinnregelung, Spieltage) – einzige Ausnahme bleibt der
   Status-Schalter selbst, um eine Saison wieder zu öffnen
 - **Guthaben & Einsätze** – Kontenübersicht, Transaktionen, Ein-/Auszahlungen,

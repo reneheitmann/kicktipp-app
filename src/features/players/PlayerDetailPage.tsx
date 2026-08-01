@@ -89,7 +89,9 @@ export function PlayerDetailPage() {
   // Ohne Filter (Aggregat über alle Saisons) zählen Entwurf/Archiviert nicht
   // mit; eine explizit ausgewählte Einzelsaison zeigt ihre Zahlen dagegen
   // unabhängig vom Status (siehe seasonStatus.ts).
-  const eligibleSeasonIds = new Set(seasons.filter((s) => isSeasonBalanceEligible(s.status)).map((s) => s.id))
+  const eligibleSeasonIds = new Set(
+    seasons.filter((s) => isSeasonBalanceEligible(s.status, can('accounts.manage'))).map((s) => s.id),
+  )
   const filteredParticipants = seasonFilter
     ? participants.filter((p) => p.season_id === seasonFilter)
     : participants.filter((p) => eligibleSeasonIds.has(p.season_id))
