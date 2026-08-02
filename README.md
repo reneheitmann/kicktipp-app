@@ -8,8 +8,12 @@ diese App bildet ausschließlich die Verwaltung/Abrechnung drumherum ab.
 
 - **Saisons & Spieltage** – Anlegen, Kopieren, Spieltag-Import aus Kicktipp,
   Gesamtwertung, Saisonvergleich (Liniendiagramm über mehrere Saisons, zeigt
-  alle aktiven Spieler, eigene Standardauswahl statt der größten Gewinner/
-  Verlierer als Favoriten speicherbar, nur im eigenen Browser).
+  jedem aktiven Nutzer jeden aktiven Spieler mit Kicktipp-Name-Spalte und
+  Suche nach Name/Kicktipp-Name – der Gesamtsaldo je Spieler kommt über eine
+  security-definer-Funktion, die nur die fertig berechnete Summe offenlegt,
+  Einsätze/Zahlungen einzelner Spieler bleiben weiterhin privat; eigene
+  Standardauswahl statt der größten Gewinner/Verlierer als Favoriten
+  speicherbar, nur im eigenen Browser).
   Lebenszyklus Entwurf → Aktiv → Abgeschlossen → Archiviert: Entwurf/Archiviert
   sind für normale Nutzer unsichtbar und zählen nicht in saisonübergreifenden
   Geld-Summen mit (Ausnahme: Nutzer mit `accounts.manage` sehen Entwurf-Saisons
