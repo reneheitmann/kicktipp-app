@@ -12,7 +12,8 @@
 
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { sendSmtpMail, SmtpError } from '../_shared/smtp.ts'
-import { withSentFolderAppender, listFolders, ImapError } from '../_shared/imap.ts'
+import { archiveManyToSentFolder } from '../_shared/mailArchive.ts'
+import { logAppError } from '../_shared/logging.ts'
 import { corsHeadersForOrigin } from '../_shared/cors.ts'
 
 type JsonResponder = (body: unknown, status?: number) => Response
@@ -166,38 +167,9 @@ async function handle(
     }
   }
 
-  // Ablage im Gesendet-Ordner ist reine Komfortfunktion (siehe imap.ts) – ein
-  // Fehler dort darf den bereits erfolgreich verschickten E-Mails nicht als
-  // Fehlschlag angerechnet werden, landet aber als Warnung im Log.
-  if (sentRawMessages.length > 0 && settings.imap_host && settings.imap_port && settings.imap_sent_folder) {
-    const imapConfig = {
-      hostname: settings.imap_host,
-      port: settings.imap_port,
-      username: settings.smtp_username ?? '',
-      password: settings.smtp_password ?? '',
-    }
-    try {
-      await withSentFolderAppender({ ...imapConfig, sentFolder: settings.imap_sent_folder }, async (append) => {
-        for (const raw of sentRawMessages) await append(raw)
-      })
-    } catch (err) {
-      const message = err instanceof ImapError ? err.message : err instanceof Error ? err.message : String(err)
-      const availableFolders = await listFolders(imapConfig).catch(() => null)
-      await logAppError(
-        supabaseUrl,
-        serviceRoleKey,
-        'send-bulk-email',
-        `Kopie im Gesendet-Ordner konnte nicht abgelegt werden: ${message}`,
-        {
-          imap_host: settings.imap_host,
-          imap_sent_folder: settings.imap_sent_folder,
-          count: sentRawMessages.length,
-          available_folders: availableFolders,
-        },
-        'warn',
-      )
-    }
-  }
+  await archiveManyToSentFolder(supabaseUrl, serviceRoleKey, 'send-bulk-email', settings, sentRawMessages, {
+    count: sentRawMessages.length,
+  })
 
   // Einzelne fehlgeschlagene Empfänger sind für den sendenden User bereits im
   // Ergebnis (results) sichtbar – hier zusätzlich gesammelt für den Admin,
@@ -214,21 +186,5 @@ async function handle(
   }
 
   return jsonResponse({ results })
-}
-
-async function logAppError(
-  supabaseUrl: string,
-  serviceRoleKey: string,
-  source: string,
-  message: string,
-  details?: Record<string, unknown>,
-  level: 'error' | 'warn' = 'error',
-) {
-  try {
-    const client = createClient(supabaseUrl, serviceRoleKey)
-    await client.from('app_logs').insert({ level, source, message, details: details ?? null })
-  } catch {
-    // Logging darf den eigentlichen Response-Pfad nicht zusätzlich zum Absturz bringen.
-  }
 }
 

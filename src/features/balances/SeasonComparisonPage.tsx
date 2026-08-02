@@ -23,6 +23,31 @@ const lineColors = ['#0f172a', '#2563eb', '#16a34a', '#d97706', '#dc2626', '#7c3
 // erweitern.
 const DEFAULT_CHART_PLAYER_COUNT = 4
 
+// Verallgemeinert das Einzel-Favorit-Muster aus SeasonDetailPage.tsx
+// (FAVORITE_PLAYER_STORAGE_KEY) auf mehrere IDs, da hier bereits eine
+// Mehrfachauswahl existiert.
+const FAVORITE_PLAYER_IDS_STORAGE_KEY = 'kicktipp_favorite_player_ids'
+
+function readFavoritePlayerIds(): string[] {
+  try {
+    const raw = localStorage.getItem(FAVORITE_PLAYER_IDS_STORAGE_KEY)
+    const parsed = raw ? JSON.parse(raw) : []
+    return Array.isArray(parsed) ? parsed.filter((id) => typeof id === 'string') : []
+  } catch {
+    return []
+  }
+}
+
+function saveFavoritePlayerIds(ids: string[]): void {
+  try {
+    if (ids.length === 0) localStorage.removeItem(FAVORITE_PLAYER_IDS_STORAGE_KEY)
+    else localStorage.setItem(FAVORITE_PLAYER_IDS_STORAGE_KEY, JSON.stringify(ids))
+  } catch {
+    // z. B. privates Fenster ohne Storage-Zugriff – Auswahl bleibt dann nur
+    // für die aktuelle Sitzung erhalten, kein Absturz nötig.
+  }
+}
+
 export function SeasonComparisonPage() {
   const { can } = useAuth()
   const canManageAccounts = can('accounts.manage')
@@ -138,11 +163,18 @@ export function SeasonComparisonPage() {
       })
   }, [playerRows, sortKey, sortDirection, tableSearch])
 
-  // Vorauswahl beim ersten Laden: die größten Gewinner und Verlierer über
-  // alle Saisons hinweg, damit das Diagramm sofort etwas Aussagekräftiges
-  // zeigt, ohne dass erst manuell ausgewählt werden muss.
+  // Vorauswahl beim ersten Laden: zuerst die selbst gespeicherten Favoriten
+  // (siehe "Als Standardauswahl speichern" unten), sonst wie bisher die
+  // größten Gewinner und Verlierer über alle Saisons hinweg, damit das
+  // Diagramm sofort etwas Aussagekräftiges zeigt.
   useEffect(() => {
     if (playerRows.length === 0 || selectedPlayerIds.size > 0) return
+    const favoriteIds = new Set(readFavoritePlayerIds())
+    const favorites = playerRows.filter((r) => favoriteIds.has(r.player.id))
+    if (favorites.length > 0) {
+      setSelectedPlayerIds(new Set(favorites.map((r) => r.player.id)))
+      return
+    }
     const half = Math.ceil(DEFAULT_CHART_PLAYER_COUNT / 2)
     const top = playerRows.slice(0, half)
     const bottom = playerRows.slice(-half)
@@ -224,9 +256,18 @@ export function SeasonComparisonPage() {
             </div>
 
             <div className="flex h-72 w-full flex-col rounded-xl border border-slate-200 bg-white p-3 sm:w-64">
-              <p className="mb-2 text-xs font-medium text-slate-500">
-                Spieler im Diagramm ({selectedPlayers.length} ausgewählt)
-              </p>
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <p className="text-xs font-medium text-slate-500">
+                  Spieler im Diagramm ({selectedPlayers.length} ausgewählt)
+                </p>
+                <button
+                  type="button"
+                  onClick={() => saveFavoritePlayerIds([...selectedPlayerIds])}
+                  className="shrink-0 text-xs font-medium text-slate-500 hover:text-slate-900 hover:underline"
+                >
+                  Als Standard speichern
+                </button>
+              </div>
               <input
                 type="text"
                 value={playerSearch}
@@ -258,8 +299,9 @@ export function SeasonComparisonPage() {
             </div>
           </div>
           <p className="mb-6 text-xs text-slate-500">
-            Vorausgewählt sind die größten Gewinner und Verlierer über alle Saisons – weitere Spieler lassen sich
-            oben über die Suche gezielt hinzufügen.
+            Ohne gespeicherte Standardauswahl sind die größten Gewinner und Verlierer über alle Saisons
+            vorausgewählt – weitere Spieler lassen sich oben über die Suche gezielt hinzufügen und die aktuelle
+            Auswahl über "Als Standard speichern" für künftige Aufrufe merken (nur in diesem Browser).
           </p>
 
           <SearchInput

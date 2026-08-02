@@ -65,7 +65,7 @@ export function MyAccountPage() {
 
   useEffect(() => {
     if (!profile) return
-    Promise.all([listPlayers(), listPlayerProfileLinks()])
+    Promise.all([listPlayers({ includeInactive: true }), listPlayerProfileLinks()])
       .then(([players, links]) => {
         const linkedPlayerIds = new Set(links.filter((l) => l.profile_id === profile.id).map((l) => l.player_id))
         setLinkedPlayers(players.filter((p) => linkedPlayerIds.has(p.id)))

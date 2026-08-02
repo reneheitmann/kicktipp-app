@@ -63,7 +63,7 @@ export function ImportPage() {
   const [success, setSuccess] = useState<string | null>(null)
 
   useEffect(() => {
-    Promise.all([listSeasons(), listPlayers()])
+    Promise.all([listSeasons(), listPlayers({ includeInactive: true })])
       .then(([seasonData, playerData]) => {
         setSeasons(seasonData)
         setPlayers(playerData)

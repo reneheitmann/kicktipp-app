@@ -17,6 +17,17 @@ export const templateVariables: TemplateVariable[] = [
   { token: '{{Gewinne}}', label: 'Gewinne', description: 'Bereits verbuchte Gewinne in der gewählten Bezugssaison' },
 ]
 
+// Variablen für die beiden System-Vorlagen (Passwort-Reset/Neuanlage-
+// Einladung, siehe 0061_email_system_templates.sql) – andere Werte werden
+// serverseitig in send-password-reset/index.ts erst beim Versand ermittelt
+// (z. B. der Recovery-Link), daher ein eigenes, kleineres Set statt der
+// spielerbezogenen Variablen oben.
+export const systemTemplateVariables: TemplateVariable[] = [
+  { token: '{{Link}}', label: 'Link', description: 'Bestätigungs-/Passwort-Link' },
+  { token: '{{AppName}}', label: 'App-Name', description: 'Name der App (Erscheinungsbild-Einstellungen)' },
+  { token: '{{Name}}', label: 'Name', description: 'Name des Empfängers' },
+]
+
 export interface RecipientVariables {
   Spielername: string
   Vorname: string

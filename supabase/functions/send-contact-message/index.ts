@@ -11,7 +11,9 @@
 // das ist der ganze Zweck dieser Function.
 
 import { createClient } from 'jsr:@supabase/supabase-js@2'
-import { sendSmtpMail, SmtpError } from './smtp.ts'
+import { sendSmtpMail, SmtpError } from '../_shared/smtp.ts'
+import { archiveToSentFolder } from '../_shared/mailArchive.ts'
+import { logAppError } from '../_shared/logging.ts'
 import { corsHeadersForOrigin } from '../_shared/cors.ts'
 
 type JsonResponder = (body: unknown, status?: number) => Response
@@ -114,8 +116,9 @@ async function handle(
   const senderName = callerProfile.name
   const senderEmail = callerProfile.email ?? callerUser.email ?? ''
 
+  let rawMessage: string
   try {
-    await sendSmtpMail(
+    const sent = await sendSmtpMail(
       {
         hostname: settings.smtp_host,
         port: settings.smtp_port,
@@ -137,30 +140,18 @@ async function handle(
         ].join('\n'),
       },
     )
+    rawMessage = sent.raw
   } catch (err) {
     const errMessage = err instanceof SmtpError ? err.message : err instanceof Error ? err.message : String(err)
     await logAppError(supabaseUrl, serviceRoleKey, 'send-contact-message', errMessage, { senderEmail })
     return jsonResponse({ error: 'Nachricht konnte nicht verschickt werden.' }, 500)
   }
 
+  await archiveToSentFolder(supabaseUrl, serviceRoleKey, 'send-contact-message', settings, rawMessage, { senderEmail })
+
   return jsonResponse({ ok: true })
 }
 
 function escapeHtml(text: string): string {
   return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
-}
-
-async function logAppError(
-  supabaseUrl: string,
-  serviceRoleKey: string,
-  source: string,
-  message: string,
-  details?: Record<string, unknown>,
-) {
-  try {
-    const client = createClient(supabaseUrl, serviceRoleKey)
-    await client.from('app_logs').insert({ level: 'error', source, message, details: details ?? null })
-  } catch {
-    // Logging darf den eigentlichen Response-Pfad nicht zusätzlich zum Absturz bringen.
-  }
 }

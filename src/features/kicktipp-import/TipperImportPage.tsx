@@ -41,7 +41,11 @@ export function TipperImportPage() {
   const [done, setDone] = useState(false)
 
   useEffect(() => {
-    Promise.all([listPlayers(), isAdmin ? listProfiles() : Promise.resolve([]), listPlayerProfileLinks()])
+    Promise.all([
+      listPlayers({ includeInactive: true }),
+      isAdmin ? listProfiles() : Promise.resolve([]),
+      listPlayerProfileLinks(),
+    ])
       .then(([playerData, profileData, linkData]) => {
         setPlayers(playerData)
         setProfiles(profileData)
@@ -125,7 +129,7 @@ export function TipperImportPage() {
             isGeneratedPlaceholder: true,
           })
           if (sendInviteEmails) {
-            await requestPasswordReset(entry.row.email)
+            await requestPasswordReset(entry.row.email, 'invite')
           }
           if (playerId) {
             await setPlayerProfileLinks(playerId, [createdUser.id])

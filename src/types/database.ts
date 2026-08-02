@@ -28,6 +28,7 @@ export type PermissionKey =
   | 'payouts.manage'
   | 'rankings.manage'
   | 'players.manage'
+  | 'players.link_logins'
   | 'accounts.manage'
   | 'balance_transfer.manage'
   | 'import.use'
@@ -77,6 +78,7 @@ export type Player = {
   id: string
   name: string
   kicktipp_name: string | null
+  is_active: boolean
   created_at: string
 }
 
@@ -225,11 +227,17 @@ export type Zahlung = {
 // verwechseln mit EmailSettings, das die SMTP-Zugangsdaten hält). body_text
 // und subject enthalten Variablen-Tokens ({{Spielername}} etc.), siehe
 // src/features/emails/templateVariables.ts.
+export type EmailSystemTemplateKey = 'password_reset' | 'new_user_invite'
+
 export type EmailTemplate = {
   id: string
   name: string
   subject: string
   body_text: string
+  /** Nur für die beiden System-Vorlagen (Passwort-Reset/Neuanlage-Einladung)
+   *  gesetzt – null für die freien Massenmail-Vorlagen. Siehe
+   *  0061_email_system_templates.sql. */
+  system_key: EmailSystemTemplateKey | null
   created_at: string
   updated_at: string
   created_by: string | null
@@ -366,12 +374,14 @@ export interface Database {
           id?: string
           name: string
           kicktipp_name?: string | null
+          is_active?: boolean
           created_at?: string
         }
         Update: {
           id?: string
           name?: string
           kicktipp_name?: string | null
+          is_active?: boolean
           created_at?: string
         }
         Relationships: []
@@ -765,6 +775,7 @@ export interface Database {
           name: string
           subject: string
           body_text: string
+          system_key?: EmailSystemTemplateKey | null
           created_at?: string
           updated_at?: string
           created_by?: string | null
@@ -774,6 +785,7 @@ export interface Database {
           name?: string
           subject?: string
           body_text?: string
+          system_key?: EmailSystemTemplateKey | null
           created_at?: string
           updated_at?: string
           created_by?: string | null

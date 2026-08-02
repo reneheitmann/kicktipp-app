@@ -8,7 +8,9 @@
 // können oder fremde Postfächer als eigenes Login zu kapern.
 
 import { createClient } from 'jsr:@supabase/supabase-js@2'
-import { sendSmtpMail, SmtpError } from './smtp.ts'
+import { sendSmtpMail, SmtpError } from '../_shared/smtp.ts'
+import { archiveToSentFolder } from '../_shared/mailArchive.ts'
+import { logAppError } from '../_shared/logging.ts'
 import { corsHeadersForOrigin, isAllowedOrigin } from '../_shared/cors.ts'
 
 type JsonResponder = (body: unknown, status?: number) => Response
@@ -133,8 +135,9 @@ async function handle(
   const confirmLink = `${redirectOrigin}/email-bestaetigen?token=${rawToken}`
   const escapedConfirmLink = escapeHtml(confirmLink)
 
+  let rawMessage: string
   try {
-    await sendSmtpMail(
+    const sent = await sendSmtpMail(
       {
         hostname: settings.smtp_host,
         port: settings.smtp_port,
@@ -155,11 +158,14 @@ async function handle(
         ].join('\n'),
       },
     )
+    rawMessage = sent.raw
   } catch (err) {
     const message = err instanceof SmtpError ? err.message : err instanceof Error ? err.message : String(err)
     await logAppError(supabaseUrl, serviceRoleKey, 'update-own-email', message, { email })
     return jsonResponse({ error: 'Bestätigungsmail konnte nicht verschickt werden.' }, 500)
   }
+
+  await archiveToSentFolder(supabaseUrl, serviceRoleKey, 'update-own-email', settings, rawMessage, { email })
 
   return jsonResponse({ ok: true })
 }
@@ -177,19 +183,4 @@ async function sha256Hex(text: string): Promise<string> {
 
 function escapeHtml(text: string): string {
   return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
-}
-
-async function logAppError(
-  supabaseUrl: string,
-  serviceRoleKey: string,
-  source: string,
-  message: string,
-  details?: Record<string, unknown>,
-) {
-  try {
-    const client = createClient(supabaseUrl, serviceRoleKey)
-    await client.from('app_logs').insert({ level: 'error', source, message, details: details ?? null })
-  } catch {
-    // Logging darf den eigentlichen Response-Pfad nicht zusätzlich zum Absturz bringen.
-  }
 }

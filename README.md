@@ -7,7 +7,9 @@ diese App bildet ausschließlich die Verwaltung/Abrechnung drumherum ab.
 ## Funktionsumfang
 
 - **Saisons & Spieltage** – Anlegen, Kopieren, Spieltag-Import aus Kicktipp,
-  Gesamtwertung, Saisonvergleich (Liniendiagramm über mehrere Saisons).
+  Gesamtwertung, Saisonvergleich (Liniendiagramm über mehrere Saisons, zeigt
+  alle aktiven Spieler, eigene Standardauswahl statt der größten Gewinner/
+  Verlierer als Favoriten speicherbar, nur im eigenen Browser).
   Lebenszyklus Entwurf → Aktiv → Abgeschlossen → Archiviert: Entwurf/Archiviert
   sind für normale Nutzer unsichtbar und zählen nicht in saisonübergreifenden
   Geld-Summen mit (Ausnahme: Nutzer mit `accounts.manage` sehen Entwurf-Saisons
@@ -18,17 +20,23 @@ diese App bildet ausschließlich die Verwaltung/Abrechnung drumherum ab.
 - **Guthaben & Einsätze** – Kontenübersicht, Transaktionen, Ein-/Auszahlungen,
   automatische Gewinnverteilung nach konfigurierbaren Auszahlungsregeln
 - **Spielerverwaltung** – Spieler-Stammdaten inkl. Kicktipp-Namen-Mapping,
-  Verknüpfung mit Benutzerkonten
+  Deaktivieren (blendet den Spieler aus allen Ansichten/Massenmails aus, ohne
+  historische Daten zu löschen, weiterhin reaktivierbar); Verknüpfung mit
+  Benutzerkonten – per granularem Recht (`players.link_logins`) auch an
+  Spielleiter delegierbar
 - **Kicktipp-Import** – Tabellen-Import aus Kicktipp.de (Teilnehmer/Tipper)
 - **Kicktipp-Seite** – bettet die Kicktipp-Gruppenseite direkt per offiziellem
   Kicktipp-Widget-Script ein (eigener Menüpunkt, kein separater Tab nötig)
 - **Menü verwalten** – admin-editierbare Reihenfolge und Bezeichnungen der
   Menüpunkte, gilt app-weit für alle Rollen
 - **Benutzerverwaltung** – Rollen (`admin`, `spielleiter`, `user`), Sperren,
-  Passwort-Reset, letzter Login; per granularem Recht (`users.manage`) auch
-  an Spielleiter delegierbar, Admin-Konten bleiben davon immer ausgenommen;
-  echter Rollenwechsel (Admin → Spielleiter oder Spieler, Spielleiter →
-  Spieler; keine reine Client-Vorschau, jederzeit rückgängig)
+  endgültiges Löschen (Tipp-Bestätigung, kaskadiert Sitzungen/Passwort-
+  Historie/Spieler-Verknüpfungen, verknüpfte Spieler selbst bleiben
+  bestehen), Passwort-Reset, letzter Login; per granularem Recht
+  (`users.manage`) auch an Spielleiter delegierbar, Admin-Konten bleiben
+  davon immer ausgenommen; echter Rollenwechsel (Admin → Spielleiter oder
+  Spieler, Spielleiter → Spieler; keine reine Client-Vorschau, jederzeit
+  rückgängig)
 - **Mein Profil** – Name, Passwort und E-Mail-Adresse (per Bestätigungslink)
   selbst ändern
 - **Feingranulare Berechtigungen** – rollenbasierte Rechte pro Seite/Aktion,
@@ -36,7 +44,10 @@ diese App bildet ausschließlich die Verwaltung/Abrechnung drumherum ab.
 - **E-Mail-Versand** – Einzel-/Massen-Mails an Spieler mit Vorlagen, eigener
   SMTP-Client (kein Drittanbieter-Mailversand); optional legt ein eigener
   IMAP-Client zusätzlich eine Kopie im admin-konfigurierten Gesendet-Ordner
-  des Postfachs ab (reiner SMTP-Versand macht das sonst nicht von selbst)
+  des Postfachs ab (reiner SMTP-Versand macht das sonst nicht von selbst).
+  Passwort-Reset- und Benutzer-Neuanlage-Einladungsmail nutzen eigene,
+  admin-editierbare System-Vorlagen (genau eine je Anlass, über dieselbe
+  Vorlagenmaske wie die Massenmail-Vorlagen)
 - **Kontakt** – Formular für jeden User, verschickt eine Nachricht per E-Mail
   an den Spielleiter (Antworten geht direkt an den Absender)
 - **Erscheinungsbild** – App-Name, Icon/Favicon und Primärfarbe zur Laufzeit
