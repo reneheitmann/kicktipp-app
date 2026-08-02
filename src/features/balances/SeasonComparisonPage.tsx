@@ -210,7 +210,7 @@ export function SeasonComparisonPage() {
                   <LineChart data={chartData}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                    <YAxis tick={{ fontSize: 12 }} />
+                    <YAxis tick={{ fontSize: 12 }} tickFormatter={(value) => currencyFormatter.format(centsToEuros(Number(value)))} />
                     <Tooltip formatter={(value) => currencyFormatter.format(centsToEuros(Number(value)))} />
                     <Legend />
                     {selectedPlayers.map(({ player }, i) => (
