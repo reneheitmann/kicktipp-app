@@ -1,0 +1,52 @@
+name: Datenbank-Tests
+
+# pgTAP-Tests für die Postgres-Funktionen (aktuell: calculate_matchday_payout/
+# calculate_season_payout, supabase/migrations/0012_tie_aware_payout_calculation.sql),
+# siehe supabase/tests/database/. Läuft komplett gegen eine frische, aus den
+# Migrationen aufgebaute LOKALE Datenbank in einem GitHub-gehosteten Runner
+# (Docker ist dort vorinstalliert, siehe db-backup.yml) - kein Zugriff auf
+# Dev/beta/prod nötig, daher auch keine Supabase-Secrets hier.
+#
+# Bewusst eigenständig statt docker-publish.yml zu erweitern: andere Ebene
+# (DB-Migrationen vs. Frontend-Bundle), keine echte Abhängigkeit zwischen
+# beiden Pipelines.
+
+on:
+  push:
+    branches: [main, beta]
+    paths:
+      - "supabase/**"
+  pull_request:
+    paths:
+      - "supabase/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pgtap:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Code auschecken
+        uses: actions/checkout@v4
+
+      - name: Supabase CLI einrichten
+        uses: supabase/setup-cli@v2
+        with:
+          version: latest
+          github-token: ${{ github.token }}
+
+      # Erster Versuch schloss die meisten Container per wiederholtem -x aus
+      # (nur db wird für pgTAP gebraucht) - das schlug fehl, weil der
+      # rest-Container trotzdem startete (wiederholtes -x scheint nur den
+      # letzten Wert zu behalten statt zu akkumulieren) und dessen
+      # Health-Check dann über den ausgeschlossenen kong-Container lief.
+      # Startet jetzt bewusst den kompletten, offiziell unterstützten Stack -
+      # ein paar Sekunden langsamer, aber ohne Undokumentierte
+      # Exclude-Interaktionen.
+      - name: Lokale Datenbank starten
+        run: supabase start
+
+      - name: pgTAP-Suite ausführen
+        run: supabase test db --local supabase/tests/database

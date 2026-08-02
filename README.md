@@ -106,6 +106,18 @@ supabase db push --linked
 supabase functions deploy <function-name>
 ```
 
+pgTAP-Tests für die kritischen Postgres-Funktionen (aktuell: die
+Gewinnberechnung, `supabase/tests/database/`) laufen lokal gegen eine
+frische, aus den Migrationen aufgebaute Datenbank (braucht Docker):
+
+```bash
+supabase start
+supabase test db --local supabase/tests/database
+```
+
+Läuft außerdem automatisch in CI bei jeder Änderung unter `supabase/**`
+(`.github/workflows/db-tests.yml`).
+
 Alle Edge Functions (`admin-create-user`, `admin-update-user`,
 `update-own-password`, `update-own-email`, `confirm-email-change`, `send-email`,
 `send-bulk-email`, `send-password-reset`, `send-contact-message`) benötigen
