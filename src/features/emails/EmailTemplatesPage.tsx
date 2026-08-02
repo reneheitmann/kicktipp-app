@@ -1,15 +1,12 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
-import { useAuth } from '../auth/useAuth'
 import { EmailTemplateForm } from './EmailTemplateForm'
 import { systemTemplateVariables } from './templateVariables'
 import { createEmailTemplate, deleteEmailTemplate, listEmailTemplates, updateEmailTemplate } from './emailTemplatesApi'
 import type { EmailTemplate } from '../../types/database'
 
 export function EmailTemplatesPage() {
-  const { profile } = useAuth()
-  const isAdmin = profile?.role === 'admin'
   const [templates, setTemplates] = useState<EmailTemplate[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -73,7 +70,7 @@ export function EmailTemplatesPage() {
         <p className="text-sm text-slate-500">Lade...</p>
       ) : (
         <>
-          {isAdmin && systemTemplates.length > 0 && (
+          {systemTemplates.length > 0 && (
             <div className="mb-6">
               <h2 className="mb-2 text-sm font-semibold text-slate-900">System-Vorlagen</h2>
               <p className="mb-2 text-xs text-slate-500">
