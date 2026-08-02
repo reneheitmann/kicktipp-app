@@ -1,5 +1,6 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react'
 import { logToServer } from '../lib/logging'
+import { tryRecoverFromChunkLoadError } from '../lib/chunkLoadRecovery'
 
 interface Props {
   children: ReactNode
@@ -21,6 +22,7 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
+    if (tryRecoverFromChunkLoadError(error.message)) return
     logToServer('error', 'frontend-render', error.message, {
       stack: error.stack,
       componentStack: info.componentStack,
