@@ -10,6 +10,9 @@
 // nach einem fetch() funktioniert dagegen einwandfrei, daher dieser schlanke,
 // selbst geschriebene Client auf Basis von Deno.connect/Deno.connectTls/
 // Deno.startTls statt einer Library, die genau das intern anders macht.
+//
+// Gemeinsam für send-email/ und send-bulk-email/ (per relativem Import aus
+// _shared/, analog zu cors.ts) statt zwei identischer Kopien.
 
 export interface SmtpConfig {
   hostname: string
@@ -55,11 +58,41 @@ function stripHeaderInjection(text: string): string {
   return text.replace(/[\r\n]+/g, ' ')
 }
 
-export async function sendSmtpMail(config: SmtpConfig, message: SmtpMessage): Promise<void> {
-  const to = assertSafeEmailAddress(message.to, 'Empfänger')
-  const fromEmail = assertSafeEmailAddress(message.fromEmail, 'Absender')
+export interface RawEmail {
+  /** Kompletter RFC822-Text (Header + Leerzeile + Base64-Body), ohne SMTP-Dot-Terminator. */
+  raw: string
+  envelopeFrom: string
+  envelopeTo: string
+}
+
+// Baut den exakten Nachrichtentext einmal zentral, damit sowohl der
+// SMTP-Versand als auch die IMAP-Ablage im Gesendet-Ordner (imap.ts) garantiert
+// dieselbe Nachricht verwenden statt sie zweimal (potenziell abweichend)
+// zusammenzusetzen.
+export function buildRawEmail(message: SmtpMessage): RawEmail {
+  const envelopeTo = assertSafeEmailAddress(message.to, 'Empfänger')
+  const envelopeFrom = assertSafeEmailAddress(message.fromEmail, 'Absender')
   const fromName = message.fromName ? stripHeaderInjection(message.fromName) : message.fromName
   const subject = stripHeaderInjection(message.subject)
+
+  const from = fromName ? `${encodeHeader(fromName)} <${envelopeFrom}>` : envelopeFrom
+  const headers = [
+    `From: ${from}`,
+    `To: ${envelopeTo}`,
+    `Subject: ${encodeHeader(subject)}`,
+    'MIME-Version: 1.0',
+    'Content-Type: text/html; charset=UTF-8',
+    'Content-Transfer-Encoding: base64',
+  ].join('\r\n')
+  // Base64 enthält keine Zeilen, die mit "." beginnen können – SMTP-
+  // Dot-Stuffing der DATA-Phase ist damit für den Body kein Thema.
+  const body = wrapBase64(base64(message.html))
+
+  return { raw: `${headers}\r\n\r\n${body}`, envelopeFrom, envelopeTo }
+}
+
+export async function sendSmtpMail(config: SmtpConfig, message: SmtpMessage): Promise<RawEmail> {
+  const email = buildRawEmail(message)
 
   let conn: Deno.Conn =
     config.encryption === 'tls'
@@ -89,23 +122,11 @@ export async function sendSmtpMail(config: SmtpConfig, message: SmtpMessage): Pr
       await command(io, base64(config.password ?? ''), 235)
     }
 
-    await command(io, `MAIL FROM:<${fromEmail}>`, 250)
-    await command(io, `RCPT TO:<${to}>`, 250)
+    await command(io, `MAIL FROM:<${email.envelopeFrom}>`, 250)
+    await command(io, `RCPT TO:<${email.envelopeTo}>`, 250)
     await command(io, 'DATA', 354)
 
-    const from = fromName ? `${encodeHeader(fromName)} <${fromEmail}>` : fromEmail
-    const headers = [
-      `From: ${from}`,
-      `To: ${to}`,
-      `Subject: ${encodeHeader(subject)}`,
-      'MIME-Version: 1.0',
-      'Content-Type: text/html; charset=UTF-8',
-      'Content-Transfer-Encoding: base64',
-    ].join('\r\n')
-    // Base64 enthält keine Zeilen, die mit "." beginnen können – SMTP-
-    // Dot-Stuffing der DATA-Phase ist damit für den Body kein Thema.
-    const body = wrapBase64(base64(message.html))
-    await write(io, `${headers}\r\n\r\n${body}\r\n.\r\n`)
+    await write(io, `${email.raw}\r\n.\r\n`)
     await expectCode(io, 250)
 
     await command(io, 'QUIT', 221)
@@ -116,6 +137,8 @@ export async function sendSmtpMail(config: SmtpConfig, message: SmtpMessage): Pr
       // Verbindung war eventuell schon vom Server geschlossen – irrelevant.
     }
   }
+
+  return email
 }
 
 interface Io {

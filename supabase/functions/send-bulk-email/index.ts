@@ -1,7 +1,9 @@
 // Edge Function: verschickt E-Mails an mehrere Spieler in einem Aufruf
 // (Empfängerauswahl/Variablen-Rendering passiert clientseitig, siehe
-// src/features/emails/). Eigenständiges Funktionsverzeichnis mit eigener
-// Kopie von smtp.ts (keine Cross-Function-Imports), analog zu send-email/.
+// src/features/emails/). Nutzt denselben SMTP-Client wie send-email/ aus
+// _shared/smtp.ts. Ist ein Gesendet-Ordner konfiguriert (_shared/imap.ts),
+// wird für den ganzen Versandlauf eine einzige IMAP-Verbindung
+// wiederverwendet statt pro Empfänger neu zu verbinden.
 //
 // Anders als send-email/ (SMTP-Testmail, hart admin-only, betrifft die
 // SMTP-Zugangsdaten selbst) ist der Massenversand an Spieler ein normales
@@ -9,7 +11,8 @@
 // role_permissions-System geprüft ('email.send'), nicht über role==='admin'.
 
 import { createClient } from 'jsr:@supabase/supabase-js@2'
-import { sendSmtpMail, SmtpError } from './smtp.ts'
+import { sendSmtpMail, SmtpError } from '../_shared/smtp.ts'
+import { withSentFolderAppender, listFolders, ImapError } from '../_shared/imap.ts'
 import { corsHeadersForOrigin } from '../_shared/cors.ts'
 
 type JsonResponder = (body: unknown, status?: number) => Response
@@ -144,9 +147,10 @@ async function handle(
 
   const results: RecipientResult[] = []
   const failures: { to: string; error: string }[] = []
+  const sentRawMessages: string[] = []
   for (const recipient of recipients) {
     try {
-      await sendSmtpMail(smtpConfig, {
+      const sent = await sendSmtpMail(smtpConfig, {
         fromEmail: settings.sender_email,
         fromName: settings.sender_name,
         to: recipient.to,
@@ -154,10 +158,44 @@ async function handle(
         html: recipient.html,
       })
       results.push({ to: recipient.to, ok: true })
+      sentRawMessages.push(sent.raw)
     } catch (err) {
       const message = err instanceof SmtpError ? err.message : err instanceof Error ? err.message : String(err)
       results.push({ to: recipient.to, ok: false, error: message })
       failures.push({ to: recipient.to, error: message })
+    }
+  }
+
+  // Ablage im Gesendet-Ordner ist reine Komfortfunktion (siehe imap.ts) – ein
+  // Fehler dort darf den bereits erfolgreich verschickten E-Mails nicht als
+  // Fehlschlag angerechnet werden, landet aber als Warnung im Log.
+  if (sentRawMessages.length > 0 && settings.imap_host && settings.imap_port && settings.imap_sent_folder) {
+    const imapConfig = {
+      hostname: settings.imap_host,
+      port: settings.imap_port,
+      username: settings.smtp_username ?? '',
+      password: settings.smtp_password ?? '',
+    }
+    try {
+      await withSentFolderAppender({ ...imapConfig, sentFolder: settings.imap_sent_folder }, async (append) => {
+        for (const raw of sentRawMessages) await append(raw)
+      })
+    } catch (err) {
+      const message = err instanceof ImapError ? err.message : err instanceof Error ? err.message : String(err)
+      const availableFolders = await listFolders(imapConfig).catch(() => null)
+      await logAppError(
+        supabaseUrl,
+        serviceRoleKey,
+        'send-bulk-email',
+        `Kopie im Gesendet-Ordner konnte nicht abgelegt werden: ${message}`,
+        {
+          imap_host: settings.imap_host,
+          imap_sent_folder: settings.imap_sent_folder,
+          count: sentRawMessages.length,
+          available_folders: availableFolders,
+        },
+        'warn',
+      )
     }
   }
 
@@ -184,10 +222,11 @@ async function logAppError(
   source: string,
   message: string,
   details?: Record<string, unknown>,
+  level: 'error' | 'warn' = 'error',
 ) {
   try {
     const client = createClient(supabaseUrl, serviceRoleKey)
-    await client.from('app_logs').insert({ level: 'error', source, message, details: details ?? null })
+    await client.from('app_logs').insert({ level, source, message, details: details ?? null })
   } catch {
     // Logging darf den eigentlichen Response-Pfad nicht zusätzlich zum Absturz bringen.
   }

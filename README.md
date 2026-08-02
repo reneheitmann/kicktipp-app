@@ -34,7 +34,9 @@ diese App bildet ausschließlich die Verwaltung/Abrechnung drumherum ab.
 - **Feingranulare Berechtigungen** – rollenbasierte Rechte pro Seite/Aktion,
   unabhängig von den drei Basisrollen konfigurierbar
 - **E-Mail-Versand** – Einzel-/Massen-Mails an Spieler mit Vorlagen, eigener
-  SMTP-Client (kein Drittanbieter-Mailversand)
+  SMTP-Client (kein Drittanbieter-Mailversand); optional legt ein eigener
+  IMAP-Client zusätzlich eine Kopie im admin-konfigurierten Gesendet-Ordner
+  des Postfachs ab (reiner SMTP-Versand macht das sonst nicht von selbst)
 - **Kontakt** – Formular für jeden User, verschickt eine Nachricht per E-Mail
   an den Spielleiter (Antworten geht direkt an den Absender)
 - **Erscheinungsbild** – App-Name, Icon/Favicon und Primärfarbe zur Laufzeit

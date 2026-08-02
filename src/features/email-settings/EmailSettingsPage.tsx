@@ -23,6 +23,9 @@ export function EmailSettingsPage() {
   const [encryption, setEncryption] = useState<SmtpEncryption>('starttls')
   const [senderEmail, setSenderEmail] = useState('')
   const [senderName, setSenderName] = useState('')
+  const [imapHost, setImapHost] = useState('')
+  const [imapPort, setImapPort] = useState<number | ''>('')
+  const [imapSentFolder, setImapSentFolder] = useState('')
 
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -44,6 +47,9 @@ export function EmailSettingsPage() {
           setEncryption(settings.smtp_encryption)
           setSenderEmail(settings.sender_email)
           setSenderName(settings.sender_name ?? '')
+          setImapHost(settings.imap_host ?? '')
+          setImapPort(settings.imap_port ?? '')
+          setImapSentFolder(settings.imap_sent_folder ?? '')
           setHasPassword(settings.has_password)
         }
         setError(null)
@@ -71,6 +77,9 @@ export function EmailSettingsPage() {
         smtp_encryption: encryption,
         sender_email: senderEmail.trim(),
         sender_name: senderName.trim() || null,
+        imap_host: imapHost.trim() || null,
+        imap_port: imapPort === '' ? null : imapPort,
+        imap_sent_folder: imapSentFolder.trim() || null,
         updated_by: profile.id,
       })
       if (password) setHasPassword(true)
@@ -210,6 +219,57 @@ export function EmailSettingsPage() {
               onChange={(e) => setSenderName(e.target.value)}
               placeholder="Kicktipp Spielrunde"
               className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base focus:border-slate-900 focus:outline-none"
+            />
+          </div>
+        </div>
+
+        <div className="border-t border-slate-200 pt-4">
+          <h2 className="mb-1 text-sm font-semibold text-slate-900">Kopie im Gesendet-Ordner ablegen (optional)</h2>
+          <p className="mb-3 text-sm text-slate-500">
+            Reiner SMTP-Versand legt selbst keine Kopie im Postfach ab. Trage hier die IMAP-Zugangsdaten desselben
+            Postfachs ein (Benutzername/Passwort oben werden wiederverwendet), um versendete E-Mails zusätzlich im
+            angegebenen Ordner abzulegen. Den exakten Ordnernamen findest du in deinem Mail-Programm (z. B. "Sent",
+            "INBOX.Sent" oder "Gesendet"). Leer lassen deaktiviert die Funktion.
+          </p>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div className="sm:col-span-2">
+              <label htmlFor="imap-host" className="mb-1 block text-sm font-medium text-slate-700">
+                IMAP-Host
+              </label>
+              <input
+                id="imap-host"
+                value={imapHost}
+                onChange={(e) => setImapHost(e.target.value)}
+                placeholder="imap.example.com"
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base focus:border-slate-900 focus:outline-none"
+              />
+            </div>
+            <div>
+              <label htmlFor="imap-port" className="mb-1 block text-sm font-medium text-slate-700">
+                Port
+              </label>
+              <input
+                id="imap-port"
+                type="number"
+                min={1}
+                max={65535}
+                value={imapPort}
+                onChange={(e) => setImapPort(e.target.value === '' ? '' : Number(e.target.value))}
+                placeholder="993"
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base focus:border-slate-900 focus:outline-none"
+              />
+            </div>
+          </div>
+          <div className="mt-4">
+            <label htmlFor="imap-sent-folder" className="mb-1 block text-sm font-medium text-slate-700">
+              Gesendet-Ordner
+            </label>
+            <input
+              id="imap-sent-folder"
+              value={imapSentFolder}
+              onChange={(e) => setImapSentFolder(e.target.value)}
+              placeholder="Sent"
+              className="w-full max-w-xs rounded-lg border border-slate-300 px-3 py-2 text-base focus:border-slate-900 focus:outline-none"
             />
           </div>
         </div>

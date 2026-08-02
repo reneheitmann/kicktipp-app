@@ -317,6 +317,9 @@ export type EmailSettings = {
   smtp_encryption: SmtpEncryption
   sender_email: string
   sender_name: string | null
+  imap_host: string | null
+  imap_port: number | null
+  imap_sent_folder: string | null
   updated_at: string
   updated_by: string | null
 }
@@ -616,6 +619,9 @@ export interface Database {
           smtp_encryption?: SmtpEncryption
           sender_email: string
           sender_name?: string | null
+          imap_host?: string | null
+          imap_port?: number | null
+          imap_sent_folder?: string | null
           updated_at?: string
           updated_by?: string | null
         }
@@ -628,6 +634,9 @@ export interface Database {
           smtp_encryption?: SmtpEncryption
           sender_email?: string
           sender_name?: string | null
+          imap_host?: string | null
+          imap_port?: number | null
+          imap_sent_folder?: string | null
           updated_at?: string
           updated_by?: string | null
         }
