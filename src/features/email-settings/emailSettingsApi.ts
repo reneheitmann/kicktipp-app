@@ -15,6 +15,9 @@ export interface EmailSettingsInput {
   smtp_encryption: SmtpEncryption
   sender_email: string
   sender_name: string | null
+  imap_host: string | null
+  imap_port: number | null
+  imap_sent_folder: string | null
   updated_by: string
 }
 
@@ -39,6 +42,9 @@ export async function saveEmailSettings(input: EmailSettingsInput): Promise<void
     smtp_encryption: input.smtp_encryption,
     sender_email: input.sender_email,
     sender_name: input.sender_name,
+    imap_host: input.imap_host,
+    imap_port: input.imap_port,
+    imap_sent_folder: input.imap_sent_folder,
     updated_at: new Date().toISOString(),
     updated_by: input.updated_by,
   }
