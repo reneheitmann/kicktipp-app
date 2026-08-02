@@ -19,7 +19,10 @@ export function PlayersPage() {
   async function reload() {
     setLoading(true)
     try {
-      const [playerData, linkData] = await Promise.all([listPlayers(), listPlayerProfileLinks()])
+      const [playerData, linkData] = await Promise.all([
+        listPlayers({ includeInactive: true }),
+        listPlayerProfileLinks(),
+      ])
       setPlayers(playerData)
       setLinks(linkData)
       setError(null)
@@ -54,6 +57,15 @@ export function PlayersPage() {
     }
   }
 
+  async function toggleActive(player: Player) {
+    try {
+      await updatePlayer(player.id, { is_active: !player.is_active })
+      await reload()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Status konnte nicht geändert werden.')
+    }
+  }
+
   const filteredPlayers = players.filter((player) => {
     const term = search.trim().toLowerCase()
     if (!term) return true
@@ -82,7 +94,9 @@ export function PlayersPage() {
           {filteredPlayers.map((player) => (
             <li key={player.id} className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
               <Link to={`/players/${player.id}`} className="min-w-0 hover:underline">
-                <p className="truncate font-medium text-slate-900">{player.name}</p>
+                <p className="truncate font-medium text-slate-900">
+                  {player.name} {!player.is_active && <span className="text-xs font-normal text-red-500">(deaktiviert)</span>}
+                </p>
                 <p className="truncate text-sm text-slate-500">
                   Kicktipp: {player.kicktipp_name || '—'}
                 </p>
@@ -90,6 +104,9 @@ export function PlayersPage() {
               <div className="flex flex-wrap gap-2">
                 <Button variant="secondary" onClick={() => openEdit(player)}>
                   Bearbeiten
+                </Button>
+                <Button variant="secondary" onClick={() => toggleActive(player)}>
+                  {player.is_active ? 'Deaktivieren' : 'Aktivieren'}
                 </Button>
                 <Button variant="danger" onClick={() => handleDelete(player)}>
                   Löschen

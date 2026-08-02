@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabaseClient'
 import { listSeasonTransactions } from '../balances/balancesApi'
 import { computeAccountBalance } from '../players/accountBalance'
 import { listPlayerProfileLinks } from '../players/playerProfileLinksApi'
+import { listPlayers } from '../players/playersApi'
 import { listZahlungenForSeason } from '../players/zahlungenApi'
 import { listMatchdayPayouts } from '../rankings/matchdayRankingsApi'
 import { listSeasonPayouts } from '../rankings/seasonRankingsApi'
@@ -26,7 +27,7 @@ export type PlayerWithProfile = Player & {
 // selbst laden und clientseitig zuordnen.
 export async function listPlayersWithProfiles(): Promise<PlayerWithProfile[]> {
   const [players, links, profiles] = await Promise.all([
-    fetchAllRows<Player>((from, to) => supabase.from('players').select('*').order('name').range(from, to)),
+    listPlayers(),
     listPlayerProfileLinks(),
     fetchAllRows<LinkedProfile>((from, to) =>
       supabase.from('profiles').select('id, name, vorname, nachname, email, is_active').range(from, to),

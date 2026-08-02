@@ -1,16 +1,24 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
+import { useAuth } from '../auth/useAuth'
 import { EmailTemplateForm } from './EmailTemplateForm'
+import { systemTemplateVariables } from './templateVariables'
 import { createEmailTemplate, deleteEmailTemplate, listEmailTemplates, updateEmailTemplate } from './emailTemplatesApi'
 import type { EmailTemplate } from '../../types/database'
 
 export function EmailTemplatesPage() {
+  const { profile } = useAuth()
+  const isAdmin = profile?.role === 'admin'
   const [templates, setTemplates] = useState<EmailTemplate[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [editingTemplate, setEditingTemplate] = useState<EmailTemplate | undefined>(undefined)
+  const [editingSystemTemplate, setEditingSystemTemplate] = useState<EmailTemplate | undefined>(undefined)
   const [showForm, setShowForm] = useState(false)
+
+  const systemTemplates = templates.filter((t) => t.system_key)
+  const freeTemplates = templates.filter((t) => !t.system_key)
 
   async function reload() {
     setLoading(true)
@@ -63,27 +71,54 @@ export function EmailTemplatesPage() {
 
       {loading ? (
         <p className="text-sm text-slate-500">Lade...</p>
-      ) : templates.length === 0 ? (
-        <p className="text-sm text-slate-500">Noch keine Vorlagen angelegt.</p>
       ) : (
-        <ul className="divide-y divide-slate-200 overflow-hidden rounded-xl border border-slate-200 bg-white">
-          {templates.map((template) => (
-            <li key={template.id} className="flex items-center justify-between gap-3 px-4 py-3">
-              <div className="min-w-0">
-                <p className="truncate font-medium text-slate-900">{template.name}</p>
-                <p className="truncate text-sm text-slate-500">{template.subject}</p>
-              </div>
-              <div className="flex shrink-0 gap-2">
-                <Button variant="secondary" onClick={() => openEdit(template)}>
-                  Bearbeiten
-                </Button>
-                <Button variant="danger" onClick={() => handleDelete(template)}>
-                  Löschen
-                </Button>
-              </div>
-            </li>
-          ))}
-        </ul>
+        <>
+          {isAdmin && systemTemplates.length > 0 && (
+            <div className="mb-6">
+              <h2 className="mb-2 text-sm font-semibold text-slate-900">System-Vorlagen</h2>
+              <p className="mb-2 text-xs text-slate-500">
+                Werden automatisch bei Passwort-Reset bzw. Benutzer-Neuanlage per E-Mail-Einladung verschickt – genau
+                eine Vorlage je Anlass, nicht löschbar.
+              </p>
+              <ul className="divide-y divide-slate-200 overflow-hidden rounded-xl border border-slate-200 bg-white">
+                {systemTemplates.map((template) => (
+                  <li key={template.id} className="flex items-center justify-between gap-3 px-4 py-3">
+                    <div className="min-w-0">
+                      <p className="truncate font-medium text-slate-900">{template.name}</p>
+                      <p className="truncate text-sm text-slate-500">{template.subject}</p>
+                    </div>
+                    <Button variant="secondary" className="shrink-0" onClick={() => setEditingSystemTemplate(template)}>
+                      Bearbeiten
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {freeTemplates.length === 0 ? (
+            <p className="text-sm text-slate-500">Noch keine Vorlagen angelegt.</p>
+          ) : (
+            <ul className="divide-y divide-slate-200 overflow-hidden rounded-xl border border-slate-200 bg-white">
+              {freeTemplates.map((template) => (
+                <li key={template.id} className="flex items-center justify-between gap-3 px-4 py-3">
+                  <div className="min-w-0">
+                    <p className="truncate font-medium text-slate-900">{template.name}</p>
+                    <p className="truncate text-sm text-slate-500">{template.subject}</p>
+                  </div>
+                  <div className="flex shrink-0 gap-2">
+                    <Button variant="secondary" onClick={() => openEdit(template)}>
+                      Bearbeiten
+                    </Button>
+                    <Button variant="danger" onClick={() => handleDelete(template)}>
+                      Löschen
+                    </Button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
       )}
 
       {showForm && (
@@ -96,6 +131,18 @@ export function EmailTemplatesPage() {
             } else {
               await createEmailTemplate(input)
             }
+            await reload()
+          }}
+        />
+      )}
+
+      {editingSystemTemplate && (
+        <EmailTemplateForm
+          template={editingSystemTemplate}
+          variables={systemTemplateVariables}
+          onClose={() => setEditingSystemTemplate(undefined)}
+          onSubmit={async (input) => {
+            await updateEmailTemplate(editingSystemTemplate.id, input)
             await reload()
           }}
         />

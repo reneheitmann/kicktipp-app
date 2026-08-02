@@ -15,7 +15,7 @@ interface PlayerFormProps {
 }
 
 export function PlayerForm({ player, existingPlayers, existingLinks, onClose, onSubmit }: PlayerFormProps) {
-  const { profile } = useAuth()
+  const { can } = useAuth()
   const [name, setName] = useState(player?.name ?? '')
   const [kicktippName, setKicktippName] = useState(player?.kicktipp_name ?? '')
   const [profileIds, setProfileIds] = useState<Set<string>>(
@@ -26,7 +26,7 @@ export function PlayerForm({ player, existingPlayers, existingLinks, onClose, on
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
-  const canLinkLogin = profile?.role === 'admin'
+  const canLinkLogin = can('players.link_logins')
 
   useEffect(() => {
     if (!canLinkLogin) return

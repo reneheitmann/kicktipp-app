@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { computePlayerBalances } from './balanceCalculations'
 import type { Player, SeasonParticipant, Transaction, Zahlung } from '../../types/database'
 
-const player = (id: string, name: string): Player => ({ id, name, kicktipp_name: null, created_at: '' })
+const player = (id: string, name: string): Player => ({ id, name, kicktipp_name: null, is_active: true, created_at: '' })
 
 function tx(overrides: Partial<Transaction> & Pick<Transaction, 'player_id' | 'typ' | 'betrag'>): Transaction {
   return {

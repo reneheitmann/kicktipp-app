@@ -1,16 +1,19 @@
 import { useRef, useState, type FormEvent } from 'react'
 import { Modal } from '../../components/ui/Modal'
 import { Button } from '../../components/ui/Button'
-import { insertVariableAtCursor, templateVariables } from './templateVariables'
+import { insertVariableAtCursor, templateVariables, type TemplateVariable } from './templateVariables'
 import type { EmailTemplate } from '../../types/database'
 
 interface EmailTemplateFormProps {
   template?: EmailTemplate
+  /** Standard: die spielerbezogenen Variablen (Massenmail-Vorlagen); für
+   *  System-Vorlagen wird systemTemplateVariables übergeben. */
+  variables?: TemplateVariable[]
   onClose: () => void
   onSubmit: (input: { name: string; subject: string; body_text: string }) => Promise<void>
 }
 
-export function EmailTemplateForm({ template, onClose, onSubmit }: EmailTemplateFormProps) {
+export function EmailTemplateForm({ template, variables, onClose, onSubmit }: EmailTemplateFormProps) {
   const [name, setName] = useState(template?.name ?? '')
   const [subject, setSubject] = useState(template?.subject ?? '')
   const [bodyText, setBodyText] = useState(template?.body_text ?? '')
@@ -98,7 +101,7 @@ export function EmailTemplateForm({ template, onClose, onSubmit }: EmailTemplate
             Variable einfügen (an der Cursor-Position in Betreff oder Text):
           </p>
           <div className="flex flex-wrap gap-1.5">
-            {templateVariables.map((v) => (
+            {(variables ?? templateVariables).map((v) => (
               <button
                 key={v.token}
                 type="button"

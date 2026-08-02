@@ -2,8 +2,12 @@ import { fetchAllRows } from '../../lib/fetchAllRows'
 import { supabase } from '../../lib/supabaseClient'
 import type { Player } from '../../types/database'
 
-export async function listPlayers(): Promise<Player[]> {
-  return fetchAllRows((from, to) => supabase.from('players').select('*').order('name').range(from, to))
+export async function listPlayers(opts: { includeInactive?: boolean } = {}): Promise<Player[]> {
+  return fetchAllRows((from, to) => {
+    let query = supabase.from('players').select('*').order('name')
+    if (!opts.includeInactive) query = query.eq('is_active', true)
+    return query.range(from, to)
+  })
 }
 
 export async function getPlayer(id: string): Promise<Player> {
@@ -23,7 +27,7 @@ export async function createPlayer(input: {
 
 export async function updatePlayer(
   id: string,
-  input: Partial<Pick<Player, 'name' | 'kicktipp_name'>>,
+  input: Partial<Pick<Player, 'name' | 'kicktipp_name' | 'is_active'>>,
 ): Promise<Player> {
   const { data, error } = await supabase.from('players').update(input).eq('id', id).select().single()
   if (error) throw error

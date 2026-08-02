@@ -61,7 +61,7 @@ export function CreateUserForm({
         isGeneratedPlaceholder: inviteByEmail,
       })
       if (inviteByEmail) {
-        await requestPasswordReset(email.trim())
+        await requestPasswordReset(email.trim(), 'invite')
       }
       onCreated()
       onClose()

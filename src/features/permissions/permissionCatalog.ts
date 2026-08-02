@@ -55,7 +55,14 @@ export const permissionCatalog: PermissionCatalogEntry[] = [
     key: 'players.manage',
     label: 'Spieler verwalten',
     page: 'Spieler',
-    description: 'Spieler anlegen, bearbeiten, löschen.',
+    description: 'Spieler anlegen, bearbeiten, deaktivieren/aktivieren, löschen.',
+  },
+  {
+    key: 'players.link_logins',
+    label: 'Logins mit Spielern verknüpfen',
+    page: 'Spieler',
+    description:
+      'Bestehende Benutzer-Logins mit Spielern verknüpfen/trennen (z. B. Elternteil verwaltet, Kind bekommt eigenen Zugang).',
   },
   {
     key: 'accounts.manage',

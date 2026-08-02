@@ -1,5 +1,5 @@
-import { FunctionsHttpError } from '@supabase/supabase-js'
 import { supabase } from '../../lib/supabaseClient'
+import { toDetailedError } from './edgeFunctionError'
 
 interface UpdateUserInput {
   userId: string
@@ -17,16 +17,4 @@ interface UpdateUserInput {
 export async function adminUpdateUser(input: UpdateUserInput): Promise<void> {
   const { error } = await supabase.functions.invoke('admin-update-user', { body: input })
   if (error) throw await toDetailedError(error)
-}
-
-async function toDetailedError(error: unknown): Promise<Error> {
-  if (error instanceof FunctionsHttpError) {
-    try {
-      const body = await error.context.json()
-      if (typeof body?.error === 'string') return new Error(body.error)
-    } catch {
-      // Body war kein JSON – Fallback auf die generische Meldung unten.
-    }
-  }
-  return error instanceof Error ? error : new Error(String(error))
 }

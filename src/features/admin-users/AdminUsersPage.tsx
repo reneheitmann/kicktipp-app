@@ -3,7 +3,9 @@ import { Button } from '../../components/ui/Button'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { SearchInput } from '../../components/ui/SearchInput'
 import { CreateUserForm } from './CreateUserForm'
+import { DeleteUserDialog } from './DeleteUserDialog'
 import { EditUserForm } from './EditUserForm'
+import { adminDeleteUser } from './adminDeleteUser'
 import { listProfiles, setProfileActive, updateProfileRole } from './profilesApi'
 import { requestPasswordReset } from '../auth/passwordResetApi'
 import { useAuth } from '../auth/useAuth'
@@ -28,6 +30,7 @@ export function AdminUsersPage() {
   const [search, setSearch] = useState('')
   const [pendingRoleChange, setPendingRoleChange] = useState<{ profile: Profile; role: UserRole } | null>(null)
   const [pendingToggle, setPendingToggle] = useState<Profile | null>(null)
+  const [pendingDelete, setPendingDelete] = useState<Profile | null>(null)
 
   async function reload() {
     setLoading(true)
@@ -62,6 +65,14 @@ export function AdminUsersPage() {
       return
     }
     setPendingToggle(profileRow)
+  }
+
+  function requestDelete(profileRow: Profile) {
+    if (isLastActiveAdmin(profileRow)) {
+      setError('Der letzte aktive Administrator kann nicht gelöscht werden.')
+      return
+    }
+    setPendingDelete(profileRow)
   }
 
   async function confirmRoleChange() {
@@ -168,6 +179,11 @@ export function AdminUsersPage() {
                 >
                   {p.is_active ? 'Sperren' : 'Entsperren'}
                 </Button>
+                {p.id !== ownProfile?.id && (
+                  <Button variant="danger" onClick={() => requestDelete(p)} disabled={!isTrueAdmin && p.role === 'admin'}>
+                    Löschen
+                  </Button>
+                )}
               </div>
             </li>
           ))}
@@ -208,6 +224,17 @@ export function AdminUsersPage() {
           danger={pendingToggle.is_active}
           onConfirm={confirmToggleActive}
           onClose={() => setPendingToggle(null)}
+        />
+      )}
+
+      {pendingDelete && (
+        <DeleteUserDialog
+          profile={pendingDelete}
+          onClose={() => setPendingDelete(null)}
+          onConfirm={async () => {
+            await adminDeleteUser(pendingDelete.id)
+            await reload()
+          }}
         />
       )}
     </div>
