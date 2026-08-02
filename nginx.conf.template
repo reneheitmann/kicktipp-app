@@ -27,6 +27,22 @@ server {
         try_files $uri $uri/ /index.html;
     }
 
+    # index.html referenziert die aktuell gültigen, inhaltsadressierten
+    # Chunk-Dateien (siehe unten) – ohne explizites Cache-Control würde der
+    # Browser sie heuristisch cachen und nach einem Deploy (jedes Docker-
+    # Image enthält nur die neuesten Chunk-Dateien, alte werden nicht
+    # aufgehoben) auf inzwischen gelöschte Chunks verweisen -> 404 beim
+    # dynamischen Import. "no-cache" heißt trotz des Namens nicht "nie
+    # cachen", sondern "vor Nutzung immer beim Server nachfragen" (per ETag),
+    # ein unveränderter Aufruf bleibt dabei weiterhin ein billiger 304er.
+    location = /index.html {
+        add_header Cache-Control "no-cache";
+    }
+    location = /beta/index.html {
+        alias /usr/share/nginx/html/beta/index.html;
+        add_header Cache-Control "no-cache";
+    }
+
     location ~* \.(js|css|svg|png|jpg|jpeg|gif|woff2?)$ {
         expires 30d;
         add_header Cache-Control "public, immutable";
