@@ -7,7 +7,7 @@
 -- hält die erwarteten Beträge unabhängig von der Anzahl der Teilnehmer
 -- leicht nachrechenbar.
 begin;
-select plan(22);
+select plan(26);
 
 -- Gemeinsame Test-Spieler (über alle Szenarien wiederverwendet, players
 -- selbst sind saisonunabhängig).
@@ -230,13 +230,16 @@ select is(
 );
 
 -- ============================================================
--- Szenario 6 (Aufgabe 2): Rundungs-Inkonsistenz zwischen Frontend-Vorschau
--- und Backend. Topf 100,00, ein Rang (100%), 3-Wege-Gleichstand -> jeder
--- bekommt round(100 * 1/3, 2) = 33,33, Summe 99,99 statt 100,00. Anders
--- als computeAmounts() im Frontend (src/features/payouts/payoutCalculations.ts,
--- "letzter Rang bekommt den exakten Rest") gibt es hier KEINE
--- Rest-Korrektur - dieser Test dokumentiert den bestehenden Drift bewusst,
--- er ist kein Fehler in den Erwartungswerten.
+-- Szenario 6 (Aufgabe 2, Teil 1): bewusst verbleibende Grenze nach
+-- 0064_fair_payout_rounding.sql. Topf 100,00, ein Rang (100%), 3-Wege-
+-- Gleichstand -> 100,00 / 3 = 33,33...€ lässt sich nicht glatt auf 3
+-- Spieler aufteilen. 0064 gibt der Gleichstand-Fairness bewusst Vorrang:
+-- alle drei bekommen exakt denselben Betrag (33,33), auch wenn die Summe
+-- dadurch (99,99) 1 Cent unter dem Topf bleibt - die einzige Alternative
+-- wäre, einem der drei gleichplatzierten Spieler einen Cent mehr als den
+-- anderen zu geben, was dem Zweck von 0012 (Gleichstand-Fairness)
+-- widerspräche. Kein Test-Artefakt, keine Regression - siehe Kommentar in
+-- 0064_fair_payout_rounding.sql.
 -- ============================================================
 insert into public.seasons (id, name, start_date, end_date) values
   ('a0000000-0000-0000-0000-000000000006', 'pgtap-season-rounding-drift', '2025-01-01', '2025-12-31');
@@ -263,7 +266,55 @@ select is(
 );
 select is(
   (select sum(betrag) from public.transactions where season_id = 'a0000000-0000-0000-0000-000000000006' and typ = 'gewinn_gesamt'),
-  99.99::numeric, 'Szenario 6 (Befund): Summe der Auszahlungen (99,99) weicht um 1 Cent vom Topf (100,00) ab - kein Test-Artefakt, siehe Migrations-Kommentar zur Rundung'
+  99.99::numeric, 'Szenario 6 (bewusste Grenze): Summe der Auszahlungen (99,99) bleibt 1 Cent unter dem Topf (100,00), damit alle drei Gleichstand-Spieler exakt gleich viel bekommen'
+);
+
+-- ============================================================
+-- Szenario 7 (Aufgabe 2, Teil 2): beweist die eigentliche Korrektur aus
+-- 0064_fair_payout_rounding.sql an einem Fall OHNE Gleichstand, der vorher
+-- (0012) gedriftet wäre. Topf 333,33, Regeln 50/30/20% (3 eindeutige
+-- Ränge). Alte, unabhängige Rundung: round(333.33*0.50,2)=166.67,
+-- round(333.33*0.30,2)=100.00, round(333.33*0.20,2)=66.67 -> Summe 333,34
+-- (1 Cent zu viel). Largest-Remainder-Korrektur über die drei (nicht
+-- gleichgestellten, also frei korrigierbaren) Gruppen liefert stattdessen
+-- 166,66/100,00/66,67 - Summe exakt 333,33.
+-- ============================================================
+insert into public.seasons (id, name, start_date, end_date) values
+  ('a0000000-0000-0000-0000-000000000007', 'pgtap-season-drift-fix', '2025-01-01', '2025-12-31');
+
+insert into public.season_participants (season_id, player_id, gesamtsieg_einsatz_betrag) values
+  ('a0000000-0000-0000-0000-000000000007', 'b0000000-0000-0000-0000-000000000001', 333.33),
+  ('a0000000-0000-0000-0000-000000000007', 'b0000000-0000-0000-0000-000000000002', 0),
+  ('a0000000-0000-0000-0000-000000000007', 'b0000000-0000-0000-0000-000000000003', 0),
+  ('a0000000-0000-0000-0000-000000000007', 'b0000000-0000-0000-0000-000000000004', 0);
+
+insert into public.payout_rules (season_id, typ, rang, prozent_anteil) values
+  ('a0000000-0000-0000-0000-000000000007', 'gesamtsieg', 1, 50),
+  ('a0000000-0000-0000-0000-000000000007', 'gesamtsieg', 2, 30),
+  ('a0000000-0000-0000-0000-000000000007', 'gesamtsieg', 3, 20);
+
+insert into public.season_rankings (season_id, player_id, rang) values
+  ('a0000000-0000-0000-0000-000000000007', 'b0000000-0000-0000-0000-000000000002', 1),
+  ('a0000000-0000-0000-0000-000000000007', 'b0000000-0000-0000-0000-000000000003', 2),
+  ('a0000000-0000-0000-0000-000000000007', 'b0000000-0000-0000-0000-000000000004', 3);
+
+select public.calculate_season_payout('a0000000-0000-0000-0000-000000000007');
+
+select is(
+  (select betrag from public.transactions where season_id = 'a0000000-0000-0000-0000-000000000007' and typ = 'gewinn_gesamt' and player_id = 'b0000000-0000-0000-0000-000000000002'),
+  166.66::numeric, 'Szenario 7: Rang 1 bekommt 166,66 (1 Cent weniger als die naive Rundung 166,67)'
+);
+select is(
+  (select betrag from public.transactions where season_id = 'a0000000-0000-0000-0000-000000000007' and typ = 'gewinn_gesamt' and player_id = 'b0000000-0000-0000-0000-000000000003'),
+  100.00::numeric, 'Szenario 7: Rang 2 bekommt 100,00 (unverändert)'
+);
+select is(
+  (select betrag from public.transactions where season_id = 'a0000000-0000-0000-0000-000000000007' and typ = 'gewinn_gesamt' and player_id = 'b0000000-0000-0000-0000-000000000004'),
+  66.67::numeric, 'Szenario 7: Rang 3 bekommt 66,67 (unverändert)'
+);
+select is(
+  (select sum(betrag) from public.transactions where season_id = 'a0000000-0000-0000-0000-000000000007' and typ = 'gewinn_gesamt'),
+  333.33::numeric, 'Szenario 7 (Fix bestätigt): Summe entspricht jetzt exakt dem Topf'
 );
 
 select * from finish();

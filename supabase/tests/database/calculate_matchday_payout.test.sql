@@ -13,7 +13,7 @@
 -- zählt, daher hier bewusst "krumme" Einzelbeträge, die sich zu runden
 -- Töpfen summieren.
 begin;
-select plan(23);
+select plan(27);
 
 insert into public.players (id, name) values
   ('c0000000-0000-0000-0000-000000000002', 'pgtap-md-player-a'),
@@ -247,10 +247,12 @@ select is(
 );
 
 -- ============================================================
--- Szenario 6 (Aufgabe 2): dieselbe Rundungs-Inkonsistenz wie im
--- Saison-Test, hier für die Spieltags-Variante. Topf 100,00 (34+33+33),
--- ein Rang (100%), 3-Wege-Gleichstand -> jeder bekommt
--- round(100 * 1/3, 2) = 33,33, Summe 99,99 statt 100,00.
+-- Szenario 6 (Aufgabe 2, Teil 1): dieselbe bewusst verbleibende Grenze wie
+-- im Saison-Test, hier für die Spieltags-Variante - siehe Kommentar in
+-- calculate_season_payout.test.sql und in 0064_fair_payout_rounding.sql.
+-- Topf 100,00 (34+33+33), ein Rang (100%), 3-Wege-Gleichstand -> alle drei
+-- bekommen exakt denselben Betrag (33,33), Summe bleibt 1 Cent unter dem
+-- Topf statt Gleichstand-Fairness zu verletzen.
 -- ============================================================
 insert into public.seasons (id, name, start_date, end_date) values
   ('d0000000-0000-0000-0000-000000000006', 'pgtap-md-season-rounding-drift', '2025-01-01', '2025-12-31');
@@ -275,11 +277,58 @@ select public.calculate_matchday_payout('e0000000-0000-0000-0000-000000000006');
 
 select is(
   (select betrag from public.transactions where matchday_id = 'e0000000-0000-0000-0000-000000000006' and typ = 'gewinn_spieltag' and player_id = 'c0000000-0000-0000-0000-000000000002'),
-  33.33::numeric, 'Szenario 6: jeder der 3 Gleichstand-Spieler bekommt unabhängig gerundet 33,33'
+  33.33::numeric, 'Szenario 6: jeder der 3 Gleichstand-Spieler bekommt exakt denselben Betrag (33,33)'
 );
 select is(
   (select sum(betrag) from public.transactions where matchday_id = 'e0000000-0000-0000-0000-000000000006' and typ = 'gewinn_spieltag'),
-  99.99::numeric, 'Szenario 6 (Befund): Summe der Auszahlungen (99,99) weicht um 1 Cent vom Topf (100,00) ab - kein Test-Artefakt, siehe Migrations-Kommentar zur Rundung'
+  99.99::numeric, 'Szenario 6 (bewusste Grenze): Summe bleibt 1 Cent unter dem Topf, damit alle drei Gleichstand-Spieler exakt gleich viel bekommen'
+);
+
+-- ============================================================
+-- Szenario 7 (Aufgabe 2, Teil 2): beweist die Korrektur aus
+-- 0064_fair_payout_rounding.sql an einem Fall OHNE Gleichstand. Topf
+-- 333,33 (166.67+100.00+66.66), Regeln 50/30/20% (3 eindeutige Ränge).
+-- Vor 0064: 166,67/100,00/66,67 (Summe 333,34). Nach 0064:
+-- 166,66/100,00/66,67 (Summe exakt 333,33).
+-- ============================================================
+insert into public.seasons (id, name, start_date, end_date) values
+  ('d0000000-0000-0000-0000-000000000007', 'pgtap-md-season-drift-fix', '2025-01-01', '2025-12-31');
+
+insert into public.season_participants (season_id, player_id, gesamtsieg_einsatz_betrag, spieltags_einsatz_betrag) values
+  ('d0000000-0000-0000-0000-000000000007', 'c0000000-0000-0000-0000-000000000002', 0, 166.67),
+  ('d0000000-0000-0000-0000-000000000007', 'c0000000-0000-0000-0000-000000000003', 0, 100.00),
+  ('d0000000-0000-0000-0000-000000000007', 'c0000000-0000-0000-0000-000000000004', 0, 66.66);
+
+insert into public.payout_rules (season_id, typ, rang, prozent_anteil) values
+  ('d0000000-0000-0000-0000-000000000007', 'spieltag', 1, 50),
+  ('d0000000-0000-0000-0000-000000000007', 'spieltag', 2, 30),
+  ('d0000000-0000-0000-0000-000000000007', 'spieltag', 3, 20);
+
+insert into public.matchdays (id, season_id, nummer) values
+  ('e0000000-0000-0000-0000-000000000007', 'd0000000-0000-0000-0000-000000000007', 1);
+
+insert into public.matchday_rankings (matchday_id, player_id, rang) values
+  ('e0000000-0000-0000-0000-000000000007', 'c0000000-0000-0000-0000-000000000002', 1),
+  ('e0000000-0000-0000-0000-000000000007', 'c0000000-0000-0000-0000-000000000003', 2),
+  ('e0000000-0000-0000-0000-000000000007', 'c0000000-0000-0000-0000-000000000004', 3);
+
+select public.calculate_matchday_payout('e0000000-0000-0000-0000-000000000007');
+
+select is(
+  (select betrag from public.transactions where matchday_id = 'e0000000-0000-0000-0000-000000000007' and typ = 'gewinn_spieltag' and player_id = 'c0000000-0000-0000-0000-000000000002'),
+  166.66::numeric, 'Szenario 7: Rang 1 bekommt 166,66 (1 Cent weniger als die naive Rundung 166,67)'
+);
+select is(
+  (select betrag from public.transactions where matchday_id = 'e0000000-0000-0000-0000-000000000007' and typ = 'gewinn_spieltag' and player_id = 'c0000000-0000-0000-0000-000000000003'),
+  100.00::numeric, 'Szenario 7: Rang 2 bekommt 100,00 (unverändert)'
+);
+select is(
+  (select betrag from public.transactions where matchday_id = 'e0000000-0000-0000-0000-000000000007' and typ = 'gewinn_spieltag' and player_id = 'c0000000-0000-0000-0000-000000000004'),
+  66.67::numeric, 'Szenario 7: Rang 3 bekommt 66,67 (unverändert)'
+);
+select is(
+  (select sum(betrag) from public.transactions where matchday_id = 'e0000000-0000-0000-0000-000000000007' and typ = 'gewinn_spieltag'),
+  333.33::numeric, 'Szenario 7 (Fix bestätigt): Summe entspricht jetzt exakt dem Topf'
 );
 
 select * from finish();
