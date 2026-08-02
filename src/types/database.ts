@@ -854,6 +854,10 @@ export interface Database {
         Args: { p_season_id: string; p_typ: PayoutTyp }
         Returns: { pool: number; has_payouts: boolean }[]
       }
+      get_player_season_balances: {
+        Args: { p_season_ids: string[] }
+        Returns: { player_id: string; season_id: string; gesamt_saldo: number }[]
+      }
       switch_to_role: {
         Args: { p_target_role: UserRole }
         Returns: undefined

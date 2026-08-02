@@ -1,7 +1,13 @@
 import { fetchAllRows } from '../../lib/fetchAllRows'
-import { eurosToCents } from '../../lib/money'
+import { eurosToCents, type Cents } from '../../lib/money'
 import { supabase } from '../../lib/supabaseClient'
 import type { Transaction } from '../../types/database'
+
+export interface PublicPlayerSeasonBalance {
+  player_id: string
+  season_id: string
+  gesamt_saldo: Cents
+}
 
 function toCents(row: Transaction): Transaction {
   return { ...row, betrag: eurosToCents(row.betrag) }
@@ -44,4 +50,20 @@ export async function listTransactionsForPlayers(playerIds: string[]): Promise<T
     supabase.from('transactions').select('*').in('player_id', playerIds).range(from, to),
   )
   return rows.map(toCents)
+}
+
+/** Liefert den Gesamtsaldo je Spieler/Saison für ALLE Spieler (nicht nur
+ * eigene verknüpfte) über eine security-definer-Funktion, die nur die
+ * fertig berechnete Summe offenlegt – season_participants/transactions/
+ * zahlungen selbst bleiben weiterhin "eigener Spieler"-privat. Für den
+ * Saisonvergleich, der jeden aktiven Spieler zeigen soll. */
+export async function getPublicPlayerSeasonBalances(seasonIds: string[]): Promise<PublicPlayerSeasonBalance[]> {
+  if (seasonIds.length === 0) return []
+  const { data, error } = await supabase.rpc('get_player_season_balances', { p_season_ids: seasonIds })
+  if (error) throw error
+  return (data ?? []).map((row) => ({
+    player_id: row.player_id,
+    season_id: row.season_id,
+    gesamt_saldo: eurosToCents(row.gesamt_saldo),
+  }))
 }
