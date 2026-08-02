@@ -13,7 +13,8 @@
 
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { sendSmtpMail, SmtpError } from '../_shared/smtp.ts'
-import { appendToSentFolder, listFolders, ImapError } from '../_shared/imap.ts'
+import { archiveToSentFolder } from '../_shared/mailArchive.ts'
+import { logAppError } from '../_shared/logging.ts'
 import { corsHeadersForOrigin } from '../_shared/cors.ts'
 
 type JsonResponder = (body: unknown, status?: number) => Response
@@ -140,56 +141,8 @@ async function handle(
     return jsonResponse({ error: `SMTP-Fehler: ${message}` }, 502)
   }
 
-  // Ablage im Gesendet-Ordner ist reine Komfortfunktion (siehe imap.ts) – ein
-  // Fehler dort darf die bereits erfolgreich verschickte E-Mail nicht als
-  // Fehlschlag melden, landet aber als Warnung im Log, damit ein Admin eine
-  // kaputte IMAP-Konfiguration bemerkt.
-  if (settings.imap_host && settings.imap_port && settings.imap_sent_folder) {
-    const imapConfig = {
-      hostname: settings.imap_host,
-      port: settings.imap_port,
-      username: settings.smtp_username ?? '',
-      password: settings.smtp_password ?? '',
-    }
-    try {
-      await appendToSentFolder({ ...imapConfig, sentFolder: settings.imap_sent_folder }, rawMessage)
-    } catch (err) {
-      const message = err instanceof ImapError ? err.message : err instanceof Error ? err.message : String(err)
-      // Bei "existiert nicht" direkt die tatsächlich vorhandenen Ordner mitloggen,
-      // damit der Admin den korrekten Namen nicht erraten muss.
-      const availableFolders = await listFolders(imapConfig).catch(() => null)
-      await logAppError(
-        supabaseUrl,
-        serviceRoleKey,
-        'send-email',
-        `Kopie im Gesendet-Ordner konnte nicht abgelegt werden: ${message}`,
-        {
-          to,
-          imap_host: settings.imap_host,
-          imap_sent_folder: settings.imap_sent_folder,
-          available_folders: availableFolders,
-        },
-        'warn',
-      )
-    }
-  }
+  await archiveToSentFolder(supabaseUrl, serviceRoleKey, 'send-email', settings, rawMessage, { to })
 
   return jsonResponse({ ok: true })
-}
-
-async function logAppError(
-  supabaseUrl: string,
-  serviceRoleKey: string,
-  source: string,
-  message: string,
-  details?: Record<string, unknown>,
-  level: 'error' | 'warn' = 'error',
-) {
-  try {
-    const client = createClient(supabaseUrl, serviceRoleKey)
-    await client.from('app_logs').insert({ level, source, message, details: details ?? null })
-  } catch {
-    // Logging darf den eigentlichen Response-Pfad nicht zusätzlich zum Absturz bringen.
-  }
 }
 

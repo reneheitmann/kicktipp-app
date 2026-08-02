@@ -26,6 +26,10 @@ export interface SmtpMessage {
   fromEmail: string
   fromName?: string | null
   to: string
+  /** Optional – z. B. bei Kontaktanfragen die tatsächliche Adresse des
+   *  sendenden Users, damit der Empfänger direkt "Antworten" kann, statt sie
+   *  manuell aus dem Nachrichtentext abzutippen. */
+  replyTo?: string
   subject: string
   html: string
 }
@@ -72,6 +76,7 @@ export interface RawEmail {
 export function buildRawEmail(message: SmtpMessage): RawEmail {
   const envelopeTo = assertSafeEmailAddress(message.to, 'Empfänger')
   const envelopeFrom = assertSafeEmailAddress(message.fromEmail, 'Absender')
+  const replyTo = message.replyTo ? assertSafeEmailAddress(message.replyTo, 'Antwort-Adresse') : undefined
   const fromName = message.fromName ? stripHeaderInjection(message.fromName) : message.fromName
   const subject = stripHeaderInjection(message.subject)
 
@@ -79,6 +84,7 @@ export function buildRawEmail(message: SmtpMessage): RawEmail {
   const headers = [
     `From: ${from}`,
     `To: ${envelopeTo}`,
+    ...(replyTo ? [`Reply-To: ${replyTo}`] : []),
     `Subject: ${encodeHeader(subject)}`,
     'MIME-Version: 1.0',
     'Content-Type: text/html; charset=UTF-8',

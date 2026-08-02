@@ -12,9 +12,14 @@
 // auth.admin.generateLink() ist eine privilegierte API ohne Supabase's
 // eingebaute Abuse-Schranken für resetPasswordForEmail – die
 // password_reset_throttle-Tabelle übernimmt das hier selbst.
+//
+// Ist ein Gesendet-Ordner konfiguriert (_shared/imap.ts), landet danach
+// zusätzlich eine Kopie dort (_shared/mailArchive.ts).
 
 import { createClient } from 'jsr:@supabase/supabase-js@2'
-import { sendSmtpMail, SmtpError } from './smtp.ts'
+import { sendSmtpMail, SmtpError } from '../_shared/smtp.ts'
+import { archiveToSentFolder } from '../_shared/mailArchive.ts'
+import { logAppError } from '../_shared/logging.ts'
 import { corsHeadersForOrigin } from '../_shared/cors.ts'
 
 const THROTTLE_MS = 5 * 60_000
@@ -109,8 +114,9 @@ async function handle(req: Request, supabaseUrl: string, serviceRoleKey: string)
   // sichtbaren Linktext muss & als &amp; escaped werden.
   const escapedActionLink = escapeHtml(actionLink)
 
+  let rawMessage: string
   try {
-    await sendSmtpMail(
+    const sent = await sendSmtpMail(
       {
         hostname: settings.smtp_host,
         port: settings.smtp_port,
@@ -131,28 +137,17 @@ async function handle(req: Request, supabaseUrl: string, serviceRoleKey: string)
         ].join('\n'),
       },
     )
+    rawMessage = sent.raw
   } catch (err) {
     const message = err instanceof SmtpError ? err.message : err instanceof Error ? err.message : String(err)
     await logAppError(supabaseUrl, serviceRoleKey, 'send-password-reset', message, { email })
+    return
   }
+
+  await archiveToSentFolder(supabaseUrl, serviceRoleKey, 'send-password-reset', settings, rawMessage, { email })
 }
 
 function escapeHtml(text: string): string {
   return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
-}
-
-async function logAppError(
-  supabaseUrl: string,
-  serviceRoleKey: string,
-  source: string,
-  message: string,
-  details?: Record<string, unknown>,
-) {
-  try {
-    const client = createClient(supabaseUrl, serviceRoleKey)
-    await client.from('app_logs').insert({ level: 'error', source, message, details: details ?? null })
-  } catch {
-    // Logging darf den eigentlichen Response-Pfad nicht zusätzlich zum Absturz bringen.
-  }
 }
 
