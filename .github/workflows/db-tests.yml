@@ -36,12 +36,16 @@ jobs:
           version: latest
           github-token: ${{ github.token }}
 
-      - name: Lokale Datenbank starten (nur der db-Container, Rest unnötig für pgTAP)
-        run: |
-          supabase start \
-            -x analytics -x edge-runtime -x functions -x imgproxy \
-            -x inbucket -x kong -x meta -x realtime -x rest -x storage \
-            -x studio -x vector
+      # Erster Versuch schloss die meisten Container per wiederholtem -x aus
+      # (nur db wird für pgTAP gebraucht) - das schlug fehl, weil der
+      # rest-Container trotzdem startete (wiederholtes -x scheint nur den
+      # letzten Wert zu behalten statt zu akkumulieren) und dessen
+      # Health-Check dann über den ausgeschlossenen kong-Container lief.
+      # Startet jetzt bewusst den kompletten, offiziell unterstützten Stack -
+      # ein paar Sekunden langsamer, aber ohne Undokumentierte
+      # Exclude-Interaktionen.
+      - name: Lokale Datenbank starten
+        run: supabase start
 
       - name: pgTAP-Suite ausführen
         run: supabase test db --local supabase/tests/database
