@@ -30,6 +30,12 @@ export function AccountsOverviewPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [zahlungFor, setZahlungFor] = useState<Player | null>(null)
+  const [exportingZahlungen, setExportingZahlungen] = useState(false)
+  const [zahlungSearch, setZahlungSearch] = useState('')
+  const [zahlungDatumVon, setZahlungDatumVon] = useState('')
+  const [zahlungDatumBis, setZahlungDatumBis] = useState('')
+  const [zahlungSeasonId, setZahlungSeasonId] = useState('')
+  const [zahlungTyp, setZahlungTyp] = useState<'' | 'einzahlung' | 'auszahlung'>('')
   const [seasonFilter, setSeasonFilter] = useState('')
   const [search, setSearch] = useState('')
   const [sortColumn, setSortColumn] = useState<
@@ -127,9 +133,23 @@ export function AccountsOverviewPage() {
   const totalOffen = computeTotalOutstanding(players.map((p) => p.id), participants, matchdayCounts, zahlungen, transactions)
 
   const playersById = new Map(players.map((p) => [p.id, p]))
-  const term = search.trim().toLowerCase()
+  const seasonsById = new Map(seasons.map((s) => [s.id, s.name]))
+
+  const zahlungTerm = zahlungSearch.trim().toLowerCase()
   const filteredZahlungen = zahlungen
-    .filter((z) => (playersById.get(z.player_id)?.name ?? '').toLowerCase().includes(term))
+    .filter((z) => {
+      const player = playersById.get(z.player_id)
+      if (zahlungTerm) {
+        const matchesName = (player?.name ?? '').toLowerCase().includes(zahlungTerm)
+        const matchesKicktipp = (player?.kicktipp_name ?? '').toLowerCase().includes(zahlungTerm)
+        if (!matchesName && !matchesKicktipp) return false
+      }
+      if (zahlungDatumVon && z.datum < zahlungDatumVon) return false
+      if (zahlungDatumBis && z.datum > zahlungDatumBis) return false
+      if (zahlungSeasonId && z.season_id !== zahlungSeasonId) return false
+      if (zahlungTyp && z.typ !== zahlungTyp) return false
+      return true
+    })
     .sort((a, b) => b.datum.localeCompare(a.datum))
   const summeEinzahlungen = filteredZahlungen
     .filter((z) => z.typ === 'einzahlung')
@@ -137,6 +157,19 @@ export function AccountsOverviewPage() {
   const summeAuszahlungen = filteredZahlungen
     .filter((z) => z.typ === 'auszahlung')
     .reduce((sum, z) => sum + z.betrag, 0)
+  const summeDifferenz = summeEinzahlungen - summeAuszahlungen
+
+  async function handleExportZahlungen() {
+    setExportingZahlungen(true)
+    try {
+      const { exportZahlungenExcel } = await import('../balances/exportExcel')
+      await exportZahlungenExcel(filteredZahlungen, players, seasons)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Export fehlgeschlagen.')
+    } finally {
+      setExportingZahlungen(false)
+    }
+  }
 
   return (
     <div className="p-4 sm:p-6">
@@ -147,104 +180,154 @@ export function AccountsOverviewPage() {
       <p className="mb-4 text-sm font-medium text-slate-700">
         Insgesamt offen: {currencyFormatter.format(centsToEuros(totalOffen))}
       </p>
-      <SearchInput value={search} onChange={setSearch} placeholder="Spieler suchen..." className="mb-4 max-w-xs" />
 
       {error && <p role="alert" className="mb-4 text-sm text-red-600">{error}</p>}
 
-      {rows.length === 0 ? (
-        <p className="text-sm text-slate-500">
-          {players.length === 0 ? 'Noch keine Spieler angelegt.' : 'Keine Treffer für die Suche.'}
-        </p>
-      ) : (
-        <>
-          <p className="mb-2 text-xs text-slate-500 sm:hidden">→ Tabelle nach links wischen für weitere Spalten</p>
-          <div className="max-h-[70vh] overflow-auto rounded-xl border border-slate-200 bg-white">
-            <table className="w-full min-w-[720px] text-sm">
-            <thead>
-              <tr className="border-b border-slate-200 text-slate-500">
-                <SortableTh columnKey="name" label="Spieler" activeKey={sortColumn} direction={sortDirection} onSort={handleSort} />
-                <SortableTh
-                  columnKey="beitraegeGesamt"
-                  label="Beiträge gesamt"
-                  activeKey={sortColumn}
-                  direction={sortDirection}
-                  onSort={handleSort}
-                  align="right"
-                />
-                <SortableTh
-                  columnKey="einzahlungenGesamt"
-                  label="Eingezahlt"
-                  activeKey={sortColumn}
-                  direction={sortDirection}
-                  onSort={handleSort}
-                  align="right"
-                />
-                <SortableTh
-                  columnKey="auszahlungenGesamt"
-                  label="Ausgezahlt"
-                  activeKey={sortColumn}
-                  direction={sortDirection}
-                  onSort={handleSort}
-                  align="right"
-                />
-                <SortableTh
-                  columnKey="gewinneGesamt"
-                  label="Gewinne"
-                  activeKey={sortColumn}
-                  direction={sortDirection}
-                  onSort={handleSort}
-                  align="right"
-                />
-                <SortableTh
-                  columnKey="offen"
-                  label="Status"
-                  activeKey={sortColumn}
-                  direction={sortDirection}
-                  onSort={handleSort}
-                  align="right"
-                />
-                <th className="sticky top-0 z-10 bg-white px-4 py-3 font-medium"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map(({ player, balance }) => (
-                <tr key={player.id} className="border-b border-slate-100 last:border-0">
-                  <td className="px-4 py-3">
-                    <Link to={`/players/${player.id}`} className="font-medium text-slate-900 hover:underline">
-                      {player.name}
-                    </Link>
-                  </td>
-                  <td className="px-4 py-3 text-right text-slate-700">{currencyFormatter.format(centsToEuros(balance.beitraegeGesamt))}</td>
-                  <td className="px-4 py-3 text-right text-slate-700">{currencyFormatter.format(centsToEuros(balance.einzahlungenGesamt))}</td>
-                  <td className="px-4 py-3 text-right text-slate-700">{currencyFormatter.format(centsToEuros(balance.auszahlungenGesamt))}</td>
-                  <td className="px-4 py-3 text-right text-slate-700">{currencyFormatter.format(centsToEuros(balance.gewinneGesamt))}</td>
-                  <td className="px-4 py-3 text-right">
-                    {balance.offen > 0 ? (
-                      <span className="font-medium text-amber-700">
-                        {currencyFormatter.format(centsToEuros(balance.offen))} offen
-                      </span>
-                    ) : balance.offen < 0 ? (
-                      <span className="font-medium text-emerald-700">
-                        {currencyFormatter.format(centsToEuros(-balance.offen))} Guthaben
-                      </span>
-                    ) : (
-                      <span className="font-medium text-slate-500">Ausgeglichen</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <Button variant="secondary" onClick={() => setZahlungFor(player)}>
-                      + Zahlung
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-            </table>
-          </div>
-        </>
-      )}
+      <CollapsibleSection title="Kontostände" count={rows.length}>
+        <SearchInput value={search} onChange={setSearch} placeholder="Spieler suchen..." className="mb-4 max-w-xs" />
 
-      <CollapsibleSection title="Ein-/Auszahlungen" count={filteredZahlungen.length} defaultOpen={false}>
+        {rows.length === 0 ? (
+          <p className="text-sm text-slate-500">
+            {players.length === 0 ? 'Noch keine Spieler angelegt.' : 'Keine Treffer für die Suche.'}
+          </p>
+        ) : (
+          <>
+            <p className="mb-2 text-xs text-slate-500 sm:hidden">→ Tabelle nach links wischen für weitere Spalten</p>
+            <div className="max-h-[70vh] overflow-auto rounded-xl border border-slate-200 bg-white">
+              <table className="w-full min-w-[720px] text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 text-slate-500">
+                  <SortableTh columnKey="name" label="Spieler" activeKey={sortColumn} direction={sortDirection} onSort={handleSort} />
+                  <SortableTh
+                    columnKey="beitraegeGesamt"
+                    label="Beiträge gesamt"
+                    activeKey={sortColumn}
+                    direction={sortDirection}
+                    onSort={handleSort}
+                    align="right"
+                  />
+                  <SortableTh
+                    columnKey="einzahlungenGesamt"
+                    label="Eingezahlt"
+                    activeKey={sortColumn}
+                    direction={sortDirection}
+                    onSort={handleSort}
+                    align="right"
+                  />
+                  <SortableTh
+                    columnKey="auszahlungenGesamt"
+                    label="Ausgezahlt"
+                    activeKey={sortColumn}
+                    direction={sortDirection}
+                    onSort={handleSort}
+                    align="right"
+                  />
+                  <SortableTh
+                    columnKey="gewinneGesamt"
+                    label="Gewinne"
+                    activeKey={sortColumn}
+                    direction={sortDirection}
+                    onSort={handleSort}
+                    align="right"
+                  />
+                  <SortableTh
+                    columnKey="offen"
+                    label="Status"
+                    activeKey={sortColumn}
+                    direction={sortDirection}
+                    onSort={handleSort}
+                    align="right"
+                  />
+                  <th className="sticky top-0 z-10 bg-white px-4 py-3 font-medium"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map(({ player, balance }) => (
+                  <tr key={player.id} className="border-b border-slate-100 last:border-0">
+                    <td className="px-4 py-3">
+                      <Link to={`/players/${player.id}`} className="font-medium text-slate-900 hover:underline">
+                        {player.name}
+                      </Link>
+                    </td>
+                    <td className="px-4 py-3 text-right text-slate-700">{currencyFormatter.format(centsToEuros(balance.beitraegeGesamt))}</td>
+                    <td className="px-4 py-3 text-right text-slate-700">{currencyFormatter.format(centsToEuros(balance.einzahlungenGesamt))}</td>
+                    <td className="px-4 py-3 text-right text-slate-700">{currencyFormatter.format(centsToEuros(balance.auszahlungenGesamt))}</td>
+                    <td className="px-4 py-3 text-right text-slate-700">{currencyFormatter.format(centsToEuros(balance.gewinneGesamt))}</td>
+                    <td className="px-4 py-3 text-right">
+                      {balance.offen > 0 ? (
+                        <span className="font-medium text-amber-700">
+                          {currencyFormatter.format(centsToEuros(balance.offen))} offen
+                        </span>
+                      ) : balance.offen < 0 ? (
+                        <span className="font-medium text-emerald-700">
+                          {currencyFormatter.format(centsToEuros(-balance.offen))} Guthaben
+                        </span>
+                      ) : (
+                        <span className="font-medium text-slate-500">Ausgeglichen</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <Button variant="secondary" onClick={() => setZahlungFor(player)}>
+                        + Zahlung
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              </table>
+            </div>
+          </>
+        )}
+      </CollapsibleSection>
+
+      <CollapsibleSection
+        title="Ein-/Auszahlungen"
+        count={filteredZahlungen.length}
+        defaultOpen={false}
+        actions={
+          filteredZahlungen.length > 0 ? (
+            <Button variant="secondary" onClick={handleExportZahlungen} disabled={exportingZahlungen}>
+              {exportingZahlungen ? 'Export...' : 'Als Excel exportieren'}
+            </Button>
+          ) : undefined
+        }
+      >
+        <div className="mb-3 flex flex-wrap items-end gap-3">
+          <SearchInput
+            value={zahlungSearch}
+            onChange={setZahlungSearch}
+            placeholder="Spieler oder Kicktipp-Name suchen..."
+            className="max-w-xs"
+          />
+          <label className="text-sm text-slate-600">
+            von{' '}
+            <input
+              type="date"
+              value={zahlungDatumVon}
+              onChange={(e) => setZahlungDatumVon(e.target.value)}
+              className="rounded-lg border border-slate-300 px-2 py-2 text-sm focus:border-slate-900 focus:outline-none"
+            />
+          </label>
+          <label className="text-sm text-slate-600">
+            bis{' '}
+            <input
+              type="date"
+              value={zahlungDatumBis}
+              onChange={(e) => setZahlungDatumBis(e.target.value)}
+              className="rounded-lg border border-slate-300 px-2 py-2 text-sm focus:border-slate-900 focus:outline-none"
+            />
+          </label>
+          <SeasonFilter seasons={seasons} value={zahlungSeasonId} onChange={setZahlungSeasonId} />
+          <select
+            value={zahlungTyp}
+            onChange={(e) => setZahlungTyp(e.target.value as typeof zahlungTyp)}
+            className="rounded-lg border border-slate-300 px-3 py-2 text-base focus:border-slate-900 focus:outline-none"
+          >
+            <option value="">Alle Typen</option>
+            <option value="einzahlung">Einzahlung</option>
+            <option value="auszahlung">Auszahlung</option>
+          </select>
+        </div>
         <p className="mb-3 flex flex-wrap gap-x-6 gap-y-1 text-sm font-medium">
           <span className="text-emerald-700">
             Summe Einzahlungen: {currencyFormatter.format(centsToEuros(summeEinzahlungen))}
@@ -252,16 +335,20 @@ export function AccountsOverviewPage() {
           <span className="text-amber-700">
             Summe Auszahlungen: {currencyFormatter.format(centsToEuros(summeAuszahlungen))}
           </span>
+          <span className={summeDifferenz >= 0 ? 'text-emerald-700' : 'text-amber-700'}>
+            Differenz: {currencyFormatter.format(centsToEuros(summeDifferenz))}
+          </span>
         </p>
         {filteredZahlungen.length === 0 ? (
           <p className="text-sm text-slate-500">Keine Zahlungen gefunden.</p>
         ) : (
           <div className="max-h-[70vh] overflow-auto rounded-xl border border-slate-200 bg-white">
-            <table className="w-full min-w-[560px] text-sm">
+            <table className="w-full min-w-[680px] text-sm">
               <thead>
                 <tr className="border-b border-slate-200 text-slate-500">
                   <th className="sticky top-0 z-10 bg-white px-4 py-3 text-left font-medium">Datum</th>
                   <th className="sticky top-0 z-10 bg-white px-4 py-3 text-left font-medium">Spieler</th>
+                  <th className="sticky top-0 z-10 bg-white px-4 py-3 text-left font-medium">Saison</th>
                   <th className="sticky top-0 z-10 bg-white px-4 py-3 text-left font-medium">Typ</th>
                   <th className="sticky top-0 z-10 bg-white px-4 py-3 text-right font-medium">Betrag</th>
                   <th className="sticky top-0 z-10 bg-white px-4 py-3 text-left font-medium">Notiz</th>
@@ -276,6 +363,7 @@ export function AccountsOverviewPage() {
                         {playersById.get(z.player_id)?.name ?? 'Unbekannter Spieler'}
                       </Link>
                     </td>
+                    <td className="px-4 py-3 text-slate-700">{seasonsById.get(z.season_id) ?? '—'}</td>
                     <td className="px-4 py-3 text-slate-700">{z.typ === 'einzahlung' ? 'Einzahlung' : 'Auszahlung'}</td>
                     <td className="px-4 py-3 text-right text-slate-700">{currencyFormatter.format(centsToEuros(z.betrag))}</td>
                     <td className="px-4 py-3 text-slate-500">{z.notiz || '—'}</td>
