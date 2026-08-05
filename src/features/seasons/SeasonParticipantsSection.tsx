@@ -55,14 +55,23 @@ export function SeasonParticipantsSection({
   const [confirmingBulkRemove, setConfirmingBulkRemove] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
+  const [onlyDeviating, setOnlyDeviating] = useState(false)
+
+  function deviatesFromDefault(participant: SeasonParticipant): boolean {
+    return (
+      participant.gesamtsieg_einsatz_betrag !== defaultGesamtsiegBetrag ||
+      participant.spieltags_einsatz_betrag !== defaultSpieltagsBetrag
+    )
+  }
 
   const playersById = new Map(players.map((p) => [p.id, p]))
   const assignedPlayerIds = new Set(participants.map((p) => p.player_id))
   const availablePlayers = players.filter((p) => !assignedPlayerIds.has(p.id))
   const filteredParticipants = participants.filter((participant) => {
     const term = search.trim().toLowerCase()
-    if (!term) return true
-    return (playersById.get(participant.player_id)?.name ?? '').toLowerCase().includes(term)
+    if (term && !(playersById.get(participant.player_id)?.name ?? '').toLowerCase().includes(term)) return false
+    if (onlyDeviating && !deviatesFromDefault(participant)) return false
+    return true
   })
   const allVisibleSelected = filteredParticipants.length > 0 && filteredParticipants.every((p) => selectedIds.has(p.id))
 
@@ -119,7 +128,18 @@ export function SeasonParticipantsSection({
         {error && <p role="alert" className="mb-2 text-sm text-red-600">{error}</p>}
 
         {participants.length > 1 && (
-          <SearchInput value={search} onChange={setSearch} placeholder="Spieler suchen..." className="mb-3 max-w-xs" />
+          <div className="mb-3 flex flex-wrap items-center gap-3">
+            <SearchInput value={search} onChange={setSearch} placeholder="Spieler suchen..." className="max-w-xs" />
+            <label className="flex items-center gap-2 text-sm text-slate-600">
+              <input
+                type="checkbox"
+                checked={onlyDeviating}
+                onChange={(e) => setOnlyDeviating(e.target.checked)}
+                className="h-4 w-4"
+              />
+              Nur Abweichungen vom Standard
+            </label>
+          </div>
         )}
 
         {canManage && filteredParticipants.length > 1 && (
@@ -145,7 +165,9 @@ export function SeasonParticipantsSection({
         {participants.length === 0 ? (
           <p className="text-sm text-slate-500">Noch keine Teilnehmer.</p>
         ) : filteredParticipants.length === 0 ? (
-          <p className="text-sm text-slate-500">Keine Treffer für die Suche.</p>
+          <p className="text-sm text-slate-500">
+            {onlyDeviating ? 'Keine Teilnehmer mit Abweichung vom Standard.' : 'Keine Treffer für die Suche.'}
+          </p>
         ) : (
           <ul className="divide-y divide-slate-200 overflow-hidden rounded-xl border border-slate-200 bg-white">
             {filteredParticipants.map((participant) => (
