@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { Button } from '../../components/ui/Button'
 import { SearchInput } from '../../components/ui/SearchInput'
 import { SortableTh } from '../../components/ui/SortableTh'
 import { currencyFormatter } from '../../lib/format'
@@ -55,6 +56,7 @@ export function SeasonComparisonPage() {
   const [seasons, setSeasons] = useState<Season[]>([])
   const [players, setPlayers] = useState<Player[]>([])
   const [publicBalances, setPublicBalances] = useState<PublicPlayerSeasonBalance[]>([])
+  const [metric, setMetric] = useState<'saldo' | 'gewinne'>('saldo')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedPlayerIds, setSelectedPlayerIds] = useState<Set<string>>(new Set())
@@ -111,16 +113,16 @@ export function SeasonComparisonPage() {
     return players
       .map((player) => {
         const bySeasonId = new Map(
-          seasons.map((season) => [
-            season.id,
-            publicBalances.find((b) => b.player_id === player.id && b.season_id === season.id)?.gesamt_saldo ?? 0,
-          ]),
+          seasons.map((season) => {
+            const balance = publicBalances.find((b) => b.player_id === player.id && b.season_id === season.id)
+            return [season.id, (metric === 'saldo' ? balance?.gesamt_saldo : balance?.gewinne) ?? 0]
+          }),
         )
         const total = [...bySeasonId.values()].reduce((sum, v) => sum + v, 0)
         return { player, bySeasonId, total }
       })
       .sort((a, b) => b.total - a.total)
-  }, [players, seasons, publicBalances])
+  }, [players, seasons, publicBalances, metric])
 
   // Eigene Sortierung + Suche nur für die Tabelle – playerRows selbst bleibt
   // total-absteigend sortiert, da die Vorauswahl-Logik unten (größte
@@ -195,9 +197,27 @@ export function SeasonComparisonPage() {
         <p className="text-sm text-slate-500">Noch keine Saisons vorhanden.</p>
       ) : (
         <>
+          <div className="mb-3 flex items-center gap-2">
+            <Button variant={metric === 'saldo' ? 'primary' : 'secondary'} onClick={() => setMetric('saldo')}>
+              Saldo
+            </Button>
+            <Button variant={metric === 'gewinne' ? 'primary' : 'secondary'} onClick={() => setMetric('gewinne')}>
+              Gewinne
+            </Button>
+          </div>
           <p className="mb-3 text-sm text-slate-500">
-            Die Grafik zeigt den Verlauf des Gesamtsaldos je ausgewähltem Spieler über alle Saisons hinweg – so
-            lässt sich auf einen Blick erkennen, wer über die Zeit im Plus oder Minus liegt.
+            {metric === 'saldo' ? (
+              <>
+                Die Grafik zeigt den Verlauf des Gesamtsaldos je ausgewähltem Spieler über alle Saisons hinweg – so
+                lässt sich auf einen Blick erkennen, wer über die Zeit im Plus oder Minus liegt.
+              </>
+            ) : (
+              <>
+                Die Grafik zeigt den Verlauf der reinen Gewinne (ohne Einsatz/Zahlungen gegenzurechnen) je
+                ausgewähltem Spieler über alle Saisons hinweg – so lässt sich auf einen Blick erkennen, wer am
+                meisten gewonnen hat.
+              </>
+            )}
           </p>
           <div className="mb-3 flex flex-col gap-4 sm:flex-row">
             <div className="h-72 w-full rounded-xl border border-slate-200 bg-white p-4 sm:flex-1">
@@ -313,7 +333,14 @@ export function SeasonComparisonPage() {
                       align="right"
                     />
                   ))}
-                  <SortableTh columnKey="total" label="Gesamt" activeKey={sortKey} direction={sortDirection} onSort={handleSort} align="right" />
+                  <SortableTh
+                    columnKey="total"
+                    label={metric === 'saldo' ? 'Gesamtsaldo' : 'Gesamtgewinne'}
+                    activeKey={sortKey}
+                    direction={sortDirection}
+                    onSort={handleSort}
+                    align="right"
+                  />
                 </tr>
               </thead>
               <tbody>

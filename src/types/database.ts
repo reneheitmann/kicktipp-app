@@ -856,7 +856,7 @@ export interface Database {
       }
       get_player_season_balances: {
         Args: { p_season_ids: string[] }
-        Returns: { player_id: string; season_id: string; gesamt_saldo: number }[]
+        Returns: { player_id: string; season_id: string; gesamt_saldo: number; gewinne: number }[]
       }
       switch_to_role: {
         Args: { p_target_role: UserRole }

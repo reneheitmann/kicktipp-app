@@ -7,6 +7,7 @@ export interface PublicPlayerSeasonBalance {
   player_id: string
   season_id: string
   gesamt_saldo: Cents
+  gewinne: Cents
 }
 
 function toCents(row: Transaction): Transaction {
@@ -65,5 +66,6 @@ export async function getPublicPlayerSeasonBalances(seasonIds: string[]): Promis
     player_id: row.player_id,
     season_id: row.season_id,
     gesamt_saldo: eurosToCents(row.gesamt_saldo),
+    gewinne: eurosToCents(row.gewinne),
   }))
 }
