@@ -1,6 +1,6 @@
 import ExcelJS from 'exceljs'
 import { centsToEuros } from '../../lib/money'
-import type { Matchday, Player, Season, Transaction } from '../../types/database'
+import type { Matchday, Player, Season, Transaction, Zahlung } from '../../types/database'
 import type { PlayerBalance } from './balanceCalculations'
 
 const typLabels: Record<Transaction['typ'], string> = {
@@ -89,6 +89,55 @@ export async function exportSeasonExcel(
   const link = document.createElement('a')
   link.href = url
   link.download = `Saisonabrechnung_${season.name.replace(/[^\w-]+/g, '_')}.xlsx`
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  URL.revokeObjectURL(url)
+}
+
+const zahlungTypLabels: Record<Zahlung['typ'], string> = {
+  einzahlung: 'Einzahlung',
+  auszahlung: 'Auszahlung',
+}
+
+export async function exportZahlungenExcel(zahlungen: Zahlung[], players: Player[], seasons: Season[]): Promise<void> {
+  const playersById = new Map(players.map((p) => [p.id, p.name]))
+  const seasonsById = new Map(seasons.map((s) => [s.id, s.name]))
+
+  const workbook = new ExcelJS.Workbook()
+  workbook.creator = 'Kicktipp Spielrunde'
+  workbook.created = new Date()
+
+  const sheet = workbook.addWorksheet('Ein- und Auszahlungen')
+  sheet.columns = [
+    { header: 'Datum', key: 'datum', width: 14 },
+    { header: 'Spieler', key: 'spieler', width: 24 },
+    { header: 'Saison', key: 'saison', width: 18 },
+    { header: 'Typ', key: 'typ', width: 16 },
+    { header: 'Betrag', key: 'betrag', width: 14 },
+    { header: 'Notiz', key: 'notiz', width: 32 },
+  ]
+  sheet.getRow(1).font = { bold: true }
+  for (const z of [...zahlungen].sort((a, b) => b.datum.localeCompare(a.datum))) {
+    sheet.addRow({
+      datum: z.datum,
+      spieler: playersById.get(z.player_id) ?? z.player_id,
+      saison: seasonsById.get(z.season_id) ?? '',
+      typ: zahlungTypLabels[z.typ],
+      betrag: centsToEuros(z.betrag),
+      notiz: z.notiz ?? '',
+    })
+  }
+  sheet.getColumn('betrag').numFmt = '#,##0.00 €'
+
+  const buffer = await workbook.xlsx.writeBuffer()
+  const blob = new Blob([buffer], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = 'Ein-Auszahlungen.xlsx'
   document.body.appendChild(link)
   link.click()
   link.remove()

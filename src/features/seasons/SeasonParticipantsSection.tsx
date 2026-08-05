@@ -13,6 +13,10 @@ interface SeasonParticipantsSectionProps {
   players: Player[]
   /** Anzahl der bisher angelegten Spieltage dieser Saison, für die Spieltagseinsatz-Aufschlüsselung. */
   matchdayCount: number
+  /** Saisonweiter Standard-Einsatz (season.default_*) – Vorausfüllung im
+   *  "+ Spieler"-Formular sowie Referenz für die Abweichungs-Badges unten. */
+  defaultGesamtsiegBetrag: Cents
+  defaultSpieltagsBetrag: Cents
   canManage: boolean
   onAdd: (input: { playerId: string; gesamtsiegBetrag: Cents; spieltagsBetrag: Cents }) => Promise<void>
   onUpdate: (
@@ -34,6 +38,8 @@ export function SeasonParticipantsSection({
   participants,
   players,
   matchdayCount,
+  defaultGesamtsiegBetrag,
+  defaultSpieltagsBetrag,
   canManage,
   onAdd,
   onUpdate,
@@ -175,6 +181,21 @@ export function SeasonParticipantsSection({
                       </button>
                     )}
                     <span className="min-w-0 truncate">{playersById.get(participant.player_id)?.name ?? 'Unbekannter Spieler'}</span>
+                    {participant.gesamtsieg_einsatz_betrag === 0 && participant.spieltags_einsatz_betrag === 0 && (
+                      <span className="shrink-0 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700">
+                        Kein Einsatz hinterlegt
+                      </span>
+                    )}
+                    {participant.gesamtsieg_einsatz_betrag !== defaultGesamtsiegBetrag && (
+                      <span className="shrink-0 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700">
+                        Gesamtwertung weicht ab ({currencyFormatter.format(centsToEuros(defaultGesamtsiegBetrag))} Standard)
+                      </span>
+                    )}
+                    {participant.spieltags_einsatz_betrag !== defaultSpieltagsBetrag && (
+                      <span className="shrink-0 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700">
+                        Spieltag weicht ab ({currencyFormatter.format(centsToEuros(defaultSpieltagsBetrag))} Standard)
+                      </span>
+                    )}
                   </p>
                   <p className="truncate text-sm text-slate-500">
                     Gesamtwertung: {currencyFormatter.format(centsToEuros(participant.gesamtsieg_einsatz_betrag))} · Spieltag:{' '}
@@ -212,6 +233,8 @@ export function SeasonParticipantsSection({
       {showAddForm && (
         <SeasonParticipantForm
           availablePlayers={availablePlayers}
+          defaultGesamtsiegBetrag={defaultGesamtsiegBetrag}
+          defaultSpieltagsBetrag={defaultSpieltagsBetrag}
           onClose={() => setShowAddForm(false)}
           onSubmit={async ({ playerId, gesamtsiegBetrag, spieltagsBetrag }) =>
             onAdd({ playerId, gesamtsiegBetrag, spieltagsBetrag })
