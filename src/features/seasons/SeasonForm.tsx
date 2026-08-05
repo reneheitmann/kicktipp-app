@@ -1,12 +1,20 @@
 import { useState, type FormEvent } from 'react'
 import { Modal } from '../../components/ui/Modal'
 import { Button } from '../../components/ui/Button'
+import { formatEuroInputValue, parseEuroInput, type Cents } from '../../lib/money'
 import type { Season } from '../../types/database'
 
 interface SeasonFormProps {
   season?: Season
   onClose: () => void
-  onSubmit: (input: { name: string; start_date: string; end_date: string; kicktipp_link: string }) => Promise<void>
+  onSubmit: (input: {
+    name: string
+    start_date: string
+    end_date: string
+    kicktipp_link: string
+    default_gesamtsieg_einsatz_betrag: Cents
+    default_spieltags_einsatz_betrag: Cents
+  }) => Promise<void>
 }
 
 export function SeasonForm({ season, onClose, onSubmit }: SeasonFormProps) {
@@ -14,6 +22,12 @@ export function SeasonForm({ season, onClose, onSubmit }: SeasonFormProps) {
   const [startDate, setStartDate] = useState(season?.start_date ?? '')
   const [endDate, setEndDate] = useState(season?.end_date ?? '')
   const [kicktippLink, setKicktippLink] = useState(season?.kicktipp_link ?? '')
+  const [defaultGesamtsiegBetrag, setDefaultGesamtsiegBetrag] = useState(
+    season ? formatEuroInputValue(season.default_gesamtsieg_einsatz_betrag) : '',
+  )
+  const [defaultSpieltagsBetrag, setDefaultSpieltagsBetrag] = useState(
+    season ? formatEuroInputValue(season.default_spieltags_einsatz_betrag) : '',
+  )
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
@@ -27,10 +41,27 @@ export function SeasonForm({ season, onClose, onSubmit }: SeasonFormProps) {
       setError('Das Enddatum darf nicht vor dem Startdatum liegen.')
       return
     }
+    const parsedGesamtsieg = defaultGesamtsiegBetrag.trim() === '' ? 0 : parseEuroInput(defaultGesamtsiegBetrag)
+    const parsedSpieltag = defaultSpieltagsBetrag.trim() === '' ? 0 : parseEuroInput(defaultSpieltagsBetrag)
+    if (parsedGesamtsieg === null || parsedGesamtsieg < 0) {
+      setError('Standard-Einsatz Gesamtwertung muss eine gültige Zahl (≥ 0) sein.')
+      return
+    }
+    if (parsedSpieltag === null || parsedSpieltag < 0) {
+      setError('Standard-Einsatz Spieltag muss eine gültige Zahl (≥ 0) sein.')
+      return
+    }
     setSubmitting(true)
     setError(null)
     try {
-      await onSubmit({ name: name.trim(), start_date: startDate, end_date: endDate, kicktipp_link: kicktippLink.trim() })
+      await onSubmit({
+        name: name.trim(),
+        start_date: startDate,
+        end_date: endDate,
+        kicktipp_link: kicktippLink.trim(),
+        default_gesamtsieg_einsatz_betrag: parsedGesamtsieg,
+        default_spieltags_einsatz_betrag: parsedSpieltag,
+      })
       onClose()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Speichern fehlgeschlagen.')
@@ -95,6 +126,40 @@ export function SeasonForm({ season, onClose, onSubmit }: SeasonFormProps) {
             className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base focus:border-slate-900 focus:outline-none"
           />
         </div>
+
+        <div className="flex gap-3">
+          <div className="flex-1">
+            <label htmlFor="season-default-gesamtsieg" className="mb-1 block text-sm font-medium text-slate-700">
+              Standard-Einsatz Gesamtwertung (€)
+            </label>
+            <input
+              id="season-default-gesamtsieg"
+              type="text"
+              inputMode="decimal"
+              value={defaultGesamtsiegBetrag}
+              onChange={(e) => setDefaultGesamtsiegBetrag(e.target.value)}
+              placeholder="0,00"
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base focus:border-slate-900 focus:outline-none"
+            />
+          </div>
+          <div className="flex-1">
+            <label htmlFor="season-default-spieltag" className="mb-1 block text-sm font-medium text-slate-700">
+              Standard-Einsatz Spieltag (€)
+            </label>
+            <input
+              id="season-default-spieltag"
+              type="text"
+              inputMode="decimal"
+              value={defaultSpieltagsBetrag}
+              onChange={(e) => setDefaultSpieltagsBetrag(e.target.value)}
+              placeholder="0,00"
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base focus:border-slate-900 focus:outline-none"
+            />
+          </div>
+        </div>
+        <p className="-mt-2 text-xs text-slate-500">
+          Wird beim Hinzufügen neuer Teilnehmer vorausgefüllt und dient als Referenz für die Abweichungs-Anzeige.
+        </p>
 
         {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
 

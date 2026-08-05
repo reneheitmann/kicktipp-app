@@ -423,6 +423,8 @@ export function SeasonDetailPage() {
         participants={participants}
         players={players}
         matchdayCount={matchdays.length}
+        defaultGesamtsiegBetrag={season.default_gesamtsieg_einsatz_betrag}
+        defaultSpieltagsBetrag={season.default_spieltags_einsatz_betrag}
         canManage={canManageParticipants && !seasonLocked}
         favoritePlayerId={favoritePlayerId}
         onToggleFavorite={toggleFavoritePlayer}

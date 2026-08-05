@@ -8,6 +8,11 @@ interface SeasonParticipantFormProps {
   participant?: SeasonParticipant
   fixedPlayer?: Player
   availablePlayers?: Player[]
+  /** Saisonweiter Standard-Einsatz – füllt die Beträge beim Neu-Anlegen
+   *  eines Teilnehmers vor (Bearbeiten-Fall füllt weiterhin aus dem
+   *  Teilnehmer selbst, siehe unten). */
+  defaultGesamtsiegBetrag?: Cents
+  defaultSpieltagsBetrag?: Cents
   onClose: () => void
   onSubmit: (input: {
     playerId: string
@@ -20,15 +25,21 @@ export function SeasonParticipantForm({
   participant,
   fixedPlayer,
   availablePlayers,
+  defaultGesamtsiegBetrag,
+  defaultSpieltagsBetrag,
   onClose,
   onSubmit,
 }: SeasonParticipantFormProps) {
   const [playerId, setPlayerId] = useState(fixedPlayer?.id ?? '')
   const [gesamtsiegBetrag, setGesamtsiegBetrag] = useState(
-    participant ? formatEuroInputValue(participant.gesamtsieg_einsatz_betrag) : '',
+    participant
+      ? formatEuroInputValue(participant.gesamtsieg_einsatz_betrag)
+      : formatEuroInputValue(defaultGesamtsiegBetrag ?? 0),
   )
   const [spieltagsBetrag, setSpieltagsBetrag] = useState(
-    participant ? formatEuroInputValue(participant.spieltags_einsatz_betrag) : '',
+    participant
+      ? formatEuroInputValue(participant.spieltags_einsatz_betrag)
+      : formatEuroInputValue(defaultSpieltagsBetrag ?? 0),
   )
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)

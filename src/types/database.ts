@@ -110,6 +110,11 @@ export type Season = {
   /** Link zur zugehörigen Kicktipp.de-Spielrunde – bei neuen Saisons per
    *  Formular verpflichtend, bestehende Saisons können ihn noch nicht haben. */
   kicktipp_link: string | null
+  /** Vorgabewert fürs Anlegen neuer Teilnehmer + Referenz für die
+   *  Abweichungs-Anzeige in SeasonParticipantsSection; 0 = kein Standard
+   *  gepflegt. Erzwingt nichts bei bestehenden Teilnehmer-Einsätzen. */
+  default_gesamtsieg_einsatz_betrag: Cents
+  default_spieltags_einsatz_betrag: Cents
   created_at: string
 }
 
@@ -410,6 +415,8 @@ export interface Database {
           status?: SeasonStatus
           gesamtwertung_status?: GesamtwertungStatus
           kicktipp_link?: string | null
+          default_gesamtsieg_einsatz_betrag?: number
+          default_spieltags_einsatz_betrag?: number
           created_at?: string
         }
         Update: {
@@ -420,6 +427,8 @@ export interface Database {
           status?: SeasonStatus
           gesamtwertung_status?: GesamtwertungStatus
           kicktipp_link?: string | null
+          default_gesamtsieg_einsatz_betrag?: number
+          default_spieltags_einsatz_betrag?: number
           created_at?: string
         }
         Relationships: []
