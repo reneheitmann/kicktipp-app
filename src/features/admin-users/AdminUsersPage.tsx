@@ -114,7 +114,9 @@ export function AdminUsersPage() {
   return (
     <div className="p-4 sm:p-6">
       <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-slate-900">Benutzerverwaltung</h1>
+        <h1 className="text-xl font-semibold text-slate-900">
+          Benutzerverwaltung <span className="font-normal text-slate-500">({profiles.length})</span>
+        </h1>
         <Button onClick={() => setShowCreate(true)}>+ Benutzer</Button>
       </div>
 

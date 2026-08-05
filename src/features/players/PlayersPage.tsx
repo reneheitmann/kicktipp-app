@@ -75,7 +75,9 @@ export function PlayersPage() {
   return (
     <div className="p-4 sm:p-6">
       <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-slate-900">Spieler</h1>
+        <h1 className="text-xl font-semibold text-slate-900">
+          Spieler <span className="font-normal text-slate-500">({players.length})</span>
+        </h1>
         <Button onClick={openCreate}>+ Spieler</Button>
       </div>
 

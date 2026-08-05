@@ -175,6 +175,11 @@ export function SeasonParticipantsSection({
                       </button>
                     )}
                     <span className="min-w-0 truncate">{playersById.get(participant.player_id)?.name ?? 'Unbekannter Spieler'}</span>
+                    {participant.gesamtsieg_einsatz_betrag === 0 && participant.spieltags_einsatz_betrag === 0 && (
+                      <span className="shrink-0 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700">
+                        Kein Einsatz hinterlegt
+                      </span>
+                    )}
                   </p>
                   <p className="truncate text-sm text-slate-500">
                     Gesamtwertung: {currencyFormatter.format(centsToEuros(participant.gesamtsieg_einsatz_betrag))} · Spieltag:{' '}

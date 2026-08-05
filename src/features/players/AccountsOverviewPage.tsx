@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
+import { CollapsibleSection } from '../../components/ui/CollapsibleSection'
 import { SearchInput } from '../../components/ui/SearchInput'
 import { SeasonFilter } from '../../components/ui/SeasonFilter'
 import { SortableTh } from '../../components/ui/SortableTh'
-import { currencyFormatter } from '../../lib/format'
+import { currencyFormatter, formatGermanDate } from '../../lib/format'
 import { centsToEuros } from '../../lib/money'
 import { listPlayers } from './playersApi'
 import { addZahlung, listZahlungenForSeasons } from './zahlungenApi'
@@ -125,6 +126,18 @@ export function AccountsOverviewPage() {
 
   const totalOffen = computeTotalOutstanding(players.map((p) => p.id), participants, matchdayCounts, zahlungen, transactions)
 
+  const playersById = new Map(players.map((p) => [p.id, p]))
+  const term = search.trim().toLowerCase()
+  const filteredZahlungen = zahlungen
+    .filter((z) => (playersById.get(z.player_id)?.name ?? '').toLowerCase().includes(term))
+    .sort((a, b) => b.datum.localeCompare(a.datum))
+  const summeEinzahlungen = filteredZahlungen
+    .filter((z) => z.typ === 'einzahlung')
+    .reduce((sum, z) => sum + z.betrag, 0)
+  const summeAuszahlungen = filteredZahlungen
+    .filter((z) => z.typ === 'auszahlung')
+    .reduce((sum, z) => sum + z.betrag, 0)
+
   return (
     <div className="p-4 sm:p-6">
       <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
@@ -230,6 +243,49 @@ export function AccountsOverviewPage() {
           </div>
         </>
       )}
+
+      <CollapsibleSection title="Ein-/Auszahlungen" count={filteredZahlungen.length} defaultOpen={false}>
+        <p className="mb-3 flex flex-wrap gap-x-6 gap-y-1 text-sm font-medium">
+          <span className="text-emerald-700">
+            Summe Einzahlungen: {currencyFormatter.format(centsToEuros(summeEinzahlungen))}
+          </span>
+          <span className="text-amber-700">
+            Summe Auszahlungen: {currencyFormatter.format(centsToEuros(summeAuszahlungen))}
+          </span>
+        </p>
+        {filteredZahlungen.length === 0 ? (
+          <p className="text-sm text-slate-500">Keine Zahlungen gefunden.</p>
+        ) : (
+          <div className="max-h-[70vh] overflow-auto rounded-xl border border-slate-200 bg-white">
+            <table className="w-full min-w-[560px] text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 text-slate-500">
+                  <th className="sticky top-0 z-10 bg-white px-4 py-3 text-left font-medium">Datum</th>
+                  <th className="sticky top-0 z-10 bg-white px-4 py-3 text-left font-medium">Spieler</th>
+                  <th className="sticky top-0 z-10 bg-white px-4 py-3 text-left font-medium">Typ</th>
+                  <th className="sticky top-0 z-10 bg-white px-4 py-3 text-right font-medium">Betrag</th>
+                  <th className="sticky top-0 z-10 bg-white px-4 py-3 text-left font-medium">Notiz</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredZahlungen.map((z) => (
+                  <tr key={z.id} className="border-b border-slate-100 last:border-0">
+                    <td className="px-4 py-3 text-slate-700">{formatGermanDate(z.datum)}</td>
+                    <td className="px-4 py-3">
+                      <Link to={`/players/${z.player_id}`} className="font-medium text-slate-900 hover:underline">
+                        {playersById.get(z.player_id)?.name ?? 'Unbekannter Spieler'}
+                      </Link>
+                    </td>
+                    <td className="px-4 py-3 text-slate-700">{z.typ === 'einzahlung' ? 'Einzahlung' : 'Auszahlung'}</td>
+                    <td className="px-4 py-3 text-right text-slate-700">{currencyFormatter.format(centsToEuros(z.betrag))}</td>
+                    <td className="px-4 py-3 text-slate-500">{z.notiz || '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </CollapsibleSection>
 
       {zahlungFor && (
         <ZahlungForm
