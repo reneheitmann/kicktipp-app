@@ -137,7 +137,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.error('Session-Ladevorgang fehlgeschlagen', err)
         return 'timeout' as const
       })
-      .then((result) => {
+      .then(async (result) => {
         if (!isMounted) return
         if (result === 'timeout') {
           console.error(`Session-Ladevorgang hängt oder schlägt fehl (Limit ${INIT_SESSION_TIMEOUT_MS}ms) – versuche Neuladen`)
@@ -146,8 +146,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             window.location.reload()
             return
           }
+          // Zweiter Stall in Folge (Reload hat nicht geholfen, z. B. anhaltende
+          // Netzwerkstörung): initSession() kann an jeder Stelle hängen
+          // geblieben sein, z. B. nachdem `profile` bereits gesetzt wurde, aber
+          // `permissions` noch die leere Ausgangsmenge ist. Einfach nur
+          // `setLoading(false)` würde ProtectedRoute mit diesem inkonsistenten
+          // Zwischenstand rendern lassen – can() liefert dann für jedes Recht
+          // fälschlich false, was auf /unauthorized statt /login führt, obwohl
+          // eine gültige Sitzung bestand. Stattdessen lokal abmelden (gleiches
+          // Muster wie checkExpiry() oben) – das räumt Session/Profil/Rechte
+          // über den bestehenden onAuthStateChange(SIGNED_OUT)-Pfad sauber auf
+          // und landet garantiert auf der Login-Seite statt einer falschen
+          // Zugriffsverweigerung.
+          await supabase.auth.signOut({ scope: 'local' }).catch((err) => console.error('Lokales Abmelden fehlgeschlagen', err))
         }
-        setLoading(false)
+        if (isMounted) setLoading(false)
       })
 
     const { data: subscription } = supabase.auth.onAuthStateChange(async (event, newSession) => {
