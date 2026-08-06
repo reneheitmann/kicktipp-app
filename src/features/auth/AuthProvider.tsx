@@ -35,6 +35,22 @@ async function fetchPermissions(role: UserRole): Promise<Set<PermissionKey>> {
 const LOGIN_AT_STORAGE_KEY = 'kicktipp_session_login_at'
 const DEFAULT_MAX_SESSION_HOURS = 8
 
+// Absicherung gegen einen hängenden Ladevorgang: wenn ein Tab länger im
+// Hintergrund eingefroren war (Standby, vom Betriebssystem pausierter Tab)
+// und danach wieder aktiv wird, kann der bereits laufende getSession()-Call
+// (bzw. der interne navigator.locks-Mutex von supabase-js) nie mehr
+// resolven/rejecten – ohne dieses Timeout bliebe `loading` für immer `true`
+// und die App hinge dauerhaft auf "Lade...". Ein eingefrorener Tab pausiert
+// auch seine Timer, daher feuert dieser bereits laufende setTimeout erst
+// kurz nach dem Reaktivieren – kein zusätzlicher pageshow/visibilitychange-
+// Listener nötig.
+const INIT_SESSION_TIMEOUT_MS = 12_000
+const STALL_RELOAD_FLAG = 'kicktipp_auth_stall_reload_attempted'
+
+function timeout(ms: number): Promise<'timeout'> {
+  return new Promise((resolve) => setTimeout(() => resolve('timeout'), ms))
+}
+
 function isSessionExpired(maxHours: number): boolean {
   const raw = localStorage.getItem(LOGIN_AT_STORAGE_KEY)
   if (!raw) return false
@@ -98,7 +114,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return promise
     }
 
-    supabase.auth.getSession().then(async ({ data }) => {
+    async function initSession(): Promise<void> {
+      const { data } = await supabase.auth.getSession()
       if (!isMounted) return
       setSession(data.session)
       if (data.session) {
@@ -113,8 +130,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         registerSession().catch((err) => console.error('Sitzung konnte nicht registriert werden', err))
         await loadProfileDataIfNeeded(data.session.user.id)
       }
-      if (isMounted) setLoading(false)
-    })
+    }
+
+    Promise.race([initSession(), timeout(INIT_SESSION_TIMEOUT_MS)])
+      .catch((err) => {
+        console.error('Session-Ladevorgang fehlgeschlagen', err)
+        return 'timeout' as const
+      })
+      .then((result) => {
+        if (!isMounted) return
+        if (result === 'timeout') {
+          console.error(`Session-Ladevorgang hängt oder schlägt fehl (Limit ${INIT_SESSION_TIMEOUT_MS}ms) – versuche Neuladen`)
+          if (!sessionStorage.getItem(STALL_RELOAD_FLAG)) {
+            sessionStorage.setItem(STALL_RELOAD_FLAG, '1')
+            window.location.reload()
+            return
+          }
+        }
+        setLoading(false)
+      })
 
     const { data: subscription } = supabase.auth.onAuthStateChange(async (event, newSession) => {
       // Supabase erkennt den Recovery-Link automatisch (detectSessionInUrl)
