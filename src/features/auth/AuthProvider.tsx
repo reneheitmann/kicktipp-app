@@ -44,7 +44,7 @@ const DEFAULT_MAX_SESSION_HOURS = 8
 // auch seine Timer, daher feuert dieser bereits laufende setTimeout erst
 // kurz nach dem Reaktivieren – kein zusätzlicher pageshow/visibilitychange-
 // Listener nötig.
-const INIT_SESSION_TIMEOUT_MS = 12_000
+const INIT_SESSION_TIMEOUT_MS = 5_000
 const STALL_RELOAD_FLAG = 'kicktipp_auth_stall_reload_attempted'
 
 function timeout(ms: number): Promise<'timeout'> {
