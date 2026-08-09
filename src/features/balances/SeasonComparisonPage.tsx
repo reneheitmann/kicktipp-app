@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { Button } from '../../components/ui/Button'
 import { SearchInput } from '../../components/ui/SearchInput'
@@ -18,12 +18,6 @@ function matchesSearch(player: Player, term: string): boolean {
 }
 
 const lineColors = ['#0f172a', '#2563eb', '#16a34a', '#d97706', '#dc2626', '#7c3aed', '#0891b2', '#be185d']
-
-// Anzahl der größten Gewinner/Verlierer, die das Diagramm beim ersten Laden
-// vorauswählt – bei vielen Spielern (z. B. ~80) wäre "alle anzeigen" sofort
-// unlesbar, daher startet die Auswahl bewusst klein und lässt sich gezielt
-// erweitern.
-const DEFAULT_CHART_PLAYER_COUNT = 4
 
 // Verallgemeinert das Einzel-Favorit-Muster aus SeasonDetailPage.tsx
 // (FAVORITE_PLAYER_STORAGE_KEY) auf mehrere IDs, da hier bereits eine
@@ -65,6 +59,19 @@ export function SeasonComparisonPage() {
   // 'name' | 'total' | eine season.id – Saison-Spalten sind dynamisch, daher kein festes Enum.
   const [sortKey, setSortKey] = useState<string>('total')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
+  const [saveInfo, setSaveInfo] = useState<string | null>(null)
+  const saveInfoTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  function handleSaveFavorites() {
+    saveFavoritePlayerIds([...selectedPlayerIds])
+    setSaveInfo('Gespeichert.')
+    if (saveInfoTimeoutRef.current) clearTimeout(saveInfoTimeoutRef.current)
+    saveInfoTimeoutRef.current = setTimeout(() => setSaveInfo(null), 2000)
+  }
+
+  useEffect(() => () => {
+    if (saveInfoTimeoutRef.current) clearTimeout(saveInfoTimeoutRef.current)
+  }, [])
 
   function handleSort(key: string) {
     if (key === sortKey) {
@@ -139,22 +146,15 @@ export function SeasonComparisonPage() {
       })
   }, [playerRows, sortKey, sortDirection, tableSearch])
 
-  // Vorauswahl beim ersten Laden: zuerst die selbst gespeicherten Favoriten
-  // (siehe "Als Standardauswahl speichern" unten), sonst wie bisher die
-  // größten Gewinner und Verlierer über alle Saisons hinweg, damit das
-  // Diagramm sofort etwas Aussagekräftiges zeigt.
+  // Vorauswahl beim ersten Laden: ausschließlich die selbst gespeicherten
+  // Favoriten (siehe "Als Standard speichern" unten). Ohne gespeicherte
+  // Auswahl bleibt die Liste bewusst leer, statt automatisch Spieler zu
+  // erraten – der User wählt gezielt selbst aus.
   useEffect(() => {
     if (playerRows.length === 0 || selectedPlayerIds.size > 0) return
     const favoriteIds = new Set(readFavoritePlayerIds())
     const favorites = playerRows.filter((r) => favoriteIds.has(r.player.id))
-    if (favorites.length > 0) {
-      setSelectedPlayerIds(new Set(favorites.map((r) => r.player.id)))
-      return
-    }
-    const half = Math.ceil(DEFAULT_CHART_PLAYER_COUNT / 2)
-    const top = playerRows.slice(0, half)
-    const bottom = playerRows.slice(-half)
-    setSelectedPlayerIds(new Set([...top, ...bottom].map((r) => r.player.id)))
+    if (favorites.length > 0) setSelectedPlayerIds(new Set(favorites.map((r) => r.player.id)))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [playerRows])
 
@@ -253,13 +253,16 @@ export function SeasonComparisonPage() {
                 <p className="text-xs font-medium text-slate-500">
                   Spieler im Diagramm ({selectedPlayers.length} ausgewählt)
                 </p>
-                <button
-                  type="button"
-                  onClick={() => saveFavoritePlayerIds([...selectedPlayerIds])}
-                  className="shrink-0 text-xs font-medium text-slate-500 hover:text-slate-900 hover:underline"
-                >
-                  Als Standard speichern
-                </button>
+                <div className="flex shrink-0 items-center gap-2">
+                  {saveInfo && <span className="text-xs text-emerald-700">{saveInfo}</span>}
+                  <button
+                    type="button"
+                    onClick={handleSaveFavorites}
+                    className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                  >
+                    Als Standard speichern
+                  </button>
+                </div>
               </div>
               <input
                 type="text"
@@ -292,9 +295,9 @@ export function SeasonComparisonPage() {
             </div>
           </div>
           <p className="mb-6 text-xs text-slate-500">
-            Ohne gespeicherte Standardauswahl sind die größten Gewinner und Verlierer über alle Saisons
-            vorausgewählt – weitere Spieler lassen sich oben über die Suche gezielt hinzufügen und die aktuelle
-            Auswahl über "Als Standard speichern" für künftige Aufrufe merken (nur in diesem Browser).
+            Ohne gespeicherte Standardauswahl ist zunächst kein Spieler ausgewählt – über die Suche rechts lassen
+            sich gezielt Spieler hinzufügen und die aktuelle Auswahl über "Als Standard speichern" für künftige
+            Aufrufe merken (nur in diesem Browser).
           </p>
 
           <SearchInput
