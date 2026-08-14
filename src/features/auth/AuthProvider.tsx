@@ -20,11 +20,15 @@ async function fetchPermissions(role: UserRole): Promise<Set<PermissionKey>> {
     .select('permission_key')
     .eq('role', role)
     .eq('granted', true)
-  if (error) {
-    console.error('Berechtigungen konnten nicht geladen werden', error)
-    return new Set()
-  }
+  // Wirft bewusst statt still ein leeres Set zurückzugeben – sonst ist ein
+  // echter Ladefehler (z. B. kurze Netzwerkstörung) nicht von "Rolle hat 0
+  // Rechte" unterscheidbar, siehe loadProfileDataIfNeeded()/refreshProfile().
+  if (error) throw error
   return new Set(data.map((row) => row.permission_key))
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
 // Sitzungs-Zeitlimit (siehe src/features/session-policy/): clientseitige
@@ -105,8 +109,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!isMounted) return
         setProfile(loadedProfile)
         setMaxSessionHours(hours)
-        setPermissions(loadedProfile ? await fetchPermissions(loadedProfile.role) : new Set())
-        loadedUserIdRef.current = userId
+        if (!loadedProfile) {
+          setPermissions(new Set())
+          loadedUserIdRef.current = userId
+          return
+        }
+        // loadedUserIdRef wird NUR bei Erfolg gesetzt – schlägt fetchPermissions
+        // (z. B. kurze Netzwerkstörung) fehl, bleibt die Sperre in Zeile ~100
+        // offen, damit der nächste onAuthStateChange-Trigger (Token-Refresh,
+        // Tab-Fokus, Reload) es von selbst erneut versucht, statt dauerhaft
+        // mit leeren Rechten (und damit leerem Menü) hängen zu bleiben – dafür
+        // war zuvor nur Abmelden+Anmelden ein Ausweg.
+        try {
+          setPermissions(await fetchPermissions(loadedProfile.role))
+          loadedUserIdRef.current = userId
+        } catch (err) {
+          console.error('Berechtigungen konnten nicht geladen werden, versuche erneut', err)
+          await delay(2_000)
+          if (!isMounted) return
+          try {
+            setPermissions(await fetchPermissions(loadedProfile.role))
+            loadedUserIdRef.current = userId
+          } catch (retryErr) {
+            console.error('Berechtigungen konnten auch beim zweiten Versuch nicht geladen werden', retryErr)
+          }
+        }
       })().finally(() => {
         loadingPromiseRef.current = null
       })
@@ -277,14 +304,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function switchToRole(role: UserRole): Promise<{ error: string | null }> {
     const { error } = await supabase.rpc('switch_to_role', { p_target_role: role })
     if (error) return { error: error.message }
-    await refreshProfile()
+    try {
+      await refreshProfile()
+    } catch (err) {
+      return { error: err instanceof Error ? err.message : 'Rolle gewechselt, aber Rechte konnten nicht geladen werden.' }
+    }
     return { error: null }
   }
 
   async function switchBackToBaseRole(): Promise<{ error: string | null }> {
     const { error } = await supabase.rpc('switch_back_to_base_role')
     if (error) return { error: error.message }
-    await refreshProfile()
+    try {
+      await refreshProfile()
+    } catch (err) {
+      return { error: err instanceof Error ? err.message : 'Rolle gewechselt, aber Rechte konnten nicht geladen werden.' }
+    }
     return { error: null }
   }
 
