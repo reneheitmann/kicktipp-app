@@ -18,6 +18,7 @@ export function ResetPasswordPage() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [showPasswords, setShowPasswords] = useState(false)
 
   useEffect(() => {
     getPasswordPolicy()
@@ -61,12 +62,21 @@ export function ResetPasswordPage() {
 
         <form className="space-y-4" onSubmit={handleSubmit}>
           <div>
-            <label htmlFor="reset-new-password" className="mb-1 block text-sm font-medium text-slate-700">
-              Neues Passwort
-            </label>
+            <div className="mb-1 flex items-center justify-between">
+              <label htmlFor="reset-new-password" className="block text-sm font-medium text-slate-700">
+                Neues Passwort
+              </label>
+              <button
+                type="button"
+                onClick={() => setShowPasswords((v) => !v)}
+                className="text-xs text-slate-500 hover:underline"
+              >
+                {showPasswords ? 'Verbergen' : 'Anzeigen'}
+              </button>
+            </div>
             <input
               id="reset-new-password"
-              type="password"
+              type={showPasswords ? 'text' : 'password'}
               autoComplete="new-password"
               required
               value={newPassword}
@@ -81,7 +91,7 @@ export function ResetPasswordPage() {
             </label>
             <input
               id="reset-confirm-password"
-              type="password"
+              type={showPasswords ? 'text' : 'password'}
               autoComplete="new-password"
               required
               value={confirmPassword}
