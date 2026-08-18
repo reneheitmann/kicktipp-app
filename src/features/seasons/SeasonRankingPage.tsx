@@ -94,7 +94,7 @@ export function SeasonRankingPage() {
         ← Zurück zur Saison
       </Link>
 
-      <div className="mb-6 flex items-center gap-2">
+      <div className="mb-6 flex flex-wrap items-center gap-2">
         <h1 className="text-xl font-semibold text-slate-900">Gesamtwertung – {season.name}</h1>
         <Badge tone={season.gesamtwertung_status === 'abgerechnet' ? 'positive' : 'warning'}>
           {season.gesamtwertung_status}

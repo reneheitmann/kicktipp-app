@@ -25,5 +25,8 @@ export function KicktippWidgetPage() {
     }
   }, [])
 
-  return <div ref={containerRef} />
+  // Das von Kicktipp injizierte <iframe> hat eine eigene, nicht responsive
+  // feste Breite – ohne diesen Container scrollt auf schmalen Bildschirmen
+  // sonst die ganze Seite horizontal statt nur das Widget selbst.
+  return <div ref={containerRef} className="max-w-full overflow-x-auto" />
 }
