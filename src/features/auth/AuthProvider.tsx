@@ -48,6 +48,29 @@ const DEFAULT_MAX_SESSION_HOURS = 8
 const INIT_SESSION_TIMEOUT_MS = 5_000
 const STALL_RELOAD_FLAG = 'kicktipp_auth_stall_reload_attempted'
 
+// supabase-js meldet einen Recovery-Link-Klick per PASSWORD_RECOVERY-Event
+// erst NACH einem awaited Netzwerk-Roundtrip (Token-Validierung gegen
+// /auth/v1/user, siehe _getSessionFromURL() in GoTrueClient), zusätzlich per
+// setTimeout(…, 0) verzögert – registriert sich unser onAuthStateChange-
+// Listener (unten, in useEffect) erst NACH diesem Timeout (z. B. bei
+// langsamerem ersten Render, Tab im Hintergrund beim Laden), geht das Event
+// unwiederbringlich verloren: der Listener bekommt dann nur noch ein
+// normales INITIAL_SESSION mit bereits gültiger Sitzung – die Passwort-
+// Pflicht wird stillschweigend umgangen (Race, kein deterministischer Bug,
+// daher schwer reproduzierbar). Der Hash/Query-Marker steht dagegen
+// GARANTIERT schon beim allerersten React-Render noch in der URL:
+// supabase-js entfernt ihn (window.location.hash = '') ebenfalls erst nach
+// demselben Netzwerk-Roundtrip, der zwingend länger dauert als der
+// synchrone Rest von createClient() bis zum ersten Render. Ein rein
+// URL-basierter, synchroner Check kann diesen Race daher grundsätzlich
+// nicht verlieren (ersetzt das Event nicht, ergänzt es nur als
+// zusätzliche, race-freie Quelle für den initialen State).
+function isPasswordRecoveryUrl(): boolean {
+  const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''))
+  const queryParams = new URLSearchParams(window.location.search)
+  return hashParams.get('type') === 'recovery' || queryParams.get('type') === 'recovery'
+}
+
 function timeout(ms: number): Promise<'timeout'> {
   return new Promise((resolve) => setTimeout(() => resolve('timeout'), ms))
 }
@@ -75,7 +98,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [permissions, setPermissions] = useState<Set<PermissionKey>>(new Set())
   const [loading, setLoading] = useState(true)
-  const [passwordRecovery, setPasswordRecovery] = useState(false)
+  const [passwordRecovery, setPasswordRecovery] = useState(isPasswordRecoveryUrl)
   const [maxSessionHours, setMaxSessionHours] = useState(DEFAULT_MAX_SESSION_HOURS)
   const [sessionExpired, setSessionExpired] = useState(false)
   // Verhindert doppeltes Laden von Profil/Rechten/Sitzungsrichtlinie für
