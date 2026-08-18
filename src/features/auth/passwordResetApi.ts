@@ -12,7 +12,11 @@ import { supabase } from '../../lib/supabaseClient'
 // 'reset' für ein bestehendes, vergessenes Passwort, 'invite' für die
 // Willkommens-Mail bei Benutzer-Neuanlage.
 export async function requestPasswordReset(email: string, purpose: 'reset' | 'invite' = 'reset'): Promise<void> {
-  const redirectTo = `${window.location.origin}/login`
+  // reason=invite landet unverändert in der finalen Redirect-URL (Supabase
+  // hängt seine eigenen Auth-Tokens separat als URL-Fragment an) – so kann
+  // ResetPasswordPage.tsx zwischen "neues Konto einladen" und "Passwort
+  // vergessen" unterscheiden, obwohl beides technisch derselbe Recovery-Link-Typ ist.
+  const redirectTo = `${window.location.origin}/login${purpose === 'invite' ? '?reason=invite' : ''}`
   const { error } = await supabase.functions.invoke('send-password-reset', { body: { email, redirectTo, purpose } })
   if (error) throw error
 }
