@@ -115,7 +115,7 @@ export function SeasonBalancesPage() {
         </Link>
       )}
 
-      <div className="mb-6 flex items-start justify-between gap-3">
+      <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="mb-1 text-xl font-semibold text-slate-900">Guthabenübersicht</h1>
           {season && <p className="text-sm text-slate-500">{season.name}</p>}

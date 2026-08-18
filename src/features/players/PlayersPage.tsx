@@ -74,7 +74,7 @@ export function PlayersPage() {
 
   return (
     <div className="p-4 sm:p-6">
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-xl font-semibold text-slate-900">
           Spieler <span className="font-normal text-slate-500">({players.length})</span>
         </h1>
