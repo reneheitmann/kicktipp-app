@@ -11,8 +11,13 @@ import type { PasswordPolicy } from '../../types/database'
 // Passwort-Reset-Link, egal ob selbst oder vom Admin ausgelöst) – siehe
 // AuthContext.ts für die Begründung, warum das nicht einfach direkt einloggt.
 export function ResetPasswordPage() {
-  const { clearPasswordRecovery } = useAuth()
+  const { clearPasswordRecovery, session, profile } = useAuth()
   const { appName } = useAppBranding()
+  // Siehe passwordResetApi.ts: reason=invite unterscheidet "neues Konto
+  // einladen" von "Passwort vergessen" – technisch derselbe Recovery-Link,
+  // nur der Text auf dieser Seite unterscheidet sich.
+  const isInvite = new URLSearchParams(window.location.search).get('reason') === 'invite'
+  const accountEmail = session?.user.email
   const [passwordPolicy, setPasswordPolicy] = useState<PasswordPolicy | null>(null)
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -58,7 +63,18 @@ export function ResetPasswordPage() {
     <div className="flex min-h-full items-center justify-center bg-slate-50 px-4 py-12">
       <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200 sm:p-8">
         <h1 className="mb-1 text-xl font-semibold text-slate-900">{appName}</h1>
-        <p className="mb-6 text-sm text-slate-500">Bitte lege ein neues Passwort für dein Konto fest.</p>
+        <p className="mb-4 text-sm text-slate-500">
+          {isInvite
+            ? `Willkommen! Für dich wurde ein Konto angelegt. Lege jetzt ein Passwort fest, um dich zum ersten Mal anzumelden – ohne dieses Passwort kannst du dich nicht einloggen.`
+            : `Lege ein neues Passwort fest, um dich wieder anmelden zu können – ohne dieses Passwort geht es nicht weiter.`}
+        </p>
+
+        {(profile?.name || accountEmail) && (
+          <div className="mb-6 rounded-lg bg-slate-50 px-3 py-2 text-sm">
+            {profile?.name && <p className="font-medium text-slate-900">{profile.name}</p>}
+            {accountEmail && <p className="text-slate-500">{accountEmail}</p>}
+          </div>
+        )}
 
         <form className="space-y-4" onSubmit={handleSubmit}>
           <div>
