@@ -43,6 +43,18 @@ server {
         add_header Cache-Control "no-cache";
     }
 
+    # icon.png ist das statische Default-Favicon (siehe index.html/
+    # AppBrandingProvider.tsx) unter fester, nie wechselnder URL – die
+    # "immutable, 30 Tage"-Regel unten wäre hier fatal: tauscht sich die
+    # Datei aus (neues App-Icon im Code), würden Browser mit warmem Cache
+    # bis zu 30 Tage lang weiter das alte Icon zeigen, unabhängig davon, was
+    # der Server ausliefert. Muss VOR dem allgemeinen Regex-Block stehen,
+    # da nginx Regex-Locations in Datei-Reihenfolge prüft und beim ersten
+    # Treffer stoppt.
+    location ~ ^/(beta/)?icon\.png$ {
+        add_header Cache-Control "no-cache";
+    }
+
     location ~* \.(js|css|svg|png|jpg|jpeg|gif|woff2?)$ {
         expires 30d;
         add_header Cache-Control "public, immutable";
