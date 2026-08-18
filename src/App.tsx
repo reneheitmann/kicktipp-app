@@ -10,6 +10,7 @@ import { ConfirmEmailChangePage } from './features/auth/ConfirmEmailChangePage'
 import { AppShell } from './components/layout/AppShell'
 import { DashboardPage } from './pages/DashboardPage'
 import { AboutPage } from './pages/AboutPage'
+import { HelpPage } from './pages/HelpPage'
 import { UnauthorizedPage } from './pages/UnauthorizedPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { PlayerDetailPage } from './features/players/PlayerDetailPage'
@@ -127,6 +128,7 @@ function AppRoutes() {
             <Route path="/profil" element={<MyAccountPage />} />
             <Route path="/kontakt" element={<ContactPage />} />
             <Route path="/ueber" element={<AboutPage />} />
+            <Route path="/hilfe" element={<HelpPage />} />
 
             <Route element={<ProtectedRoute requiredPermission="page.vergleich.view" />}>
               <Route path="/vergleich" element={<SeasonComparisonPage />} />

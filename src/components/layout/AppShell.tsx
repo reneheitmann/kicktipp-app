@@ -143,6 +143,13 @@ export function AppShell() {
               >
                 Über diese App
               </NavLink>
+              <NavLink
+                to="/hilfe"
+                onClick={() => setAccountMenuOpen(false)}
+                className="block rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-100"
+              >
+                Hilfe
+              </NavLink>
               <button
                 onClick={() => {
                   setAccountMenuOpen(false)
@@ -345,6 +352,12 @@ function UserFooter({
         className="mt-1 block rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100"
       >
         Über diese App
+      </NavLink>
+      <NavLink
+        to="/hilfe"
+        className="mt-1 block rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100"
+      >
+        Hilfe
       </NavLink>
       <button
         onClick={onSignOut}

@@ -54,6 +54,8 @@ diese App bildet ausschließlich die Verwaltung/Abrechnung drumherum ab.
   Vorlagenmaske wie die Massenmail-Vorlagen)
 - **Kontakt** – Formular für jeden User, verschickt eine Nachricht per E-Mail
   an den Spielleiter (Antworten geht direkt an den Absender)
+- **Hilfe** – erklärt für jeden User kurz, was die App macht, und verlinkt auf
+  die offizielle Kicktipp-Runde auf kicktipp.de
 - **Erscheinungsbild** – App-Name, Icon/Favicon und Primärfarbe zur Laufzeit
   admin-konfigurierbar
 - **Passwort-Richtlinie** – Mindestlänge, Zeichenklassen, Wiederverwendungssperre
