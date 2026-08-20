@@ -154,7 +154,8 @@ export function SeasonBalancesPage() {
           ) : (
           <>
           <p className="mb-2 text-xs text-slate-500 sm:hidden">→ Tabelle nach links wischen für weitere Spalten</p>
-          <div className="max-h-[70vh] overflow-auto rounded-xl border border-slate-200 bg-white scroll-fade-x">
+          <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+          <div className="max-h-[70vh] overflow-auto scroll-fade-x">
             <table className="w-full min-w-[640px] text-sm">
               <thead>
                 <tr className="border-b border-slate-200 text-slate-500">
@@ -238,6 +239,7 @@ export function SeasonBalancesPage() {
                 ))}
               </tbody>
             </table>
+          </div>
           </div>
           </>
           )}
