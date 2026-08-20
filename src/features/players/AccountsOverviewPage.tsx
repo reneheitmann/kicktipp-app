@@ -5,6 +5,7 @@ import { CollapsibleSection } from '../../components/ui/CollapsibleSection'
 import { SearchInput } from '../../components/ui/SearchInput'
 import { SeasonFilter } from '../../components/ui/SeasonFilter'
 import { SortableTh } from '../../components/ui/SortableTh'
+import { StickyTableScroll } from '../../components/ui/StickyTableScroll'
 import { currencyFormatter, formatGermanDate } from '../../lib/format'
 import { centsToEuros } from '../../lib/money'
 import { listPlayers } from './playersApi'
@@ -193,7 +194,7 @@ export function AccountsOverviewPage() {
         ) : (
           <>
             <p className="mb-2 text-xs text-slate-500 sm:hidden">→ Tabelle nach links wischen für weitere Spalten</p>
-            <div className="max-h-[70vh] overflow-auto rounded-xl border border-slate-200 bg-white scroll-fade-x">
+            <StickyTableScroll className="max-h-[70vh] overflow-auto scroll-fade-x">
               <table className="w-full min-w-[720px] text-sm">
               <thead>
                 <tr className="border-b border-slate-200 text-slate-500">
@@ -238,7 +239,7 @@ export function AccountsOverviewPage() {
                     onSort={handleSort}
                     align="right"
                   />
-                  <th className="sticky top-0 z-10 bg-white px-4 py-3 font-medium"></th>
+                  <th className="bg-white px-4 py-3 font-medium"></th>
                 </tr>
               </thead>
               <tbody>
@@ -275,7 +276,7 @@ export function AccountsOverviewPage() {
                 ))}
               </tbody>
               </table>
-            </div>
+            </StickyTableScroll>
           </>
         )}
       </CollapsibleSection>
@@ -344,16 +345,16 @@ export function AccountsOverviewPage() {
         ) : (
           <>
           <p className="mb-2 text-xs text-slate-500 sm:hidden">→ Tabelle nach links wischen für weitere Spalten</p>
-          <div className="max-h-[70vh] overflow-auto rounded-xl border border-slate-200 bg-white scroll-fade-x">
+          <StickyTableScroll className="max-h-[70vh] overflow-auto scroll-fade-x">
             <table className="w-full min-w-[680px] text-sm">
               <thead>
                 <tr className="border-b border-slate-200 text-slate-500">
-                  <th className="sticky top-0 z-10 bg-white px-4 py-3 text-left font-medium">Datum</th>
-                  <th className="sticky top-0 z-10 bg-white px-4 py-3 text-left font-medium">Spieler</th>
-                  <th className="sticky top-0 z-10 bg-white px-4 py-3 text-left font-medium">Saison</th>
-                  <th className="sticky top-0 z-10 bg-white px-4 py-3 text-left font-medium">Typ</th>
-                  <th className="sticky top-0 z-10 bg-white px-4 py-3 text-right font-medium">Betrag</th>
-                  <th className="sticky top-0 z-10 bg-white px-4 py-3 text-left font-medium">Notiz</th>
+                  <th className="bg-white px-4 py-3 text-left font-medium">Datum</th>
+                  <th className="bg-white px-4 py-3 text-left font-medium">Spieler</th>
+                  <th className="bg-white px-4 py-3 text-left font-medium">Saison</th>
+                  <th className="bg-white px-4 py-3 text-left font-medium">Typ</th>
+                  <th className="bg-white px-4 py-3 text-right font-medium">Betrag</th>
+                  <th className="bg-white px-4 py-3 text-left font-medium">Notiz</th>
                 </tr>
               </thead>
               <tbody>
@@ -373,7 +374,7 @@ export function AccountsOverviewPage() {
                 ))}
               </tbody>
             </table>
-          </div>
+          </StickyTableScroll>
           </>
         )}
       </CollapsibleSection>

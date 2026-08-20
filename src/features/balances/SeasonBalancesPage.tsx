@@ -4,6 +4,7 @@ import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAx
 import { Button } from '../../components/ui/Button'
 import { SearchInput } from '../../components/ui/SearchInput'
 import { SortableTh } from '../../components/ui/SortableTh'
+import { StickyTableScroll } from '../../components/ui/StickyTableScroll'
 import { currencyFormatter } from '../../lib/format'
 import { centsToEuros } from '../../lib/money'
 import { listPlayers } from '../players/playersApi'
@@ -154,7 +155,7 @@ export function SeasonBalancesPage() {
           ) : (
           <>
           <p className="mb-2 text-xs text-slate-500 sm:hidden">→ Tabelle nach links wischen für weitere Spalten</p>
-          <div className="max-h-[70vh] overflow-auto rounded-xl border border-slate-200 bg-white scroll-fade-x">
+          <StickyTableScroll className="max-h-[70vh] overflow-auto scroll-fade-x">
             <table className="w-full min-w-[640px] text-sm">
               <thead>
                 <tr className="border-b border-slate-200 text-slate-500">
@@ -238,7 +239,7 @@ export function SeasonBalancesPage() {
                 ))}
               </tbody>
             </table>
-          </div>
+          </StickyTableScroll>
           </>
           )}
         </>

@@ -98,9 +98,9 @@ export function RolesPermissionsPage() {
               <table className="w-full min-w-[480px] text-sm">
                 <thead>
                   <tr className="border-b border-slate-200 text-left text-slate-500">
-                    <th className="py-2 pr-4 font-medium">Recht</th>
+                    <th className="sticky top-0 z-10 bg-white py-2 pr-4 font-medium">Recht</th>
                     {roleColumns.map((c) => (
-                      <th key={c.role} className="w-24 py-2 text-center font-medium">
+                      <th key={c.role} className="sticky top-0 z-10 w-24 bg-white py-2 text-center font-medium">
                         {c.label}
                       </th>
                     ))}

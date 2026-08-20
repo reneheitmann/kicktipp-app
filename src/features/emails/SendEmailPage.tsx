@@ -334,12 +334,12 @@ export function SendEmailPage() {
                 <table className="w-full min-w-[520px] text-sm">
                   <thead>
                     <tr className="border-b border-slate-200 text-left text-slate-500">
-                      <th className="w-8 px-3 py-2"></th>
-                      <th className="px-3 py-2 font-medium">Spieler</th>
-                      <th className="px-3 py-2 font-medium">Kicktippname</th>
-                      <th className="px-3 py-2 font-medium">E-Mail</th>
-                      <th className="px-3 py-2 text-right font-medium">Offen</th>
-                      <th className="px-3 py-2 text-right font-medium">Gewinne</th>
+                      <th className="sticky top-0 z-10 w-8 bg-white px-3 py-2"></th>
+                      <th className="sticky top-0 z-10 bg-white px-3 py-2 font-medium">Spieler</th>
+                      <th className="sticky top-0 z-10 bg-white px-3 py-2 font-medium">Kicktippname</th>
+                      <th className="sticky top-0 z-10 bg-white px-3 py-2 font-medium">E-Mail</th>
+                      <th className="sticky top-0 z-10 bg-white px-3 py-2 text-right font-medium">Offen</th>
+                      <th className="sticky top-0 z-10 bg-white px-3 py-2 text-right font-medium">Gewinne</th>
                     </tr>
                   </thead>
                   <tbody>
