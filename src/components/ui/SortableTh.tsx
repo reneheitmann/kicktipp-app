@@ -10,13 +10,18 @@ interface SortableThProps {
   className?: string
 }
 
-/** Sortierbare, beim Scrollen fixierte Tabellen-Kopfzelle (siehe SeasonBalancesPage/SeasonComparisonPage). */
+/**
+ * Sortierbare Tabellen-Kopfzelle. Die Fixierung beim Scrollen übernimmt der
+ * umgebende StickyTableScroll-Container (per JS, nicht CSS `sticky` – siehe
+ * dort), diese Zelle braucht dafür nur noch einen eigenen Hintergrund, damit
+ * durchscrollende Zeilen nicht durchscheinen.
+ */
 export function SortableTh({ columnKey, label, activeKey, direction, onSort, align = 'left', className = '' }: SortableThProps) {
   const active = activeKey === columnKey
   return (
     <th
       aria-sort={active ? (direction === 'asc' ? 'ascending' : 'descending') : 'none'}
-      className={`sticky top-0 z-10 bg-white px-2 py-2 text-xs font-medium sm:px-4 sm:py-3 sm:text-sm ${align === 'right' ? 'text-right' : 'text-left'} ${className}`}
+      className={`bg-white px-2 py-2 text-xs font-medium sm:px-4 sm:py-3 sm:text-sm ${align === 'right' ? 'text-right' : 'text-left'} ${className}`}
     >
       <button
         type="button"
