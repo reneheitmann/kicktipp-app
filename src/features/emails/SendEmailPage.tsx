@@ -328,7 +328,9 @@ export function SendEmailPage() {
             </p>
 
             {resolvedRecipients.length > 0 && (
-              <div className="overflow-x-auto rounded-lg border border-slate-200">
+              <>
+              <p className="mb-2 text-xs text-slate-500 sm:hidden">→ Tabelle nach links wischen für weitere Spalten</p>
+              <div className="overflow-x-auto scroll-fade-x">
                 <table className="w-full min-w-[520px] text-sm">
                   <thead>
                     <tr className="border-b border-slate-200 text-left text-slate-500">
@@ -370,6 +372,7 @@ export function SendEmailPage() {
                   </tbody>
                 </table>
               </div>
+              </>
             )}
           </section>
 

@@ -39,3 +39,24 @@ input[type='checkbox'],
 input[type='radio'] {
   min-height: 0;
 }
+
+/* Reiner CSS-Scroll-Schatten für horizontal scrollende Tabellen (kein JS/
+   Scroll-Listener nötig): zwei linear-gradient-"Deckel" scrollen mit dem
+   Inhalt mit, zwei radial-gradient-Schatten bleiben am Rand fixiert –
+   dadurch erscheint der Schatten nur, solange in diese Richtung noch mehr
+   Inhalt liegt, und verschwindet automatisch am jeweiligen Ende.
+   ponytail: bei Containern mit zusätzlichem vertikalem Scroll
+   (max-h-[70vh] overflow-auto) kann der Fade bei sehr langen Listen minimal
+   ungenau sitzen – Upgrade-Pfad wären sticky Overlay-Elemente statt
+   background-attachment, nur bei tatsächlichem Bedarf. */
+.scroll-fade-x {
+  background:
+    linear-gradient(to right, white 30px, rgba(255, 255, 255, 0)),
+    linear-gradient(to left, white 30px, rgba(255, 255, 255, 0)) 100% 0,
+    radial-gradient(farthest-side at 0 50%, rgba(15, 23, 42, 0.15), rgba(15, 23, 42, 0)),
+    radial-gradient(farthest-side at 100% 50%, rgba(15, 23, 42, 0.15), rgba(15, 23, 42, 0)) 100% 0;
+  background-repeat: no-repeat;
+  background-color: white;
+  background-size: 30px 100%, 30px 100%, 12px 100%, 12px 100%;
+  background-attachment: local, local, scroll, scroll;
+}

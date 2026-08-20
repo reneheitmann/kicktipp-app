@@ -193,7 +193,7 @@ export function AccountsOverviewPage() {
         ) : (
           <>
             <p className="mb-2 text-xs text-slate-500 sm:hidden">→ Tabelle nach links wischen für weitere Spalten</p>
-            <div className="max-h-[70vh] overflow-auto rounded-xl border border-slate-200 bg-white">
+            <div className="max-h-[70vh] overflow-auto rounded-xl border border-slate-200 bg-white scroll-fade-x">
               <table className="w-full min-w-[720px] text-sm">
               <thead>
                 <tr className="border-b border-slate-200 text-slate-500">
@@ -342,7 +342,9 @@ export function AccountsOverviewPage() {
         {filteredZahlungen.length === 0 ? (
           <p className="text-sm text-slate-500">Keine Zahlungen gefunden.</p>
         ) : (
-          <div className="max-h-[70vh] overflow-auto rounded-xl border border-slate-200 bg-white">
+          <>
+          <p className="mb-2 text-xs text-slate-500 sm:hidden">→ Tabelle nach links wischen für weitere Spalten</p>
+          <div className="max-h-[70vh] overflow-auto rounded-xl border border-slate-200 bg-white scroll-fade-x">
             <table className="w-full min-w-[680px] text-sm">
               <thead>
                 <tr className="border-b border-slate-200 text-slate-500">
@@ -372,6 +374,7 @@ export function AccountsOverviewPage() {
               </tbody>
             </table>
           </div>
+          </>
         )}
       </CollapsibleSection>
 
