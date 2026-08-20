@@ -152,7 +152,9 @@ export function SeasonBalancesPage() {
           {sortedBalances.length === 0 ? (
             <p className="text-sm text-slate-500">Keine Treffer für die Suche.</p>
           ) : (
-          <div className="max-h-[70vh] overflow-auto rounded-xl border border-slate-200 bg-white">
+          <>
+          <p className="mb-2 text-xs text-slate-500 sm:hidden">→ Tabelle nach links wischen für weitere Spalten</p>
+          <div className="max-h-[70vh] overflow-auto rounded-xl border border-slate-200 bg-white scroll-fade-x">
             <table className="w-full min-w-[640px] text-sm">
               <thead>
                 <tr className="border-b border-slate-200 text-slate-500">
@@ -237,6 +239,7 @@ export function SeasonBalancesPage() {
               </tbody>
             </table>
           </div>
+          </>
           )}
         </>
       )}
