@@ -95,7 +95,8 @@ diese App bildet ausschließlich die Verwaltung/Abrechnung drumherum ab.
    npm run dev
    ```
 
-Weitere Scripts: `npm run build` (Typecheck + Produktions-Build), `npm run lint`
+Weitere Scripts: `npm run build` (Typecheck + Produktions-Build), `npm run test`
+(Vitest, Unit-Tests für Berechnungen und Auth-Logik), `npm run lint`
 (oxlint), `npm run preview` (Produktions-Build lokal ansehen).
 
 ### Mit Supabase CLI (Migrationen + Edge Functions)
@@ -121,11 +122,16 @@ Läuft außerdem automatisch in CI bei jeder Änderung unter `supabase/**`
 (`.github/workflows/db-tests.yml`).
 
 Alle Edge Functions (`admin-create-user`, `admin-update-user`,
-`update-own-password`, `update-own-email`, `confirm-email-change`, `send-email`,
-`send-bulk-email`, `send-password-reset`, `send-contact-message`) benötigen
-keine zusätzlichen Secrets –
-`SUPABASE_URL` und `SUPABASE_SERVICE_ROLE_KEY` stehen Supabase Edge Functions
-automatisch zur Verfügung.
+`admin-delete-user`, `update-own-password`, `update-own-email`,
+`confirm-email-change`, `send-email`, `send-bulk-email`, `send-password-reset`,
+`send-contact-message`) nutzen `SUPABASE_URL` und `SUPABASE_SERVICE_ROLE_KEY`,
+die Supabase Edge Functions automatisch zur Verfügung stehen. Zusätzlich
+braucht das Projekt das Secret `ALLOWED_ORIGINS` (kommagetrennte Liste
+erlaubter Origins für CORS und Redirect-Allowlist, siehe
+`supabase/functions/_shared/cors.ts`), gesetzt per
+`supabase secrets set ALLOWED_ORIGINS=... --project-ref <project-ref>`.
+SMTP-Zugangsdaten kommen dagegen nicht aus Secrets, sondern werden in der
+Datenbank verwaltet (Admin-Bereich > E-Mail-Einstellungen).
 
 ## Projektstruktur
 
@@ -185,6 +191,11 @@ einer Vorschau „nach unten"), jeweils jederzeit rückgängig zu machen.
 - **`main`** – Produktion, wird bewusst per Merge von `beta` befördert. Die
   Version in `package.json` wird dabei automatisch erhöht (Minor bei neuer
   DB-Migration, sonst Patch).
+
+Vor jedem Push nach `beta` oder `main`: `npm run test`, `npx tsc --noEmit`
+und `npm run lint` sollten lokal fehlerfrei laufen (CI erzwingt Test und
+Lint zusätzlich als Build-Gate, siehe `docker-publish.yml`; der Typecheck
+läuft dort nur implizit über `npm run build`).
 
 Ein Push nach `main` **oder** `beta` baut immer **ein einziges** Docker-Image
 (`:latest`), das beide Versionen gleichzeitig enthält: `main` unter `/`,

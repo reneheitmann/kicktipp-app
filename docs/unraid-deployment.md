@@ -305,6 +305,11 @@ Terminal setzen, nicht über eine KI-Sitzung – beides sind Zugangsdaten):
    gebraucht), dann:
    `gh secret set BACKUP_ENCRYPTION_PASSPHRASE --repo reneheitmann/kicktipp-app`
 
+Migrationen sollten außerdem zuerst gegen das separate "Kicktipp Dev"-Projekt
+laufen (`supabase link --project-ref <dev-ref>` davor), um sie vor main/beta
+zu testen – Dev ist ein eigenständiges Projekt, ein Fehler dort betrifft
+nicht die produktiven Daten.
+
 **Vor einer Migration:**
 
 1. `gh workflow run db-backup.yml --repo reneheitmann/kicktipp-app` (oder im
