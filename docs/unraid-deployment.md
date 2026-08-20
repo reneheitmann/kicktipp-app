@@ -26,6 +26,15 @@ separat angegangen werden.
    dem Recht `beta.access` (vergeben über **Rollen & Berechtigungen** im
    Admin-Bereich). Von dort zurück zur Produktivversion geht jederzeit ohne
    weitere Berechtigung.
+5. **Ausnahme:** Besteht ein Push nur aus einem `[skip ci]`-Commit (der
+   automatische Versions-Bump auf `main`, oder ein Fast-Forward-Merge von
+   `main` nach `beta`, der zufällig genau auf so einem Commit landet – z. B.
+   um `beta` wieder auf den Stand von `main` zu bringen), löst GitHub das
+   absichtlich NICHT aus (verhindert eine Bump-→-Build-→-Bump-Endlosschleife
+   auf `main`, siehe Kommentar in `docker-publish.yml`). In dem Fall zeigt
+   das deployte Image weiterhin den alten Stand, bis der Build manuell
+   nachgetriggert wird: `gh workflow run docker-publish.yml --ref beta`
+   (bzw. `--ref main`), oder über den **Actions**-Tab im Repo.
 
 ```
 Code-Änderung (lokal) → git push nach beta → GitHub Actions baut EIN Image

@@ -218,4 +218,10 @@ auffrischen – überschreibt dabei den kompletten Dev-Datenbestand.
 Bei jedem Push nach `main` oder `beta` baut `.github/workflows/docker-publish.yml`
 beide Branches unabhängig voneinander und veröffentlicht das gemeinsame Image
 zu GHCR; ein Watchtower-Container auf dem Ziel-Unraid-Host zieht neue Images
-automatisch. Details zum Deployment: [`docs/unraid-deployment.md`](docs/unraid-deployment.md).
+automatisch. **Ausnahme:** Besteht der Push nur aus einem `[skip ci]`-Commit
+(automatischer Versions-Bump auf `main`, oder ein Fast-Forward-Merge, der
+zufällig genau darauf landet) – dann baut GitHub Actions absichtlich nicht
+(verhindert eine Bump-Endlosschleife auf `main`), das deployte Image bleibt
+dann auf dem alten Stand, bis der Build manuell nachgetriggert wird:
+`gh workflow run docker-publish.yml --ref beta` (bzw. `--ref main`). Details
+zum Deployment: [`docs/unraid-deployment.md`](docs/unraid-deployment.md).
