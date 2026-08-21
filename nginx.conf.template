@@ -9,11 +9,33 @@
 # das Ergebnis nach /etc/nginx/conf.d/default.conf – dadurch lässt sich der
 # Port über die LISTEN_PORT-Umgebungsvariable ändern (z. B. per Unraid-GUI-
 # Feld), ohne den Code/Docker-Image anzufassen.
+# Security-Header, gemeinsam für alle Locations. nginx vererbt add_header
+# NICHT in eine Location, die selbst mindestens ein add_header setzt (hier:
+# die beiden index.html-Locations, icon.png und der Static-Asset-Regex-Block
+# unten, alle wegen Cache-Control) – deshalb werden diese vier Header dort
+# unten jeweils wiederholt statt sich auf Vererbung vom server{}-Block zu
+# verlassen. Nicht versehentlich als "doppelt/überflüssig" entfernen.
+#
+# connect-src referenziert das gemeinsame main/beta-Supabase-Projekt fest als
+# Literal (zur Build-Zeit in VITE_SUPABASE_URL gebacken, siehe
+# docker-publish.yml/.env.example) – bei einem Projektwechsel muss dieser
+# Wert hier manuell mit aktualisiert werden, ein envsubst-Platzhalter wie bei
+# LISTEN_PORT lohnt sich für einen praktisch nie wechselnden Wert nicht.
+# script-src/frame-src erlauben ausschließlich kicktipp.de für das
+# eingebettete Kicktipp-Widget (siehe KicktippWidgetPage.tsx). style-src
+# erlaubt 'unsafe-inline', da die zur Laufzeit admin-konfigurierbare
+# Primärfarbe (siehe AppBrandingProvider.tsx) per style.setProperty() auf
+# document.documentElement gesetzt wird.
 server {
     listen ${LISTEN_PORT};
     server_name _;
     root /usr/share/nginx/html;
     index index.html;
+
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self' https://www.kicktipp.de; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://rmfvzbmxcwccnezqqnen.supabase.co wss://rmfvzbmxcwccnezqqnen.supabase.co; frame-src https://www.kicktipp.de; frame-ancestors 'self'; base-uri 'self'; form-action 'self';" always;
 
     # Beta-Bundle unter /beta/ (eigenes, unter diesem Präfix gebautes SPA,
     # siehe vite.config.ts base/Dockerfile) – eigener SPA-Fallback, da ein
@@ -37,10 +59,18 @@ server {
     # ein unveränderter Aufruf bleibt dabei weiterhin ein billiger 304er.
     location = /index.html {
         add_header Cache-Control "no-cache";
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header X-Frame-Options "SAMEORIGIN" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+        add_header Content-Security-Policy "default-src 'self'; script-src 'self' https://www.kicktipp.de; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://rmfvzbmxcwccnezqqnen.supabase.co wss://rmfvzbmxcwccnezqqnen.supabase.co; frame-src https://www.kicktipp.de; frame-ancestors 'self'; base-uri 'self'; form-action 'self';" always;
     }
     location = /beta/index.html {
         alias /usr/share/nginx/html/beta/index.html;
         add_header Cache-Control "no-cache";
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header X-Frame-Options "SAMEORIGIN" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+        add_header Content-Security-Policy "default-src 'self'; script-src 'self' https://www.kicktipp.de; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://rmfvzbmxcwccnezqqnen.supabase.co wss://rmfvzbmxcwccnezqqnen.supabase.co; frame-src https://www.kicktipp.de; frame-ancestors 'self'; base-uri 'self'; form-action 'self';" always;
     }
 
     # icon.png ist das statische Default-Favicon (siehe index.html/
@@ -53,10 +83,18 @@ server {
     # Treffer stoppt.
     location ~ ^/(beta/)?icon\.png$ {
         add_header Cache-Control "no-cache";
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header X-Frame-Options "SAMEORIGIN" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+        add_header Content-Security-Policy "default-src 'self'; script-src 'self' https://www.kicktipp.de; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://rmfvzbmxcwccnezqqnen.supabase.co wss://rmfvzbmxcwccnezqqnen.supabase.co; frame-src https://www.kicktipp.de; frame-ancestors 'self'; base-uri 'self'; form-action 'self';" always;
     }
 
     location ~* \.(js|css|svg|png|jpg|jpeg|gif|woff2?)$ {
         expires 30d;
         add_header Cache-Control "public, immutable";
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header X-Frame-Options "SAMEORIGIN" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+        add_header Content-Security-Policy "default-src 'self'; script-src 'self' https://www.kicktipp.de; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://rmfvzbmxcwccnezqqnen.supabase.co wss://rmfvzbmxcwccnezqqnen.supabase.co; frame-src https://www.kicktipp.de; frame-ancestors 'self'; base-uri 'self'; form-action 'self';" always;
     }
 }

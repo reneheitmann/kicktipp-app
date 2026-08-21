@@ -43,3 +43,14 @@ LABEL net.unraid.docker.icon="https://raw.githubusercontent.com/reneheitmann/kic
 LABEL net.unraid.docker.webui="http://[IP]:8080/"
 
 EXPOSE 8080
+
+# Non-root: das offizielle nginx-Image bringt seit 1.19 einen vorbereiteten
+# "nginx"-User mit, dem bereits alle nötigen Verzeichnisse gehören (Cache/
+# PID/Logs unter /var/..., /etc/nginx/conf.d für das envsubst-Ergebnis aus
+# nginx.conf.template) – ein expliziter USER-Wechsel funktioniert damit ohne
+# weitere Anpassungen, solange LISTEN_PORT >= 1024 bleibt (Default 8080,
+# siehe oben; ein Port < 1024 bräuchte sonst CAP_NET_BIND_SERVICE). Nach dem
+# nächsten Deploy per `docker logs kicktipp-app` auf Permission-Fehler beim
+# Start prüfen – falls doch etwas bricht, einfach diese Zeile wieder
+# entfernen (Rollback ohne weitere Codeänderung).
+USER nginx

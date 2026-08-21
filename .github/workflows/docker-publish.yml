@@ -85,6 +85,21 @@ jobs:
         working-directory: build-beta
         run: npm ci
 
+      # Zunächst bewusst nicht blockierend (continue-on-error): bestehende,
+      # noch ungefixte Findings in Transitive-Dependencies sollen nicht sofort
+      # jeden Deploy stoppen, aber im Log sichtbar bleiben. Läuft für BEIDE
+      # Branches (nicht nur den auslösenden), da package-lock.json auf main
+      # und beta unabhängig voneinander driften kann.
+      - name: Dependency-Audit (main)
+        working-directory: build-main
+        continue-on-error: true
+        run: npm audit --audit-level=high
+
+      - name: Dependency-Audit (beta)
+        working-directory: build-beta
+        continue-on-error: true
+        run: npm audit --audit-level=high
+
       - name: Getriggerten Checkout ermitteln
         id: triggered
         run: echo "dir=${{ github.ref_name == 'main' && 'build-main' || 'build-beta' }}" >> "$GITHUB_OUTPUT"
@@ -241,6 +256,21 @@ jobs:
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+
+      # Zunächst bewusst nicht blockierend (continue-on-error + exit-code 0):
+      # Findings sollen im Log sichtbar sein, aber bestehende, noch
+      # ungefixte Basis-Image-CVEs nicht sofort jeden Deploy stoppen. Scannt
+      # das eben gepushte :<sha>-Tag direkt aus der Registry (kein
+      # zusätzliches load: true nötig, docker/login-action oben hat den
+      # Runner bereits bei ghcr.io angemeldet).
+      - name: Container-Image scannen (Trivy)
+        uses: aquasecurity/trivy-action@0.28.0
+        continue-on-error: true
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          format: table
+          severity: HIGH,CRITICAL
+          exit-code: "0"
 
       - name: Versions-Bump zurück ins Repo committen
         if: github.ref == 'refs/heads/main' && steps.bump.outputs.bumped == 'true'
