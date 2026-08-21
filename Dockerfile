@@ -44,17 +44,18 @@ LABEL net.unraid.docker.webui="http://[IP]:8080/"
 
 EXPOSE 8080
 
-# Non-root (USER nginx) ist bereits zweimal gescheitert – docker logs vom
-# zweiten Vorfall haben die echte Ursache gezeigt (nicht nur vermutet):
-#   20-envsubst-on-templates.sh: ERROR: ... /etc/nginx/conf.d is not writable
-#   nginx: [emerg] mkdir() "/var/cache/nginx/client_temp" failed (Permission denied)
-# Die "nginx:alpine unterstützt Non-Root seit 1.19 ohne Anpassungen"-Annahme
-# gilt für den nginx-eigenen Cache/Log/Pid-Bereich, aber NICHT automatisch
-# für /etc/nginx/conf.d – das braucht dieses Setup zusätzlich beschreibbar,
-# weil unser envsubst-Templating (siehe oben) die Config dort bei JEDEM
-# Container-Start neu erzeugt, statt wie im nginx-Standardfall eine fertige
-# Config einzubacken. Beide betroffenen Pfade explizit vor dem User-Wechsel
-# freigeben.
-RUN chown -R nginx:nginx /etc/nginx/conf.d /var/cache/nginx
+# Non-root (USER nginx): bereits zweimal an Permission-Fehlern aus echten
+# docker logs gescheitert, jeweils an einem anderen Pfad (Whack-a-Mole, da
+# dieses konkrete Unraid-Docker-Setup dem nginx-User offenbar KEINEN der
+# üblicherweise "automatisch funktionierenden" Laufzeit-Pfade beschreibbar
+# vorbereitet, unabhängig davon, ob der Pfad in der Doku als "seit 1.19
+# unterstützt" gilt oder nicht):
+#   1) /etc/nginx/conf.d (envsubst-Templating-Ziel) + /var/cache/nginx (nginx-
+#      Arbeitsverzeichnis) – behoben.
+#   2) /run/nginx.pid (Pid-Datei) – jetzt zusätzlich freigegeben.
+# Dies ist der DRITTE Versuch – falls erneut ein anderer Pfad fehlschlägt,
+# wird USER nginx endgültig nicht mehr verfolgt (Root-Container ist ein
+# akzeptabler, sicherer Normalzustand, kein offenes Sicherheitsproblem).
+RUN chown -R nginx:nginx /etc/nginx/conf.d /var/cache/nginx /run /var/log/nginx
 
 USER nginx
