@@ -44,18 +44,18 @@ LABEL net.unraid.docker.webui="http://[IP]:8080/"
 
 EXPOSE 8080
 
-# Non-root (USER nginx): bereits zweimal an Permission-Fehlern aus echten
-# docker logs gescheitert, jeweils an einem anderen Pfad (Whack-a-Mole, da
-# dieses konkrete Unraid-Docker-Setup dem nginx-User offenbar KEINEN der
-# üblicherweise "automatisch funktionierenden" Laufzeit-Pfade beschreibbar
-# vorbereitet, unabhängig davon, ob der Pfad in der Doku als "seit 1.19
-# unterstützt" gilt oder nicht):
-#   1) /etc/nginx/conf.d (envsubst-Templating-Ziel) + /var/cache/nginx (nginx-
-#      Arbeitsverzeichnis) – behoben.
-#   2) /run/nginx.pid (Pid-Datei) – jetzt zusätzlich freigegeben.
-# Dies ist der DRITTE Versuch – falls erneut ein anderer Pfad fehlschlägt,
-# wird USER nginx endgültig nicht mehr verfolgt (Root-Container ist ein
-# akzeptabler, sicherer Normalzustand, kein offenes Sicherheitsproblem).
+# Non-root (USER nginx): entgegen der offiziellen Doku ("nginx:alpine
+# unterstützt das seit 1.19 ohne weitere Anpassungen") bereitet dieses
+# konkrete Unraid-Docker-Setup dem nginx-User NICHT alle Laufzeit-Pfade
+# beschreibbar vor – per echten docker logs auf zwei Deploys verteilt
+# ermittelt (nicht geraten):
+#   - /etc/nginx/conf.d – Ziel des envsubst-Templatings (siehe oben), wird
+#     bei JEDEM Start neu erzeugt, anders als der nginx-Standardfall mit
+#     fest eingebackener Config.
+#   - /var/cache/nginx – nginx' eigenes Arbeitsverzeichnis (client_temp etc.).
+#   - /run – Pid-Datei (/run/nginx.pid).
+# /var/log/nginx vorsorglich mit freigegeben. Verifiziert per docker logs
+# nach dem Deploy: alle Worker starten sauber, keine [emerg]-Fehler mehr.
 RUN chown -R nginx:nginx /etc/nginx/conf.d /var/cache/nginx /run /var/log/nginx
 
 USER nginx
