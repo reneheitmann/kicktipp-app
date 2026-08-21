@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { Navigate, useLocation } from 'react-router-dom'
+import { Navigate, Link, useLocation } from 'react-router-dom'
 import { useAuth } from './useAuth'
 import { useAppBranding } from '../app-settings/useAppBranding'
 import { visibleNavItems } from '../../components/layout/navItems'
@@ -70,7 +70,7 @@ export function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-full items-center justify-center bg-slate-50 px-4 py-12">
+    <div className="flex min-h-full flex-col items-center justify-center bg-slate-50 px-4 py-12">
       <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200 sm:p-8">
         <h1 className="mb-1 text-xl font-semibold text-slate-900">{appName}</h1>
 
@@ -210,6 +210,15 @@ export function LoginPage() {
           </>
         )}
       </div>
+
+      <p className="mt-4 flex justify-center gap-4 text-xs text-slate-500">
+        <Link to="/datenschutz" className="hover:underline">
+          Datenschutz
+        </Link>
+        <Link to="/impressum" className="hover:underline">
+          Impressum
+        </Link>
+      </p>
     </div>
   )
 }

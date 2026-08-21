@@ -12,6 +12,8 @@ import { DashboardPage } from './pages/DashboardPage'
 import { AboutPage } from './pages/AboutPage'
 import { HelpPage } from './pages/HelpPage'
 import { UnauthorizedPage } from './pages/UnauthorizedPage'
+import { DatenschutzPage } from './pages/DatenschutzPage'
+import { ImpressumPage } from './pages/ImpressumPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { PlayerDetailPage } from './features/players/PlayerDetailPage'
 import { SeasonsPage } from './features/seasons/SeasonsPage'
@@ -105,6 +107,10 @@ function AppRoutes() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/email-bestaetigen" element={<ConfirmEmailChangePage />} />
         <Route path="/unauthorized" element={<UnauthorizedPage />} />
+        {/* Ohne Login erreichbar: Impressumspflicht (§ 5 TMG) und die
+            DSGVO-Informationspflicht gelten unabhängig vom Login-Status. */}
+        <Route path="/datenschutz" element={<DatenschutzPage />} />
+        <Route path="/impressum" element={<ImpressumPage />} />
 
         <Route element={<ProtectedRoute />}>
           <Route element={<AppShell />}>

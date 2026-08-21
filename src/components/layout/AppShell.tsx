@@ -150,6 +150,20 @@ export function AppShell() {
               >
                 Hilfe
               </NavLink>
+              <NavLink
+                to="/datenschutz"
+                onClick={() => setAccountMenuOpen(false)}
+                className="block rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-100"
+              >
+                Datenschutz
+              </NavLink>
+              <NavLink
+                to="/impressum"
+                onClick={() => setAccountMenuOpen(false)}
+                className="block rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-100"
+              >
+                Impressum
+              </NavLink>
               <button
                 onClick={() => {
                   setAccountMenuOpen(false)
@@ -358,6 +372,18 @@ function UserFooter({
         className="mt-1 block rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100"
       >
         Hilfe
+      </NavLink>
+      <NavLink
+        to="/datenschutz"
+        className="mt-1 block rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100"
+      >
+        Datenschutz
+      </NavLink>
+      <NavLink
+        to="/impressum"
+        className="mt-1 block rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100"
+      >
+        Impressum
       </NavLink>
       <button
         onClick={onSignOut}
