@@ -337,6 +337,53 @@ gpg --batch --yes --passphrase "<BACKUP_ENCRYPTION_PASSPHRASE>" \
 tar -xzf backup.tar.gz   # ergibt schema.sql und data.sql
 ```
 
+**Zurückspielen (Restore):**
+
+⚠️ **Erst gegen das separate "Kicktipp Dev"-Projekt testen, niemals zuerst
+gegen Prod/beta** – Dev ist eigenständig, ein Fehler beim Testlauf betrifft
+dort keine echten Daten. Erst wenn der Ablauf gegen Dev nachweislich
+funktioniert, dieselben Schritte gegen das main/beta-Projekt wiederholen.
+
+1. Gegen das Ziel-Projekt verlinken (Dev-Ref zum Testen, main/beta-Ref nur
+   im echten Ernstfall):
+   ```bash
+   supabase link --project-ref <dev-ref-oder-prod-ref>
+   ```
+2. Datenbank auf den durch `schema.sql`/`data.sql` beschriebenen Stand
+   zurücksetzen (löscht den aktuellen Inhalt des Ziel-Projekts – deshalb
+   der Testlauf gegen Dev zuerst):
+   ```bash
+   supabase db reset --linked
+   supabase db query --linked --file schema.sql
+   supabase db query --linked --file data.sql
+   ```
+3. Danach kurz stichprobenartig prüfen (z. B. `supabase db query --linked
+   "select count(*) from public.profiles;"`), ob die erwartete Datenmenge
+   wieder da ist, bevor die App wieder auf dieses Projekt zeigt.
+
+## Teil 5 – Monitoring
+
+Ein externer Uptime-Check lässt sich nicht aus dem Code heraus einrichten
+(das ist reine Konfiguration bei einem Drittanbieter) – die App liefert
+dafür aber unter `http://<IP>:<PORT>/health.txt` (bzw.
+`http://<IP>:<PORT>/beta/health.txt`) eine statische Datei mit Inhalt `ok`
+aus, die sich ohne Login und ohne Datenbankzugriff abfragen lässt.
+
+**Einrichtung bei einem kostenlosen externen Anbieter** (z. B.
+[UptimeRobot](https://uptimerobot.com) oder
+[healthchecks.io](https://healthchecks.io), kein Vendor-Lock-in nötig, kein
+Reverse Proxy erforderlich – sofern der Uptime-Monitor die interne
+Heimnetz-IP erreichen kann, sonst siehe "Zugriff von außerhalb des
+Heimnetzes" im Ausblick unten):
+
+1. Neuen Monitor vom Typ "HTTP(s)" anlegen.
+2. URL: `http://<IP>:<PORT>/health.txt` (z. B.
+   `http://192.168.1.50:8080/health.txt`).
+3. Erwarteten Inhalt/Status auf HTTP 200 prüfen lassen (die meisten
+   Anbieter bieten optional auch eine Freitext-Prüfung auf `ok` im Body an).
+4. Prüfintervall nach Bedarf (z. B. alle 5 Minuten) – der Endpunkt ist eine
+   statische Datei, verursacht also keine nennenswerte zusätzliche Last.
+
 ## Ausblick (nicht Teil dieser Anleitung)
 
 - **Zugriff von außerhalb des Heimnetzes**: dafür wäre ein Reverse Proxy

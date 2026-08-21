@@ -210,9 +210,12 @@ das granulare Recht `beta.access` (vergeben über **Rollen & Berechtigungen**);
 der Wechsel passiert über einen Link im eigenen Profil.
 
 `main` und `beta` teilen sich weiterhin ein einzelnes Supabase-Projekt (ein
-eigenes Beta-Projekt scheiterte am 2-Projekte-Limit des Free-Tiers) – vor
-jeder Migration wird über den manuellen GitHub-Actions-Workflow
-`db-backup.yml` ein GPG-verschlüsseltes Backup gezogen.
+eigenes Beta-Projekt scheiterte am 2-Projekte-Limit des Free-Tiers). **Fester
+Bestandteil des eigenen Checklisten-Ablaufs, nicht optional:** vor jedem Push,
+der eine neue Datei unter `supabase/migrations/` enthält, wird zuerst über
+den manuellen GitHub-Actions-Workflow `db-backup.yml` ein GPG-verschlüsseltes
+Backup gezogen, bevor `supabase db push --linked` läuft (Restore-Ablauf:
+[`docs/unraid-deployment.md`](docs/unraid-deployment.md), Teil 4).
 
 Für lokale Entwicklung gibt es ein drittes, eigenständiges Supabase-Projekt
 ("Kicktipp Dev"), auf das `.env` lokal zeigt (siehe `.env.example`). Seine
