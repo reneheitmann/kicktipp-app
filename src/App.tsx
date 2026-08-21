@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react'
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Outlet } from 'react-router-dom'
 import { AppBrandingProvider } from './features/app-settings/AppBrandingProvider'
 import { AuthProvider } from './features/auth/AuthProvider'
 import { useAuth } from './features/auth/useAuth'
@@ -83,6 +83,18 @@ function PageLoading() {
   return <p className="p-4 text-sm text-slate-500 sm:p-6">Lade...</p>
 }
 
+// Für Seiten, die sowohl ohne Login (Impressumspflicht) als auch normal
+// innerhalb der App erreichbar sein müssen (Datenschutz/Impressum): mit
+// Session die normale AppShell (Navigation, Zurück-Möglichkeit) außenrum,
+// ohne Session die schlichte Standalone-Darstellung wie LoginPage. Ohne
+// diesen Wrapper landete man beim Aufruf im angemeldeten Zustand in einer
+// Sackgasse ohne jede Navigation.
+function PublicOrAppShell() {
+  const { session, loading } = useAuth()
+  if (loading) return <PageLoading />
+  return session ? <AppShell /> : <Outlet />
+}
+
 // Eigene Komponente (statt direkt in App()), damit useAuth() innerhalb von
 // AuthProvider aufgerufen werden kann – passwordRecovery muss unabhängig von
 // Route/restlicher Session die normale App überdecken können, siehe
@@ -111,9 +123,14 @@ function AppRoutes() {
         <Route path="/email-bestaetigen" element={<ConfirmEmailChangePage />} />
         <Route path="/unauthorized" element={<UnauthorizedPage />} />
         {/* Ohne Login erreichbar: Impressumspflicht (§ 5 TMG) und die
-            DSGVO-Informationspflicht gelten unabhängig vom Login-Status. */}
-        <Route path="/datenschutz" element={<DatenschutzPage />} />
-        <Route path="/impressum" element={<ImpressumPage />} />
+            DSGVO-Informationspflicht gelten unabhängig vom Login-Status. Mit
+            Session trotzdem innerhalb der normalen AppShell (siehe
+            PublicOrAppShell), damit man nicht in einer navigationslosen
+            Sackgasse landet. */}
+        <Route element={<PublicOrAppShell />}>
+          <Route path="/datenschutz" element={<DatenschutzPage />} />
+          <Route path="/impressum" element={<ImpressumPage />} />
+        </Route>
 
         <Route element={<ProtectedRoute />}>
           <Route element={<AppShell />}>
