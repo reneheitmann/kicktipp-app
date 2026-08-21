@@ -1,46 +1,69 @@
+import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useAppBranding } from '../features/app-settings/useAppBranding'
+import { useAuth } from '../features/auth/useAuth'
+import { getLegalSettings } from '../features/legal-settings/legalSettingsApi'
+import type { LegalSettings } from '../types/database'
+
+const PLACEHOLDER = '– noch nicht hinterlegt –'
+
+function field(value: string | undefined): string {
+  return value?.trim() ? value : PLACEHOLDER
+}
 
 // Ohne Login erreichbar (siehe App.tsx) – die Impressumspflicht (§ 5 TMG)
-// gilt unabhängig vom Login-Status. Enthält bewusst Platzhalter statt
-// erfundener Angaben, siehe Hinweis-Box unten.
+// gilt unabhängig vom Login-Status. Betreiber-/Kontaktangaben kommen aus
+// legal_settings (Admin-Bereich > Datenschutz & Impressum, siehe
+// LegalSettingsPage.tsx) statt fest im Code zu stehen.
 export function ImpressumPage() {
   const { appName } = useAppBranding()
+  const { profile } = useAuth()
+  const [legal, setLegal] = useState<LegalSettings | null>(null)
+
+  useEffect(() => {
+    getLegalSettings()
+      .then(setLegal)
+      .catch(() => setLegal(null))
+  }, [])
 
   return (
     <div className="mx-auto max-w-3xl p-4 sm:p-6">
       <h1 className="mb-2 text-xl font-semibold text-slate-900">Impressum</h1>
       <p className="mb-6 text-sm text-slate-500">Angaben gemäß § 5 TMG für {appName}.</p>
 
-      <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4">
-        <p className="text-sm text-amber-900">
-          <strong>Hinweis für den Betreiber:</strong> Diese Seite enthält noch Platzhalter (in eckigen Klammern),
-          die vor dem Livegang ausgefüllt werden müssen – siehe Liste am Ende der Datenschutzerklärung.
-        </p>
-      </div>
+      {profile?.role === 'admin' && (
+        <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4">
+          <p className="text-sm text-amber-900">
+            Nur für dich als Admin sichtbar: Betreiber-/Hosting-Angaben unter{' '}
+            <Link to="/admin/legal" className="underline">
+              Datenschutz &amp; Impressum
+            </Link>{' '}
+            pflegen.
+          </p>
+        </div>
+      )}
 
       <section className="mb-6">
         <h2 className="mb-2 text-base font-semibold text-slate-900">Diensteanbieter</h2>
         <p className="text-sm text-slate-700">
-          [BETREIBER_NAME]
+          {field(legal?.operator_name)}
           <br />
-          [BETREIBER_ADRESSE]
+          {field(legal?.operator_address)}
         </p>
       </section>
 
       <section className="mb-6">
         <h2 className="mb-2 text-base font-semibold text-slate-900">Kontakt</h2>
         <p className="text-sm text-slate-700">
-          E-Mail: [BETREIBER_KONTAKT_EMAIL]
+          E-Mail: {field(legal?.operator_email)}
           <br />
-          Telefon: [BETREIBER_TELEFON] <span className="text-slate-500">(optional)</span>
+          Telefon: {legal?.operator_phone?.trim() || 'entfällt'}
         </p>
       </section>
 
       <section className="mb-6">
         <h2 className="mb-2 text-base font-semibold text-slate-900">Verantwortlich für den Inhalt</h2>
-        <p className="text-sm text-slate-700">
-          [BETREIBER_NAME] (Anschrift wie oben)
-        </p>
+        <p className="text-sm text-slate-700">{field(legal?.operator_name)} (Anschrift wie oben)</p>
       </section>
 
       <section>

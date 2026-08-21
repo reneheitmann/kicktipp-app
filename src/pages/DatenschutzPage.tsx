@@ -1,39 +1,63 @@
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAppBranding } from '../features/app-settings/useAppBranding'
+import { useAuth } from '../features/auth/useAuth'
+import { getLegalSettings } from '../features/legal-settings/legalSettingsApi'
+import type { LegalSettings } from '../types/database'
+
+const PLACEHOLDER = '– noch nicht hinterlegt –'
+
+function field(value: string | undefined): string {
+  return value?.trim() ? value : PLACEHOLDER
+}
 
 // Ohne Login erreichbar (siehe App.tsx – Route liegt bewusst außerhalb von
 // ProtectedRoute), da die Informationspflicht nach Art. 13 DSGVO schon vor
 // der Anmeldung gilt (z. B. auf der Login-Seite, wo bereits eine E-Mail-
-// Adresse eingegeben wird). Inhalt richtet sich nach der tatsächlichen
-// Datenverarbeitung dieser App (siehe supabase/migrations/, supabase/
-// functions/), nicht nach einer generischen Vorlage – bei neuen Features,
-// die personenbezogene Daten verarbeiten, muss dieser Text mitgepflegt
-// werden.
+// Adresse eingegeben wird). Betreiber-/Hosting-Angaben kommen aus
+// legal_settings (Admin-Bereich > Datenschutz & Impressum, siehe
+// LegalSettingsPage.tsx), der übrige Inhalt richtet sich nach der
+// tatsächlichen Datenverarbeitung dieser App (siehe supabase/migrations/,
+// supabase/functions/) – bei neuen Features, die personenbezogene Daten
+// verarbeiten, muss dieser Text mitgepflegt werden.
 export function DatenschutzPage() {
   const { appName } = useAppBranding()
+  const { profile } = useAuth()
+  const [legal, setLegal] = useState<LegalSettings | null>(null)
+
+  useEffect(() => {
+    getLegalSettings()
+      .then(setLegal)
+      .catch(() => setLegal(null))
+  }, [])
 
   return (
     <div className="mx-auto max-w-3xl p-4 sm:p-6">
       <h1 className="mb-2 text-xl font-semibold text-slate-900">Datenschutzerklärung</h1>
       <p className="mb-6 text-sm text-slate-500">Gilt für {appName}, die Verwaltungs-Webapp dieser privaten Kicktipp-Spielrunde.</p>
 
-      <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4">
-        <p className="text-sm text-amber-900">
-          <strong>Hinweis für den Betreiber:</strong> Diese Seite enthält noch Platzhalter (in eckigen Klammern),
-          die vor dem Livegang ausgefüllt werden müssen – siehe Liste am Ende dieser Seite.
-        </p>
-      </div>
+      {profile?.role === 'admin' && (
+        <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4">
+          <p className="text-sm text-amber-900">
+            Nur für dich als Admin sichtbar: Betreiber-/Hosting-Angaben unter{' '}
+            <Link to="/admin/legal" className="underline">
+              Datenschutz &amp; Impressum
+            </Link>{' '}
+            pflegen.
+          </p>
+        </div>
+      )}
 
       <section className="mb-6">
         <h2 className="mb-2 text-base font-semibold text-slate-900">1. Verantwortlicher</h2>
         <p className="text-sm text-slate-700">
           Verantwortlich für die Datenverarbeitung im Sinne der DSGVO ist:
           <br />
-          [BETREIBER_NAME]
+          {field(legal?.operator_name)}
           <br />
-          [BETREIBER_ADRESSE]
+          {field(legal?.operator_address)}
           <br />
-          [BETREIBER_KONTAKT_EMAIL]
+          {field(legal?.operator_email)}
         </p>
       </section>
 
@@ -130,12 +154,12 @@ export function DatenschutzPage() {
         <p className="mb-2 text-sm text-slate-700">
           Für Datenbank, Anmeldung (Auth), Datei-Speicher und die serverseitige Programmlogik (Edge Functions)
           nutzen wir <strong>Supabase</strong> als technischen Dienstleister (Auftragsverarbeiter gemäß Art. 28
-          DSGVO). Der Speicherort der Datenbank ist: [HOSTING_STANDORT]. Mit Supabase besteht ein
+          DSGVO). Der Speicherort der Datenbank ist: {field(legal?.hosting_location)}. Mit Supabase besteht ein
           Auftragsverarbeitungsvertrag.
         </p>
         <p className="text-sm text-slate-700">
           Die Weboberfläche selbst (dieses Frontend) wird auf eigener Infrastruktur des Betreibers gehostet
-          ([HOSTING_STANDORT_FRONTEND]).
+          ({field(legal?.hosting_location_frontend)}).
         </p>
       </section>
 
@@ -160,16 +184,14 @@ export function DatenschutzPage() {
             Mein Profil
           </Link>{' '}
           („Meine Daten herunterladen") anzeigen bzw. herunterladen. Für weitergehende Anfragen (z. B. Löschung)
-          wende dich an [BETREIBER_KONTAKT_EMAIL]. Du hast außerdem das Recht, dich bei einer
+          wende dich an {field(legal?.operator_email)}. Du hast außerdem das Recht, dich bei einer
           Datenschutz-Aufsichtsbehörde zu beschweren.
         </p>
       </section>
 
       <section>
         <h2 className="mb-2 text-base font-semibold text-slate-900">12. Kontakt für Datenschutzfragen</h2>
-        <p className="text-sm text-slate-700">
-          Bei Fragen zum Datenschutz wende dich an: [BETREIBER_KONTAKT_EMAIL]
-        </p>
+        <p className="text-sm text-slate-700">Bei Fragen zum Datenschutz wende dich an: {field(legal?.operator_email)}</p>
       </section>
     </div>
   )

@@ -45,7 +45,9 @@ diese App bildet ausschließlich die Verwaltung/Abrechnung drumherum ab.
   selbst ändern; Selbstauskunft per Klick als JSON-Datei herunterladbar
   (Profil, verknüpfte Spieler, eigene Transaktionen/Zahlungen)
 - **Datenschutz & Impressum** – ohne Login erreichbar (Informationspflicht
-  gilt schon vor der Anmeldung), verlinkt aus Konto-Menü und Login-Seite
+  gilt schon vor der Anmeldung), verlinkt aus Konto-Menü und Login-Seite;
+  Betreiber-/Hosting-Angaben admin-editierbar zur Laufzeit (Admin-Bereich >
+  Datenschutz & Impressum), kein Code-Deployment für Adressänderungen nötig
 - **Feingranulare Berechtigungen** – rollenbasierte Rechte pro Seite/Aktion,
   unabhängig von den drei Basisrollen konfigurierbar
 - **E-Mail-Versand** – Einzel-/Massen-Mails an Spieler mit Vorlagen, eigener

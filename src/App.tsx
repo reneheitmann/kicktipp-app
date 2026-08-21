@@ -52,6 +52,9 @@ const SessionPolicyPage = lazy(() =>
 const NavSettingsPage = lazy(() =>
   import('./features/nav-settings/NavSettingsPage').then((m) => ({ default: m.NavSettingsPage })),
 )
+const LegalSettingsPage = lazy(() =>
+  import('./features/legal-settings/LegalSettingsPage').then((m) => ({ default: m.LegalSettingsPage })),
+)
 const SeasonRankingPage = lazy(() =>
   import('./features/seasons/SeasonRankingPage').then((m) => ({ default: m.SeasonRankingPage })),
 )
@@ -174,6 +177,7 @@ function AppRoutes() {
               <Route path="/admin/password-policy" element={<PasswordPolicyPage />} />
               <Route path="/admin/session-policy" element={<SessionPolicyPage />} />
               <Route path="/admin/menu" element={<NavSettingsPage />} />
+              <Route path="/admin/legal" element={<LegalSettingsPage />} />
             </Route>
           </Route>
         </Route>

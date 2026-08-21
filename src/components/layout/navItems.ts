@@ -40,6 +40,7 @@ export const navItems: NavItem[] = [
   { to: '/admin/branding', label: 'Erscheinungsbild', roles: ['admin'], adminGroup: 'System' },
   { to: '/admin/logs', label: 'Logs & Diagnose', roles: ['admin'], adminGroup: 'System' },
   { to: '/admin/menu', label: 'Menü verwalten', roles: ['admin'], adminGroup: 'System' },
+  { to: '/admin/legal', label: 'Datenschutz & Impressum', roles: ['admin'], adminGroup: 'System' },
 ]
 
 export function visibleNavItems(
