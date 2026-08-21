@@ -4,6 +4,7 @@ import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { useAuth } from '../auth/useAuth'
 import { useAppBranding } from './useAppBranding'
 import { getAppSettings, saveAppSettings, uploadAppIcon } from './appSettingsApi'
+import { contrastRatio, isFullHexColor } from '../../lib/contrast'
 
 const DEFAULT_APP_NAME = 'Kicktipp Spielrunde'
 const DEFAULT_PRIMARY_COLOR = '#0f172a'
@@ -105,6 +106,12 @@ export function AppSettingsPage() {
     return <p className="p-4 text-sm text-slate-500 sm:p-6">Lade...</p>
   }
 
+  // Reiner Hinweis, kein Speicher-Blocker (siehe Kommentar unten) – daher
+  // als abgeleiteter Wert bei jedem Render neu berechnet statt in einem
+  // eigenen State/Effect nachgehalten.
+  const primaryContrastWithWhite = isFullHexColor(primaryColor) ? contrastRatio(primaryColor, '#ffffff') : null
+  const primaryLowContrast = primaryContrastWithWhite !== null && primaryContrastWithWhite < 3
+
   return (
     <div className="p-4 sm:p-6">
       <h1 className="mb-6 text-xl font-semibold text-slate-900">Erscheinungsbild</h1>
@@ -179,6 +186,12 @@ export function AppSettingsPage() {
           <p className="mt-1 text-xs text-slate-500">
             Wirkt auf Buttons und die aktive Menü-Hervorhebung. Überschriften/Text bleiben unverändert dunkel.
           </p>
+          {primaryLowContrast && (
+            <p className="mt-1 text-xs text-amber-700">
+              Diese Farbe hat zu wenig Kontrast zu Weiß ({primaryContrastWithWhite!.toFixed(1)}:1, empfohlen mind.
+              3:1) und kann für manche Nutzer schwer lesbar sein. Speichern ist trotzdem möglich.
+            </p>
+          )}
         </div>
 
         <div className="flex gap-2">

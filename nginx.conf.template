@@ -12,9 +12,18 @@
 # Security-Header, gemeinsam für alle Locations. nginx vererbt add_header
 # NICHT in eine Location, die selbst mindestens ein add_header setzt (hier:
 # die beiden index.html-Locations, icon.png und der Static-Asset-Regex-Block
-# unten, alle wegen Cache-Control) – deshalb werden diese vier Header dort
+# unten, alle wegen Cache-Control) – deshalb werden diese fünf Header dort
 # unten jeweils wiederholt statt sich auf Vererbung vom server{}-Block zu
 # verlassen. Nicht versehentlich als "doppelt/überflüssig" entfernen.
+#
+# Strict-Transport-Security ist schon jetzt gefahrlos gesetzt, obwohl dieser
+# nginx-Container aktuell nur unverschlüsseltes HTTP im Heimnetz spricht:
+# Browser werten HSTS-Header ausschließlich aus, wenn sie über eine HTTPS-
+# Verbindung ankommen – über HTTP ausgeliefert bleibt der Header schlicht
+# wirkungslos (kein Downgrade-Risiko, kein "falsches Sicherheitsgefühl").
+# Sobald ein Reverse Proxy TLS terminiert (siehe docs/unraid-deployment.md,
+# Teil 6) und diesen Header durchreicht, greift er automatisch – deshalb hier
+# BITTE NICHT als "wirkungslos, also überflüssig" wieder entfernen.
 #
 # connect-src referenziert das gemeinsame main/beta-Supabase-Projekt fest als
 # Literal (zur Build-Zeit in VITE_SUPABASE_URL gebacken, siehe
@@ -35,6 +44,7 @@ server {
     add_header X-Content-Type-Options "nosniff" always;
     add_header X-Frame-Options "SAMEORIGIN" always;
     add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
     add_header Content-Security-Policy "default-src 'self'; script-src 'self' https://www.kicktipp.de; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://rmfvzbmxcwccnezqqnen.supabase.co wss://rmfvzbmxcwccnezqqnen.supabase.co; frame-src https://www.kicktipp.de; frame-ancestors 'self'; base-uri 'self'; form-action 'self';" always;
 
     # Beta-Bundle unter /beta/ (eigenes, unter diesem Präfix gebautes SPA,
@@ -62,6 +72,7 @@ server {
         add_header X-Content-Type-Options "nosniff" always;
         add_header X-Frame-Options "SAMEORIGIN" always;
         add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+        add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
         add_header Content-Security-Policy "default-src 'self'; script-src 'self' https://www.kicktipp.de; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://rmfvzbmxcwccnezqqnen.supabase.co wss://rmfvzbmxcwccnezqqnen.supabase.co; frame-src https://www.kicktipp.de; frame-ancestors 'self'; base-uri 'self'; form-action 'self';" always;
     }
     location = /beta/index.html {
@@ -70,6 +81,7 @@ server {
         add_header X-Content-Type-Options "nosniff" always;
         add_header X-Frame-Options "SAMEORIGIN" always;
         add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+        add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
         add_header Content-Security-Policy "default-src 'self'; script-src 'self' https://www.kicktipp.de; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://rmfvzbmxcwccnezqqnen.supabase.co wss://rmfvzbmxcwccnezqqnen.supabase.co; frame-src https://www.kicktipp.de; frame-ancestors 'self'; base-uri 'self'; form-action 'self';" always;
     }
 
@@ -86,6 +98,7 @@ server {
         add_header X-Content-Type-Options "nosniff" always;
         add_header X-Frame-Options "SAMEORIGIN" always;
         add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+        add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
         add_header Content-Security-Policy "default-src 'self'; script-src 'self' https://www.kicktipp.de; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://rmfvzbmxcwccnezqqnen.supabase.co wss://rmfvzbmxcwccnezqqnen.supabase.co; frame-src https://www.kicktipp.de; frame-ancestors 'self'; base-uri 'self'; form-action 'self';" always;
     }
 
@@ -95,6 +108,7 @@ server {
         add_header X-Content-Type-Options "nosniff" always;
         add_header X-Frame-Options "SAMEORIGIN" always;
         add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+        add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
         add_header Content-Security-Policy "default-src 'self'; script-src 'self' https://www.kicktipp.de; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://rmfvzbmxcwccnezqqnen.supabase.co wss://rmfvzbmxcwccnezqqnen.supabase.co; frame-src https://www.kicktipp.de; frame-ancestors 'self'; base-uri 'self'; form-action 'self';" always;
     }
 }

@@ -384,11 +384,92 @@ Heimnetzes" im Ausblick unten):
 4. Prüfintervall nach Bedarf (z. B. alle 5 Minuten) – der Endpunkt ist eine
    statische Datei, verursacht also keine nennenswerte zusätzliche Last.
 
+## Teil 6 – Zugriff von außerhalb des Heimnetzes (Reverse Proxy + TLS)
+
+Bis hierher ist die App nur im Heimnetz erreichbar (direkte IP:Port-
+Verbindung, unverschlüsseltes HTTP). Für Zugriff von unterwegs braucht es
+zusätzlich: einen Reverse Proxy (nimmt TLS entgegen, leitet intern an
+`kicktipp-app` weiter), eine eigene Domain und ein TLS-Zertifikat.
+
+### 6.1 Reverse Proxy wählen und einrichten
+
+Zwei gleichwertige, beide über Unraids **Community Applications**
+installierbare Optionen:
+
+- **[Nginx Proxy Manager](https://nginxproxymanager.com)** (Empfehlung für
+  den Einstieg) – einfache WebUI, Let's-Encrypt-Zertifikate werden direkt
+  darüber beantragt/erneuert, kein Config-Datei-Editieren nötig.
+- **[SWAG](https://docs.linuxserver.io/general/swag)** (linuxserver.io) –
+  bringt die automatische Let's-Encrypt-Erneuerung ebenfalls mit, ist aber
+  Config-Datei-basiert (mehr Kontrolle, etwas mehr Einarbeitung).
+
+Nach der Installation über Community Applications: einen neuen Proxy-Host
+(NPM) bzw. eine neue Subdomain-Config (SWAG) für die Kicktipp-Domain
+anlegen, der/die auf die bestehende `kicktipp-app`-IP zeigt:
+
+- **Ziel-IP**: die `br0`-IP von `kicktipp-app` (siehe Teil 2.1, z. B.
+  `192.168.1.50`).
+- **Ziel-Port**: der Wert aus `LISTEN_PORT` (Default `8080`, siehe
+  Dockerfile/Unraid-Container-Konfiguration).
+- **Scheme**: `http` (der Reverse Proxy spricht intern weiterhin
+  unverschlüsseltes HTTP mit `kicktipp-app` – TLS wird ausschließlich am
+  Reverse Proxy selbst terminiert, nicht am App-Container).
+
+### 6.2 Domain und DNS
+
+1. Eigene Domain besorgen (falls noch keine vorhanden) – ein beliebiger
+   Registrar, keine Kicktipp-spezifische Anforderung.
+2. Beim DNS-Anbieter der Domain einen **A-Record** anlegen, der auf die
+   öffentliche IP des Heimnetz-Anschlusses zeigt (bei wechselnder
+   öffentlicher IP stattdessen DynDNS nutzen, z. B. über den Router oder
+   einen DynDNS-Anbieter).
+3. Am Router: **Port-Forwarding 443** (HTTPS) auf die interne IP des
+   Reverse-Proxy-Containers einrichten (bei SWAG zusätzlich Port 80 für die
+   Let's-Encrypt-HTTP-Challenge, falls nicht DNS-Challenge verwendet wird).
+
+### 6.3 TLS-Zertifikat beziehen
+
+Sowohl NPM als auch SWAG beziehen das Zertifikat direkt von **Let's
+Encrypt** über die jeweilige WebUI/Config – kein manueller `certbot`-Aufruf
+nötig. Bei NPM: beim Anlegen des Proxy-Hosts den Reiter "SSL" öffnen, "Request
+a new SSL Certificate" wählen, Let's-Encrypt-AGB akzeptieren. Erneuerung
+läuft danach automatisch im Hintergrund.
+
+### 6.4 Nach dem Umstieg prüfen
+
+1. `https://<domain>/health.txt` im Browser aufrufen – muss `ok` liefern
+   (derselbe Endpunkt wie in Teil 5, nur jetzt über HTTPS statt der
+   internen IP:Port-Adresse erreichbar).
+2. Den in Teil 5 eingerichteten UptimeRobot-/healthchecks.io-Monitor von
+   der internen `http://<IP>:<PORT>/health.txt`-URL auf
+   `https://<domain>/health.txt` umstellen.
+3. `Strict-Transport-Security` prüfen (z. B. über die Browser-DevTools,
+   Reiter "Network" → Response-Header der Startseite) – sollte jetzt aktiv
+   greifen, da nginx.conf.template den Header bereits vorbereitet (siehe
+   dortiger Kommentar).
+
+### 6.5 Wichtig: Supabase Auth auf die neue Domain umstellen
+
+Ohne diesen Schritt schlagen Login-Weiterleitungen, Passwort-Reset- und
+Einladungslinks nach dem Domain-Wechsel fehl (sie verweisen dann weiterhin
+auf die alte/interne Adresse):
+
+1. **Supabase Dashboard → Authentication → URL Configuration**: die neue
+   Domain (`https://<domain>` und `https://<domain>/beta`) zu den
+   erlaubten Redirect-URLs hinzufügen.
+2. **`ALLOWED_ORIGINS`-Secret der Edge Functions** (siehe
+   `supabase/functions/_shared/cors.ts`) um die neue Domain ergänzen:
+   ```bash
+   supabase secrets set ALLOWED_ORIGINS="https://<bisherige-origins>,https://<domain>" --project-ref <project-ref>
+   ```
+   (bestehende Origins aus der kommagetrennten Liste mit übernehmen, nicht
+   überschreiben – Supabase-Secrets sind write-only, der aktuelle Wert
+   lässt sich nicht auslesen, daher vorher den bisherigen Wert notieren
+   oder aus der eigenen Dokumentation/dem letzten Setup-Schritt
+   nachschlagen).
+
 ## Ausblick (nicht Teil dieser Anleitung)
 
-- **Zugriff von außerhalb des Heimnetzes**: dafür wäre ein Reverse Proxy
-  (z. B. Nginx Proxy Manager oder SWAG, beide über Community Applications
-  installierbar) plus eigene Domain und TLS-Zertifikat nötig.
 - **Supabase self-hosted auf Unraid**: eigener, deutlich umfangreicherer
   Docker-Compose-Stack (Postgres, Auth, PostgREST, Realtime, Storage, Kong)
   plus Migration der bestehenden Cloud-Daten. Separates Projekt, das sich
