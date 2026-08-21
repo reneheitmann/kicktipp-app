@@ -44,10 +44,17 @@ LABEL net.unraid.docker.webui="http://[IP]:8080/"
 
 EXPOSE 8080
 
-# Non-root (USER nginx) wurde zweimal versucht und hat beide Male den
-# Container-Start auf dem Ziel-Unraid-Host verhindert (bestätigt, nicht nur
-# vermutet – zweiter Vorfall nach demselben Muster) – trotz der offiziellen
-# Doku, dass nginx:alpine das seit 1.19 ohne weitere Anpassungen unterstützen
-# soll. Root Cause noch nicht durch echte Logs bestätigt (kein direkter
-# Zugriff auf den Host). Bewusst NICHT erneut versuchen, ohne vorher
-# `docker logs kicktipp-app` vom fehlgeschlagenen Start einzusehen.
+# Non-root (USER nginx) ist bereits zweimal gescheitert – docker logs vom
+# zweiten Vorfall haben die echte Ursache gezeigt (nicht nur vermutet):
+#   20-envsubst-on-templates.sh: ERROR: ... /etc/nginx/conf.d is not writable
+#   nginx: [emerg] mkdir() "/var/cache/nginx/client_temp" failed (Permission denied)
+# Die "nginx:alpine unterstützt Non-Root seit 1.19 ohne Anpassungen"-Annahme
+# gilt für den nginx-eigenen Cache/Log/Pid-Bereich, aber NICHT automatisch
+# für /etc/nginx/conf.d – das braucht dieses Setup zusätzlich beschreibbar,
+# weil unser envsubst-Templating (siehe oben) die Config dort bei JEDEM
+# Container-Start neu erzeugt, statt wie im nginx-Standardfall eine fertige
+# Config einzubacken. Beide betroffenen Pfade explizit vor dem User-Wechsel
+# freigeben.
+RUN chown -R nginx:nginx /etc/nginx/conf.d /var/cache/nginx
+
+USER nginx
