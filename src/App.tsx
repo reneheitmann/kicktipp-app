@@ -12,6 +12,8 @@ import { DashboardPage } from './pages/DashboardPage'
 import { AboutPage } from './pages/AboutPage'
 import { HelpPage } from './pages/HelpPage'
 import { UnauthorizedPage } from './pages/UnauthorizedPage'
+import { DatenschutzPage } from './pages/DatenschutzPage'
+import { ImpressumPage } from './pages/ImpressumPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { PlayerDetailPage } from './features/players/PlayerDetailPage'
 import { SeasonsPage } from './features/seasons/SeasonsPage'
@@ -49,6 +51,9 @@ const SessionPolicyPage = lazy(() =>
 )
 const NavSettingsPage = lazy(() =>
   import('./features/nav-settings/NavSettingsPage').then((m) => ({ default: m.NavSettingsPage })),
+)
+const LegalSettingsPage = lazy(() =>
+  import('./features/legal-settings/LegalSettingsPage').then((m) => ({ default: m.LegalSettingsPage })),
 )
 const SeasonRankingPage = lazy(() =>
   import('./features/seasons/SeasonRankingPage').then((m) => ({ default: m.SeasonRankingPage })),
@@ -105,6 +110,10 @@ function AppRoutes() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/email-bestaetigen" element={<ConfirmEmailChangePage />} />
         <Route path="/unauthorized" element={<UnauthorizedPage />} />
+        {/* Ohne Login erreichbar: Impressumspflicht (§ 5 TMG) und die
+            DSGVO-Informationspflicht gelten unabhängig vom Login-Status. */}
+        <Route path="/datenschutz" element={<DatenschutzPage />} />
+        <Route path="/impressum" element={<ImpressumPage />} />
 
         <Route element={<ProtectedRoute />}>
           <Route element={<AppShell />}>
@@ -168,6 +177,7 @@ function AppRoutes() {
               <Route path="/admin/password-policy" element={<PasswordPolicyPage />} />
               <Route path="/admin/session-policy" element={<SessionPolicyPage />} />
               <Route path="/admin/menu" element={<NavSettingsPage />} />
+              <Route path="/admin/legal" element={<LegalSettingsPage />} />
             </Route>
           </Route>
         </Route>

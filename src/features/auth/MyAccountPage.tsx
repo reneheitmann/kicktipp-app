@@ -7,6 +7,9 @@ import { getPasswordPolicy } from '../password-policy/passwordPolicyApi'
 import { describePasswordPolicy, validatePasswordAgainstPolicy } from '../../lib/passwordValidation'
 import { listPlayers } from '../players/playersApi'
 import { listPlayerProfileLinks } from '../players/playerProfileLinksApi'
+import { listZahlungen } from '../players/zahlungenApi'
+import { listPlayerTransactions } from '../balances/balancesApi'
+import { centsToEuros } from '../../lib/money'
 import type { PasswordPolicy, Player, UserRole } from '../../types/database'
 
 const roleLabels = { admin: 'Administrator', spielleiter: 'Spielleiter', user: 'Spieler' } as const
@@ -27,6 +30,9 @@ export function MyAccountPage() {
 
   const [switching, setSwitching] = useState(false)
   const [switchError, setSwitchError] = useState<string | null>(null)
+
+  const [exportingData, setExportingData] = useState(false)
+  const [exportError, setExportError] = useState<string | null>(null)
 
   async function handleSwitchTo(role: UserRole) {
     setSwitching(true)
@@ -72,6 +78,49 @@ export function MyAccountPage() {
       })
       .catch(() => setLinkedPlayers([]))
   }, [profile])
+
+  // Selbstauskunft/Datenexport: nutzt ausschließlich Daten, die über
+  // bestehende RLS-Policies für "eigene Daten" ohnehin schon lesbar sind
+  // (siehe is_own_player() in 0041_player_profile_links.sql) – kein neuer
+  // Berechtigungscode nötig, nur eine lesbare Zusammenstellung.
+  async function handleDownloadData() {
+    if (!profile) return
+    setExportingData(true)
+    setExportError(null)
+    try {
+      const [transactionsByPlayer, zahlungenByPlayer] = await Promise.all([
+        Promise.all(linkedPlayers.map((p) => listPlayerTransactions(p.id))),
+        Promise.all(linkedPlayers.map((p) => listZahlungen(p.id))),
+      ])
+      const data = {
+        exportiert_am: new Date().toISOString(),
+        profil: {
+          name: profile.name,
+          vorname: profile.vorname,
+          nachname: profile.nachname,
+          email: profile.email,
+          rolle: profile.role,
+        },
+        spieler: linkedPlayers.map((player, i) => ({
+          name: player.name,
+          kicktipp_name: player.kicktipp_name,
+          transaktionen: transactionsByPlayer[i].map((t) => ({ ...t, betrag: centsToEuros(t.betrag) })),
+          zahlungen: zahlungenByPlayer[i].map((z) => ({ ...z, betrag: centsToEuros(z.betrag) })),
+        })),
+      }
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `meine-daten-${new Date().toISOString().slice(0, 10)}.json`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      setExportError(err instanceof Error ? err.message : 'Export fehlgeschlagen.')
+    } finally {
+      setExportingData(false)
+    }
+  }
 
   async function handleNameSubmit(e: FormEvent) {
     e.preventDefault()
@@ -204,6 +253,22 @@ export function MyAccountPage() {
             {savingEmail ? 'Wird verschickt...' : 'Bestätigungsmail senden'}
           </Button>
         </form>
+      </div>
+
+      <div className="mb-6 rounded-xl border border-slate-200 bg-white p-4">
+        <h2 className="mb-1 text-base font-semibold text-slate-900">Meine Daten</h2>
+        <p className="mb-3 text-sm text-slate-500">
+          Lade eine Übersicht deiner gespeicherten Daten (Profil, verknüpfte Spieler, eigene Transaktionen und
+          Zahlungen) als Datei herunter – siehe auch{' '}
+          <Link to="/datenschutz" className="underline">
+            Datenschutzerklärung
+          </Link>
+          .
+        </p>
+        {exportError && <p role="alert" className="mb-3 text-sm text-red-600">{exportError}</p>}
+        <Button variant="secondary" onClick={handleDownloadData} disabled={exportingData}>
+          {exportingData ? 'Wird zusammengestellt...' : 'Meine Daten herunterladen'}
+        </Button>
       </div>
 
       {linkedPlayers.length > 0 && (

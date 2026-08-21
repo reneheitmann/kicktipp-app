@@ -42,7 +42,12 @@ diese App bildet ausschließlich die Verwaltung/Abrechnung drumherum ab.
   Spieler, Spielleiter → Spieler; keine reine Client-Vorschau, jederzeit
   rückgängig)
 - **Mein Profil** – Name, Passwort und E-Mail-Adresse (per Bestätigungslink)
-  selbst ändern
+  selbst ändern; Selbstauskunft per Klick als JSON-Datei herunterladbar
+  (Profil, verknüpfte Spieler, eigene Transaktionen/Zahlungen)
+- **Datenschutz & Impressum** – ohne Login erreichbar (Informationspflicht
+  gilt schon vor der Anmeldung), verlinkt aus Konto-Menü und Login-Seite;
+  Betreiber-/Hosting-Angaben admin-editierbar zur Laufzeit (Admin-Bereich >
+  Datenschutz & Impressum), kein Code-Deployment für Adressänderungen nötig
 - **Feingranulare Berechtigungen** – rollenbasierte Rechte pro Seite/Aktion,
   unabhängig von den drei Basisrollen konfigurierbar
 - **E-Mail-Versand** – Einzel-/Massen-Mails an Spieler mit Vorlagen, eigener
@@ -211,9 +216,12 @@ jeder Migration wird über den manuellen GitHub-Actions-Workflow
 
 Für lokale Entwicklung gibt es ein drittes, eigenständiges Supabase-Projekt
 ("Kicktipp Dev"), auf das `.env` lokal zeigt (siehe `.env.example`). Seine
-Daten (inkl. `auth.users`, echte Nutzerdaten) lassen sich jederzeit per
-manuellem GitHub-Actions-Workflow `sync-dev-from-prod.yml` komplett aus Prod
+Daten (inkl. `auth.users`) lassen sich jederzeit per manuellem
+GitHub-Actions-Workflow `sync-dev-from-prod.yml` komplett aus Prod
 auffrischen – überschreibt dabei den kompletten Dev-Datenbestand.
+Klarnamen und E-Mail-Adressen werden dabei automatisch durch synthetische
+Platzhalter ersetzt (`supabase/anonymize_dev_data.sql`, Zweckbindungsgrundsatz
+DSGVO) – IDs/Verknüpfungen zwischen den Tabellen bleiben dabei erhalten.
 
 Bei jedem Push nach `main` oder `beta` baut `.github/workflows/docker-publish.yml`
 beide Branches unabhängig voneinander und veröffentlicht das gemeinsame Image

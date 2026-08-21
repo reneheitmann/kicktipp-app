@@ -286,6 +286,22 @@ export type SessionPolicy = {
   updated_by: string | null
 }
 
+// Admin-editierbare Betreiber-/Hosting-Angaben für Datenschutz/Impressum,
+// siehe supabase/migrations/0067_legal_settings.sql. Leere Strings bedeuten
+// "noch nicht hinterlegt" (siehe DatenschutzPage.tsx/ImpressumPage.tsx),
+// kein separater Nullable-Sonderfall nötig.
+export type LegalSettings = {
+  id: string
+  operator_name: string
+  operator_address: string
+  operator_email: string
+  operator_phone: string
+  hosting_location: string
+  hosting_location_frontend: string
+  updated_at: string
+  updated_by: string | null
+}
+
 // Admin-editierbare Menü-Reihenfolge + -Bezeichnungen, siehe
 // supabase/migrations/0054_nav_settings_and_kicktipp_permission.sql,
 // 0055_nav_settings_item_labels.sql und src/features/nav-settings/.
@@ -712,6 +728,32 @@ export interface Database {
         Update: {
           id?: string
           max_duration_hours?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      legal_settings: {
+        Row: LegalSettings
+        Insert: {
+          id?: string
+          operator_name?: string
+          operator_address?: string
+          operator_email?: string
+          operator_phone?: string
+          hosting_location?: string
+          hosting_location_frontend?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          id?: string
+          operator_name?: string
+          operator_address?: string
+          operator_email?: string
+          operator_phone?: string
+          hosting_location?: string
+          hosting_location_frontend?: string
           updated_at?: string
           updated_by?: string | null
         }
