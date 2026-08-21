@@ -44,13 +44,10 @@ LABEL net.unraid.docker.webui="http://[IP]:8080/"
 
 EXPOSE 8080
 
-# Non-root: das offizielle nginx-Image bringt seit 1.19 einen vorbereiteten
-# "nginx"-User mit, dem bereits alle nötigen Verzeichnisse gehören (Cache/
-# PID/Logs unter /var/..., /etc/nginx/conf.d für das envsubst-Ergebnis aus
-# nginx.conf.template) – ein expliziter USER-Wechsel funktioniert damit ohne
-# weitere Anpassungen, solange LISTEN_PORT >= 1024 bleibt (Default 8080,
-# siehe oben; ein Port < 1024 bräuchte sonst CAP_NET_BIND_SERVICE). Nach dem
-# nächsten Deploy per `docker logs kicktipp-app` auf Permission-Fehler beim
-# Start prüfen – falls doch etwas bricht, einfach diese Zeile wieder
-# entfernen (Rollback ohne weitere Codeänderung).
-USER nginx
+# Non-root (USER nginx) wurde zweimal versucht und hat beide Male den
+# Container-Start auf dem Ziel-Unraid-Host verhindert (bestätigt, nicht nur
+# vermutet – zweiter Vorfall nach demselben Muster) – trotz der offiziellen
+# Doku, dass nginx:alpine das seit 1.19 ohne weitere Anpassungen unterstützen
+# soll. Root Cause noch nicht durch echte Logs bestätigt (kein direkter
+# Zugriff auf den Host). Bewusst NICHT erneut versuchen, ohne vorher
+# `docker logs kicktipp-app` vom fehlgeschlagenen Start einzusehen.
