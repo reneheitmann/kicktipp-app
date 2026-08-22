@@ -119,7 +119,7 @@ async function handle(
     profileIds,
     'Gewinnberechnung abgeschlossen',
     `Dein Gewinn für Spieltag ${matchday.nummer}${season ? ` in ${season.name}` : ''} steht fest.`,
-    { type: 'matchday_payout', season_id: matchday.season_id, matchday_id: matchdayId },
+    { type: 'matchday_payout', season_id: matchday.season_id, matchday_id: matchdayId, supabase_url: supabaseUrl },
   )
 
   return jsonResponse({ ok: true })

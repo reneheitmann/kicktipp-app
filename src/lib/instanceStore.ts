@@ -2,6 +2,7 @@ import { secureStorage } from './secureStorage'
 import { createSupabaseClientFor, setActiveSupabaseClient } from './supabaseClient'
 import { validateInstanceInfo } from './instanceInfoSchema'
 import { isValidInstanceUrl, normalizeInstanceUrl } from './instanceUrl'
+import { removeCurrentDevicePushTokenVia } from '../mobile/push'
 
 export interface SavedInstance {
   id: string
@@ -113,9 +114,29 @@ export async function deactivateInstance(): Promise<void> {
   await secureStorage.removeItem(ACTIVE_INSTANCE_KEY)
 }
 
-/** Entfernt eine gespeicherte Instanz inkl. ihrer Zugangsdaten aus dem Secure Storage. */
+/**
+ * Entfernt eine gespeicherte Instanz inkl. ihrer Zugangsdaten aus dem Secure
+ * Storage. Löscht davor best-effort auch das Push-Token dieses Geräts bei
+ * DIESER Instanz: ein eigener, kurzlebiger Client (derselbe storageKey wie
+ * die zu entfernende Instanz) übernimmt automatisch deren gespeicherte
+ * Session, unabhängig davon, ob diese Instanz gerade aktiv ist – ohne das
+ * gäbe es beim Entfernen einer NICHT aktiven Instanz keine gültige Session,
+ * um die Löschung serverseitig (RLS: profile_id = auth.uid()) auszuführen.
+ * Schlägt das fehl (z. B. Session bereits abgelaufen), wird trotzdem lokal
+ * aufgeräumt – das ist die wichtigere Garantie.
+ */
 export async function removeInstance(instanceId: string): Promise<void> {
   const instances = await readInstances()
+  const instance = instances.find((i) => i.id === instanceId)
+  if (instance) {
+    try {
+      const client = createSupabaseClientFor(instance.supabaseUrl, instance.supabaseAnonKey, secureStorage, storageKeyFor(instance.id))
+      await removeCurrentDevicePushTokenVia(client)
+    } catch {
+      // Best effort, siehe Kommentar oben.
+    }
+  }
+
   await writeInstances(instances.filter((i) => i.id !== instanceId))
   await secureStorage.removeItem(storageKeyFor(instanceId))
   const activeId = await getActiveInstanceId()

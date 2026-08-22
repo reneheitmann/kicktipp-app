@@ -6,6 +6,7 @@ import { AuthProvider } from '../features/auth/AuthProvider'
 import { AppRoutes } from '../App'
 import { InstancePickerPage } from './InstancePickerPage'
 import { MobileInstanceContext } from './MobileInstanceContext'
+import { MobilePushIntegration } from './MobilePushIntegration'
 import { activateInstance, deactivateInstance, getActiveInstanceId, type SavedInstance } from '../lib/instanceStore'
 
 /** Koppelt die Android-Hardware-/Gesten-Zurück-Taste an die React-Router-
@@ -71,6 +72,7 @@ export function MobileApp() {
       <MobileInstanceContext.Provider value={{ activeInstance, switchInstance }}>
         <AppBrandingProvider>
           <AuthProvider>
+            <MobilePushIntegration />
             <AppRoutes />
           </AuthProvider>
         </AppBrandingProvider>

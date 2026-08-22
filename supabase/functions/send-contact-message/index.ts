@@ -166,7 +166,7 @@ async function handle(
       recipients.map((r) => r.id),
       'Neue Kontaktanfrage',
       `${senderName}: ${subject}`,
-      { type: 'contact_message' },
+      { type: 'contact_message', supabase_url: supabaseUrl },
     )
   }
 
