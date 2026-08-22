@@ -72,7 +72,7 @@ Verbindungsaufbau technisch zu ermöglichen.
 |---|---|---|---|
 | Produktion | `production` | build-zeit-fest aus `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY` | `main` unter `/` |
 | Beta | `beta` | build-zeit-fest, eigene Werte | `beta` unter `/beta/` |
-| Mobile | `mobile` | **laufzeit-dynamisch** anhand der aktiven Instanz (siehe `src/lib/supabaseClient.ts`, `instanceStore.ts`) | `mobile/`, native Shell |
+| Mobile | `mobile` | **laufzeit-dynamisch** anhand der aktiven Instanz (siehe `src/lib/supabaseClient.ts`, `src/lib/secureStorage.ts`) | `mobile/`, native Shell |
 
 `npm run build:mobile` baut den Web-Teil für den mobile-Kanal nach
 `dist-mobile/` (Capacitor `webDir`, siehe `mobile/capacitor.config.ts`).
@@ -92,6 +92,49 @@ mobile/
 
 Kein separates Repo – `mobile/` teilt sich `src/`, Typen und den API-Layer
 mit der Web-Version im Repo-Root.
+
+## Sicherheitsarchitektur
+
+### Secure Storage statt `@capacitor/preferences`
+
+`@capacitor/preferences` ist nur einfaches UserDefaults (iOS) /
+SharedPreferences (Android) – unverschlüsselt, nicht Keychain-/
+Keystore-abgesichert. Für Supabase-Refresh-Tokens mehrerer gleichzeitig
+gespeicherter Instanzen ungeeignet. Stattdessen
+[`@aparajita/capacitor-secure-storage`](https://github.com/aparajita/capacitor-secure-storage)
+(iOS Keychain / Android Keystore-verschlüsselte Ablage), siehe
+`src/lib/secureStorage.ts`. Der Supabase-Client jeder Instanz bekommt darüber
+ein eigenes `storage`-Adapter-Objekt (offiziell von supabase-js über die
+`storage`-Option beim Client-Erzeugen unterstützt) – unterschiedliche
+Instanzen landen dabei automatisch unter unterschiedlichen Schlüsseln, da
+supabase-js den Speicherschlüssel aus der jeweiligen Projekt-URL ableitet.
+
+### Nur `https://`
+
+Die Instanz-URL-Eingabe (Instanz-Wähler, Phase 3) akzeptiert ausschließlich
+`https://`-Adressen (`src/lib/instanceUrl.ts`) – eine `http://`-Eingabe wäre
+sonst eine unverschlüsselte Verbindung, über die Zugangsdaten im Klartext
+liefen.
+
+### `instance-info.json`-Validierung
+
+Die Antwort einer neu hinzugefügten Instanz wird vor Übernahme gegen ein
+festes Schema geprüft (`src/lib/instanceInfoSchema.ts`): Pflichtfelder
+vorhanden, `supabase_url` selbst ebenfalls `https://`. Bei Abweichung wird
+die Instanz nicht gespeichert, sondern eine verständliche Fehlermeldung
+gezeigt – statt mit kaputten Werten einen Supabase-Client zu initialisieren.
+
+### Vertrauensmodell
+
+Dasselbe wie bei jeder Multi-Server-App (Nextcloud, Mastodon, Matrix): wer
+eine Instanz-Domain hinzufügt, vertraut deren Betreiber grundsätzlich – das
+ist kein neues Risiko gegenüber der heutigen Web-Nutzung derselben Instanz,
+nur jetzt für beliebige Instanzen statt nur der eigenen. Was diese
+Vertrauensgrenze eng hält, ist die Entscheidung aus dem Architektur-
+Abschnitt oben (kein Remote-Origin-Loading in der WebView) – eine
+hinzugefügte Instanz bekommt dadurch ausschließlich Zugriff auf ihre
+eigenen Daten über den Supabase-Client, nie auf die native Bridge oder auf
+in der App gespeicherte Daten anderer Instanzen.
 
 ## Weitere offene Auslöser (Push, nicht in Phase 5 umgesetzt)
 
