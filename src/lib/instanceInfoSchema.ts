@@ -24,7 +24,10 @@ export function validateInstanceInfo(data: unknown): { ok: true; info: InstanceI
     return { ok: false, error: '"supabase_url" fehlt oder ist leer.' }
   }
   if (!isValidInstanceUrl(record.supabase_url)) {
-    return { ok: false, error: '"supabase_url" muss eine gültige https://-Adresse sein.' }
+    return {
+      ok: false,
+      error: '"supabase_url" muss eine gültige, öffentlich erreichbare https://-Adresse ohne eingebettete Zugangsdaten sein.',
+    }
   }
   if (typeof record.supabase_anon_key !== 'string' || record.supabase_anon_key.trim() === '') {
     return { ok: false, error: '"supabase_anon_key" fehlt oder ist leer.' }

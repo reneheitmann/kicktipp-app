@@ -105,24 +105,54 @@ gespeicherter Instanzen ungeeignet. Stattdessen
 (iOS Keychain / Android Keystore-verschlüsselte Ablage), siehe
 `src/lib/secureStorage.ts`. Der Supabase-Client jeder Instanz bekommt darüber
 ein eigenes `storage`-Adapter-Objekt (offiziell von supabase-js über die
-`storage`-Option beim Client-Erzeugen unterstützt) – unterschiedliche
-Instanzen landen dabei automatisch unter unterschiedlichen Schlüsseln, da
-supabase-js den Speicherschlüssel aus der jeweiligen Projekt-URL ableitet.
+`storage`-Option beim Client-Erzeugen unterstützt) mit explizit gesetztem
+`storageKey` (nicht supabase-js' automatische Ableitung aus der Projekt-URL)
+– so kann beim Entfernen einer Instanz gezielt genau deren gespeicherte
+Zugangsdaten gelöscht werden, ohne die interne Schlüssel-Ableitung
+nachzubauen.
 
-### Nur `https://`
+### Nur `https://`, keine lokalen/privaten Adressen
 
-Die Instanz-URL-Eingabe (Instanz-Wähler, Phase 3) akzeptiert ausschließlich
-`https://`-Adressen (`src/lib/instanceUrl.ts`) – eine `http://`-Eingabe wäre
-sonst eine unverschlüsselte Verbindung, über die Zugangsdaten im Klartext
-liefen.
+Zwei Stellen, an denen die App selbst eine vom Nutzer bzw. von einer
+Instanz-Antwort stammende URL abruft – dieselbe Prüfung
+(`isValidInstanceUrl()` in `src/lib/instanceUrl.ts`) für beide:
+
+- die vom Nutzer eingegebene Instanz-Domain (Instanz-Wähler, Phase 3),
+- `supabase_url` aus einer `instance-info.json`-Antwort (siehe unten).
+
+Nur `https://` – `http://` wäre eine unverschlüsselte Verbindung, über die
+Zugangsdaten im Klartext liefen. Zusätzlich abgelehnt: eingebettetes
+Userinfo (`user:pass@…`, klassisches Verwirrungsmuster) sowie
+localhost/Loopback/private/link-local-Adressen (auch in hex-/oktal-
+kodierter Form, z. B. `https://0x7f.0.0.1` – `new URL()` normalisiert das
+automatisch auf `127.0.0.1`) – ohne diese Sperre könnte eine präparierte
+Eingabe die App dazu bringen, gegen das eigene Gerät oder das lokale Netz
+zu requesten (SSRF-artiges Muster). Keine legitime Instanz braucht eine
+private/lokale Adresse, ein echtes Self-Hosting muss ohnehin öffentlich
+erreichbar sein.
 
 ### `instance-info.json`-Validierung
 
 Die Antwort einer neu hinzugefügten Instanz wird vor Übernahme gegen ein
 festes Schema geprüft (`src/lib/instanceInfoSchema.ts`): Pflichtfelder
-vorhanden, `supabase_url` selbst ebenfalls `https://`. Bei Abweichung wird
-die Instanz nicht gespeichert, sondern eine verständliche Fehlermeldung
-gezeigt – statt mit kaputten Werten einen Supabase-Client zu initialisieren.
+vorhanden, `supabase_url` selbst ebenfalls über `isValidInstanceUrl()`
+geprüft (siehe oben). Bei Abweichung wird die Instanz nicht gespeichert,
+sondern eine verständliche Fehlermeldung gezeigt – statt mit kaputten
+Werten einen Supabase-Client zu initialisieren.
+
+**Bewusste Grenze dieser Prüfung:** `supabase_url` wird NICHT gegen die
+Instanz-Domain selbst abgeglichen (z. B. "muss dieselbe Domain/denselben
+Origin haben") – das würde jede echte Instanz ablehnen, da ein
+Supabase-Projekt praktisch immer auf einer anderen Domain liegt
+(`*.supabase.co` oder eine eigene self-hosted Supabase-Adresse). Eine
+kompromittierte oder falsch konfigurierte Instanz könnte daher grundsätzlich
+eine `supabase_url` liefern, die auf ein völlig anderes, von ihr selbst
+kontrolliertes Backend zeigt, statt das TLS-Vertrauen der Instanz-Domain an
+ihr eigenes Supabase-Projekt weiterzugeben. Das ist keine Lücke, die sich
+rein über Eingabevalidierung schließen lässt (siehe Vertrauensmodell unten)
+– als Gegenmaßnahme zeigt der Instanz-Wähler (Phase 3) die aufgelöste
+`supabase_url` **sichtbar vor dem Login** an, statt sie kommentarlos zu
+übernehmen, damit dieser Schritt keine stille Entscheidung ist.
 
 ### Vertrauensmodell
 
