@@ -18,6 +18,10 @@ dist-ssr
 # Lokaler Supabase-CLI-Cache (Projekt-Link, Pooler-URL etc.)
 supabase/.temp
 
+# Playwright (e2e/, siehe playwright.config.ts) – lokale Testartefakte
+/test-results
+/playwright-report
+
 # Entschlüsselte DB-Backups (siehe .github/workflows/db-backup.yml) –
 # landen hier nur temporär beim lokalen Entschlüsseln, nie eingecheckt.
 /backup

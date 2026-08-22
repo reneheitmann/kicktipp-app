@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
-import { defineConfig } from 'vite'
+import { defineConfig, configDefaults } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
@@ -42,5 +42,12 @@ export default defineConfig({
   base: process.env.VITE_APP_CHANNEL === 'beta' ? '/beta/' : '/',
   define: {
     __APP_VERSION__: JSON.stringify(displayVersion),
+  },
+  test: {
+    // e2e/ läuft über Playwright (npm run test:e2e), nicht über Vitest –
+    // ohne diesen Ausschluss versucht Vitest, die *.spec.ts-Dateien dort
+    // ebenfalls einzusammeln und am fehlenden @playwright/test-Testrunner-
+    // Kontext zu scheitern.
+    exclude: [...configDefaults.exclude, 'e2e/**'],
   },
 })
