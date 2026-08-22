@@ -26,10 +26,14 @@ let currentClient: Client | null = isMobile ? null : buildWebClient()
  * instanceStore.ts) – eigener `storage`-Adapter, da supabase-js für den
  * Session-Speicher sonst `localStorage` annimmt, das es in einer nativen
  * WebView zwar technisch gibt, das aber nicht Keychain/Keystore-abgesichert
- * ist (siehe docs/mobile-app.md, Sicherheitsarchitektur).
+ * ist (siehe docs/mobile-app.md, Sicherheitsarchitektur). `storageKey` wird
+ * explizit statt supabase-js' automatischer Ableitung aus der Projekt-URL
+ * gesetzt, damit instanceStore.ts beim Entfernen einer Instanz gezielt genau
+ * deren gespeicherte Zugangsdaten löschen kann, ohne die interne
+ * Schlüssel-Ableitung nachbauen zu müssen.
  */
-export function createSupabaseClientFor(url: string, anonKey: string, storage: SupportedStorage): Client {
-  return createClient<Database>(url, anonKey, { auth: { storage } })
+export function createSupabaseClientFor(url: string, anonKey: string, storage: SupportedStorage, storageKey: string): Client {
+  return createClient<Database>(url, anonKey, { auth: { storage, storageKey } })
 }
 
 /** mobile only: nach Instanz-Wahl/-Wechsel aufgerufen (siehe instanceStore.ts). */

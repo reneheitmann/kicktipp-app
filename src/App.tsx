@@ -22,6 +22,10 @@ import { MyAccountPage } from './features/auth/MyAccountPage'
 import { ContactPage } from './features/contact/ContactPage'
 import { KicktippWidgetPage } from './features/kicktipp-widget/KicktippWidgetPage'
 
+// Siehe Kommentar in App() unten: lazy statt statisch, damit @capacitor/*
+// nachweislich aus main/beta-Bundles draußen bleibt.
+const LazyMobileApp = lazy(() => import('./mobile/MobileApp').then((m) => ({ default: m.MobileApp })))
+
 // Lazy geladen: Admin-/Import-/E-Mail-/Konten-Verwaltungsseiten sind
 // rollenbeschränkt und werden von den meisten Logins nie geöffnet – jeder
 // Login soll trotzdem nicht deren Code mitladen müssen (relevant für mobile
@@ -99,7 +103,12 @@ function PublicOrAppShell() {
 // AuthProvider aufgerufen werden kann – passwordRecovery muss unabhängig von
 // Route/restlicher Session die normale App überdecken können, siehe
 // AuthContext.ts.
-function AppRoutes() {
+// Exportiert, damit MobileApp.tsx (mobile-Kanal, siehe src/mobile/) dieselbe
+// Routen-Definition innerhalb ihrer eigenen Provider-Verschachtelung
+// wiederverwenden kann (Instanz-Kontext, Instanz-Wähler statt fixer
+// Web-Struktur) – Web-Builds nutzen weiterhin ausschließlich den Default-
+// Export unten, unverändert.
+export function AppRoutes() {
   const { passwordRecovery, profile, loading, can } = useAuth()
 
   if (passwordRecovery) {
@@ -206,6 +215,24 @@ function AppRoutes() {
 }
 
 export default function App() {
+  // mobile (Capacitor, siehe src/mobile/): eigene Wurzelkomponente statt
+  // der festen main/beta-Struktur unten – entscheidet zwischen Instanz-
+  // Wähler und AppRoutes für die jeweils aktive Instanz (siehe
+  // MobileApp.tsx). Bewusst lazy() statt eines statischen Imports: Capacitor-
+  // Plugins registrieren sich beim Import selbst (Seiteneffekt), den Rollup
+  // nicht als toten Code erkennen kann, selbst wenn der `if`-Zweig unten nie
+  // erreicht wird – ein statischer Import hätte @capacitor/* trotzdem ins
+  // main/beta-Bundle gezogen (empirisch geprüft). lazy() erzeugt stattdessen
+  // einen eigenen Chunk, der nur bei tatsächlichem Rendern nachgeladen wird –
+  // im mobile-Kanal ohnehin sofort beim Start, in main/beta nie.
+  if (import.meta.env.VITE_APP_CHANNEL === 'mobile') {
+    return (
+      <Suspense fallback={<p className="p-4 text-sm text-slate-500 sm:p-6">Lade...</p>}>
+        <LazyMobileApp />
+      </Suspense>
+    )
+  }
+
   return (
     <BrowserRouter basename={import.meta.env.BASE_URL}>
       <AppBrandingProvider>
