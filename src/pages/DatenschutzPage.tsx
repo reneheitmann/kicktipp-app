@@ -189,9 +189,31 @@ export function DatenschutzPage() {
         </p>
       </section>
 
-      <section>
+      <section className="mb-6">
         <h2 className="mb-2 text-base font-semibold text-slate-900">12. Kontakt für Datenschutzfragen</h2>
         <p className="text-sm text-slate-700">Bei Fragen zum Datenschutz wende dich an: {field(legal?.operator_email)}</p>
+      </section>
+
+      <section>
+        <h2 className="mb-2 text-base font-semibold text-slate-900">13. Mobile App (iOS/Android)</h2>
+        <p className="mb-2 text-sm text-slate-700">
+          Nutzt du die mobile App statt der Weboberfläche, gilt zusätzlich: Meldest du dich in der App bei einer
+          oder mehreren Instanzen dieser Anwendung an (jede Instanz eine eigenständige Kicktipp-Spielrunde mit
+          eigener Adresse), werden deine Zugangsdaten (Anmelde-Sitzung) für jede Instanz getrennt im
+          hardware-verschlüsselten Bereich deines Geräts gespeichert (iOS Schlüsselbund/Android Keystore) – nicht
+          in einfachen, unverschlüsselten App-Einstellungen. Welche Instanzen du auf deinem Gerät hinzugefügt hast,
+          wird an keinen zentralen Server gemeldet; das bleibt ausschließlich lokal auf deinem Gerät und ist für
+          uns nicht einsehbar.
+        </p>
+        <p className="text-sm text-slate-700">
+          Erteilst du die Berechtigung für Benachrichtigungen, wird ein von deinem Gerät ausgegebenes,
+          eindeutiges Push-Token gespeichert (verknüpft mit deinem Konto), um dir gezielt Benachrichtigungen zu
+          neuen Kontaktnachrichten und abgeschlossenen Gewinnberechnungen zusenden zu können. Die Zustellung läuft
+          über Firebase Cloud Messaging (Google) als technischen Dienstleister. Du kannst diese Verarbeitung
+          jederzeit widerrufen, indem du die Benachrichtigungs-Berechtigung in den Geräte-Einstellungen deaktivierst
+          oder die betreffende Instanz in der App entfernst – das löscht auch dein Push-Token und deine dort
+          gespeicherten Zugangsdaten.
+        </p>
       </section>
     </div>
   )
