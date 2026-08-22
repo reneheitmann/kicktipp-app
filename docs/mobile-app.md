@@ -207,3 +207,43 @@ alle Functions, die die mobile App aufruft.
 Nur als Idee notiert, bewusst nicht in diesem Schritt angebunden:
 Massenmail-Versand, Passwort-Reset-Anfrage, neue Saison angelegt,
 Spieltag-Erinnerung vor Tippschluss.
+
+## Tests
+
+**Automatisiert:** Vitest-Unit-Tests für die neue Instanz-Config-Validierung
+(`src/lib/instanceUrl.test.ts`, `src/lib/instanceInfoSchema.test.ts`) und den
+Secure-Storage-Adapter (`src/lib/secureStorage.test.ts`, Plugin gemockt –
+kein echtes Gerät nötig).
+
+**Bewusste Lücke:** Die bestehende Playwright-E2E-Suite (`e2e/`) bleibt
+**web-only**. Capacitors native WebView lässt sich damit nicht sinnvoll
+testen (kein normaler Browser-Prozess, den Playwright ansteuern kann) –
+keine neue Test-Infrastruktur dafür in diesem Schritt aufgebaut. Ein
+späterer Ausbaupfad wäre Appium oder XCUITest/Espresso direkt, falls native
+E2E-Abdeckung nötig wird.
+
+**Manuelle Testmatrix** (mindestens einmal komplett durchzuspielen, bevor
+eine Version in TestFlight/Play Internal Testing geht):
+
+| Schritt | iOS (physisches Gerät) | Android (Gerät/Emulator) |
+|---|---|---|
+| App-Start, Instanz-Wähler erscheint | [ ] | [ ] |
+| Instanz hinzufügen: `gewinnauswertung.magicprus.de` | [ ] | [ ] |
+| Aufgelöste `supabase_url` wird vor dem Login angezeigt | [ ] | [ ] |
+| Login gegen diese Instanz | [ ] | [ ] |
+| Zweite, andere Instanz hinzufügen: "Kicktipp Dev"-Projekt | [ ] | [ ] |
+| Instanz wechseln (Profil → "Instanz wechseln") | [ ] | [ ] |
+| Login gegen die zweite Instanz | [ ] | [ ] |
+| App-Neustart: zuletzt aktive Instanz bleibt aktiv (kein erneuter Login nötig) | [ ] | [ ] |
+| Instanz entfernen (inkl. Zugangsdaten-Löschung, siehe Sicherheitsarchitektur) | [ ] | [ ] |
+| Safe-Area (Notch/Home-Indicator bzw. Gestennavigation) sieht korrekt aus | [ ] | [ ] |
+| Zurück-Taste/-Geste navigiert statt die App zu schließen | [ ] | [ ] |
+| VoiceOver/TalkBack: Instanz-Wähler + Hinzufügen-Dialog bedienbar (Phase 8) | [ ] | [ ] |
+| Push-Erklärung erscheint vor dem System-Dialog, nicht danach | [ ] | [ ] |
+| Push bei neuer Kontaktnachricht kommt an, Tap navigiert zu `/kontakt` | [ ] | [ ] |
+| Push bei abgeschlossener Gewinnberechnung kommt an, Tap navigiert zur Saison | [ ] | [ ] |
+
+Wichtig: gegen **zwei echte, unterschiedliche Instanzen** durchspielen (nicht
+nur theoretisch gegen eine einzige) – erst das prüft wirklich, dass Instanzen
+sich nicht gegenseitig beeinflussen (Secure-Storage-Trennung, Instanz-Wechsel,
+push_tokens pro Instanz).
