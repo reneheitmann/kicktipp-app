@@ -358,6 +358,19 @@ export type EmailSettings = {
 // Speichern bedeutet "unverändert lassen", nicht "Passwort löschen".
 export type EmailSettingsSafe = Omit<EmailSettings, 'smtp_password'> & { has_password: boolean }
 
+// Push-Benachrichtigungs-Tokens der mobile App, siehe
+// supabase/migrations/0069_push_tokens.sql, docs/mobile-app.md.
+export type PushPlatform = 'ios' | 'android'
+
+export type PushToken = {
+  id: string
+  profile_id: string
+  platform: PushPlatform
+  token: string
+  created_at: string
+  last_seen_at: string
+}
+
 // Form folgt absichtlich dem Schema, das `supabase gen types typescript` erzeugt,
 // damit ein späterer Wechsel auf generierte Typen keine Anpassungen im restlichen Code erfordert.
 export interface Database {
@@ -840,6 +853,26 @@ export interface Database {
           created_at?: string
           updated_at?: string
           created_by?: string | null
+        }
+        Relationships: []
+      }
+      push_tokens: {
+        Row: PushToken
+        Insert: {
+          id?: string
+          profile_id: string
+          platform: PushPlatform
+          token: string
+          created_at?: string
+          last_seen_at?: string
+        }
+        Update: {
+          id?: string
+          profile_id?: string
+          platform?: PushPlatform
+          token?: string
+          created_at?: string
+          last_seen_at?: string
         }
         Relationships: []
       }
