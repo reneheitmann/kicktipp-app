@@ -349,17 +349,61 @@ funktioniert, dieselben Schritte gegen das main/beta-Projekt wiederholen.
    ```bash
    supabase link --project-ref <dev-ref-oder-prod-ref>
    ```
-2. Datenbank auf den durch `schema.sql`/`data.sql` beschriebenen Stand
-   zurücksetzen (löscht den aktuellen Inhalt des Ziel-Projekts – deshalb
-   der Testlauf gegen Dev zuerst):
+2. Schema zurücksetzen. `db reset --linked` spielt dabei **nicht**
+   `schema.sql` ein, sondern spielt alle lokalen Migrationen
+   (`supabase/migrations/`) von Grund auf neu ab – `schema.sql` aus dem
+   Backup wird für den Restore-Ablauf gar nicht gebraucht (bleibt nur als
+   Referenz-Dump im Archiv):
    ```bash
    supabase db reset --linked
-   supabase db query --linked --file schema.sql
+   ```
+   Schlägt das mit `duplicate key value violates unique constraint
+   "buckets_pkey"` fehl: Eine Migration legt den Storage-Bucket
+   `app-assets` an, `db reset` leert aber nur die App-Schemas
+   (`public` etc.), nicht das von Supabase verwaltete `storage`-Schema –
+   ein bereits vorhandener Bucket blockiert dann die Migration. Direktes
+   `DELETE FROM storage.buckets` ist per Trigger gesperrt; stattdessen über
+   die Storage-API leeren (Service-Role-Key über
+   `supabase projects api-keys --project-ref <ref>` holen) und `db reset
+   --linked` erneut ausführen:
+   ```bash
+   curl -X DELETE "https://<projekt-ref>.supabase.co/storage/v1/bucket/app-assets" \
+     -H "Authorization: Bearer <service_role-key>" -H "apikey: <service_role-key>"
+   ```
+3. Migrationen seeden diverse Standardwerte (u. a. `app_settings`,
+   `role_permissions`, `password_policy`, `session_policy`,
+   `nav_settings`, `legal_settings`, `email_templates`) – diese Zeilen
+   kollidieren mit denselben Zeilen aus `data.sql`. Vor dem Datenimport
+   daher alle App-Tabellen leeren (Liste per `select string_agg(tablename,
+   ', ') from pg_tables where schemaname='public';` ermitteln):
+   ```bash
+   supabase db query --linked "truncate table profiles, players, seasons, \
+     matchdays, matchday_entries, transactions, season_participants, \
+     payout_rules, matchday_rankings, season_rankings, kicktipp_imports, \
+     zahlungen, app_settings, password_policy, app_logs, email_settings, \
+     password_history, password_reset_throttle, player_profile_links, \
+     session_policy, user_sessions, email_change_requests, nav_settings, \
+     role_permissions, email_templates, legal_settings cascade;"
+   ```
+4. `data.sql` einspielen:
+   ```bash
    supabase db query --linked --file data.sql
    ```
-3. Danach kurz stichprobenartig prüfen (z. B. `supabase db query --linked
+   `data.sql` ist ein Dump der **gesamten** Datenbank, nicht nur von
+   `public` – enthält daher auch die Storage-Bucket-Zeile. Bricht dieser
+   Schritt erneut mit `buckets_pkey`/`app-assets` ab (weil Schritt 2 den
+   Bucket per Migration bereits neu angelegt hat), den Bucket per
+   Storage-API (siehe Schritt 2) noch einmal leeren und den kompletten
+   Import erneut starten – der Import läuft in einer Transaktion, ein
+   Abbruch macht also auch die bis dahin erfolgreichen `insert`s wieder
+   rückgängig, ein erneuter voller Lauf ist nach dem Beheben der Ursache
+   nötig, kein Fortsetzen ab der Fehlerstelle.
+5. Danach kurz stichprobenartig prüfen (z. B. `supabase db query --linked
    "select count(*) from public.profiles;"`), ob die erwartete Datenmenge
    wieder da ist, bevor die App wieder auf dieses Projekt zeigt.
+
+Verifiziert per echtem Restore-Drill (Prod-Backup → Dev, 2026-08-22):
+Schritte 1–5 laufen in dieser Reihenfolge fehlerfrei durch.
 
 ## Teil 5 – Monitoring
 
