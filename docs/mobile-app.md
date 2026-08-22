@@ -247,3 +247,28 @@ Wichtig: gegen **zwei echte, unterschiedliche Instanzen** durchspielen (nicht
 nur theoretisch gegen eine einzige) – erst das prüft wirklich, dass Instanzen
 sich nicht gegenseitig beeinflussen (Secure-Storage-Trennung, Instanz-Wechsel,
 push_tokens pro Instanz).
+
+## Versionierung
+
+Native Store-Versionsnummern (Build-Nummer muss bei Apple/Google strikt
+steigend sein) laufen **unabhängig** von der automatischen
+`package.json`-Versions-Bump-Logik in `docker-publish.yml` – dort **nicht**
+mit eingehängt. `mobile/package.json` wird eigenständig gepflegt, da
+Store-Releases deutlich seltener als Web-Deploys sind (Review-Wartezeit bei
+Apple/Google). Beim Anheben der Version zusätzlich in Xcode (`App` Target →
+General → Version/Build) bzw. `mobile/android/app/build.gradle`
+(`versionName`/`versionCode`) nachziehen – Capacitor generiert diese Werte
+nicht automatisch aus `package.json`.
+
+## Go-Live-Checkliste (Store-Vorbereitung)
+
+Bewusst manuelle Schritte, analog zu `docs/go-live-checklist.md`:
+
+- [ ] Apple-Developer-Account + Google-Play-Developer-Account anlegen (beide kostenpflichtig)
+- [ ] App-Icon/Splash-Screen-Assets erstellen (ein festes Set für die gesamte App, siehe Phase 3)
+- [ ] Apple "App Privacy"-Angaben und Google Play "Data Safety"-Formular ausfüllen (Push-Tokens, lokale Zugangsdaten-Speicherung als Datentypen angeben)
+- [ ] Erste Version manuell über Xcode Organizer / Android Studio hochladen (Fastlane-Automatisierung erst als späterer Schritt, für den ersten Release nicht nötig)
+- [ ] TestFlight- bzw. Play-Internal-Testing-Track mit dir selbst als erstem Tester einrichten, bevor ein öffentliches Review beantragt wird
+- [ ] Firebase-Projekt für FCM anlegen, Server-Key als neues Supabase-Secret für `send-push-notification` hinterlegen
+- [ ] `ALLOWED_ORIGINS` (Supabase Edge-Function-Secret) um die Capacitor-WebView-Origin (`https://localhost`) ergänzen, siehe Abschnitt "Push-Benachrichtigungen (Backend)" oben – sonst blockt CORS jeden Edge-Function-Aufruf aus der mobile App
+- [ ] Echten Restore-/Manuell-Test gemäß der Testmatrix oben auf mindestens einem physischen iOS-Gerät und einem Android-Gerät/Emulator durchspielen, inkl. VoiceOver/TalkBack-Spotcheck (Phase 8 – in dieser Umgebung ohne physisches Gerät nicht möglich gewesen)
