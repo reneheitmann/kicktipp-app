@@ -39,6 +39,12 @@ export default defineConfig({
   // index.html-Referenzen (z. B. <link href="/icon.png">) als auch alle
   // Bundle-Assets automatisch und setzt import.meta.env.BASE_URL passend,
   // das App.tsx wiederum als React-Router-basename verwendet.
+  //
+  // mobile (Capacitor, siehe mobile/) serviert das gebündelte App-Paket
+  // intern über einen lokalen Webserver unter capacitor://localhost bzw.
+  // https://localhost (nicht als rohes file://) – absolute Pfade ab "/"
+  // funktionieren dort genauso wie bei production, daher kein eigener Fall
+  // nötig (fällt unten auf denselben Default wie main).
   base: process.env.VITE_APP_CHANNEL === 'beta' ? '/beta/' : '/',
   define: {
     __APP_VERSION__: JSON.stringify(displayVersion),
