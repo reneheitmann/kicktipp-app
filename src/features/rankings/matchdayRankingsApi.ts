@@ -49,5 +49,11 @@ export async function listMatchdayPayouts(matchdayId: string): Promise<Transacti
 export async function calculateMatchdayPayout(matchdayId: string): Promise<Transaction[]> {
   const { data, error } = await supabase.rpc('calculate_matchday_payout', { p_matchday_id: matchdayId })
   if (error) throw error
+  // Push-Auslöser Nr. 2 (siehe docs/mobile-app.md, Phase 5) - fire-and-forget,
+  // ein Fehlschlag beim Push darf die erfolgreich abgeschlossene Berechnung
+  // nicht rückgängig machen bzw. dem Aufrufer als Fehler erscheinen. Läuft
+  // auf allen Kanälen (nicht nur mobile) - ohne registrierte push_tokens
+  // für die betroffenen Profile tut die Function einfach nichts.
+  supabase.functions.invoke('send-push-notification', { body: { matchday_id: matchdayId } }).catch(() => {})
   return data.map(toCents)
 }

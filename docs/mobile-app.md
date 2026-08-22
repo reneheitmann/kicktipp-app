@@ -166,6 +166,42 @@ hinzugefügte Instanz bekommt dadurch ausschließlich Zugriff auf ihre
 eigenen Daten über den Supabase-Client, nie auf die native Bridge oder auf
 in der App gespeicherte Daten anderer Instanzen.
 
+## Push-Benachrichtigungen (Backend)
+
+Ein Absender für beide Plattformen: Firebase Cloud Messaging (HTTP-v1-API,
+`supabase/functions/_shared/fcm.ts`) – iOS-APNs-Tokens lassen sich darüber
+mit zustellen, sobald Firebase auf beiden Plattformen als Absender
+eingerichtet ist (siehe Store-Checkliste unten). Braucht das neue
+Function-Secret `FCM_SERVICE_ACCOUNT_JSON` (Inhalt der Firebase-Service-
+Account-JSON-Datei), sonst nichts Neues – die DB-Anbindung läuft über die
+Standard-Edge-Function-Umgebung (`SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY`)
+wie bei den bestehenden Mail-Functions.
+
+Zwei Auslöser als Machbarkeitsnachweis, bewusst nicht mehr (siehe unten für
+weitere Ideen):
+
+1. **Neue Kontaktnachricht** – `send-contact-message` verschickt nach der
+   E-Mail zusätzlich eine Push an alle aktiven Admins/Spielleiter mit
+   registriertem Token.
+2. **Abgeschlossene Spieltags-Gewinnberechnung** – `calculateMatchdayPayout()`
+   (Client) ruft nach einem erfolgreichen `calculate_matchday_payout()`-Aufruf
+   die neue Function `send-push-notification` auf.
+
+`send-push-notification` nimmt bewusst **nur eine `matchday_id`** entgegen,
+keinen freien Titel/Text/Empfängerkreis – ein authentifizierter Client
+könnte damit sonst beliebigen Nutzern Push-Spam/Phishing-Inhalte schicken.
+Empfänger und Nachrichtentext ermittelt die Function komplett selbst aus
+der DB, nachdem sie serverseitig geprüft hat, dass für diesen Spieltag
+tatsächlich `status = 'abgerechnet'` gilt (Beleg, dass die Berechnung
+wirklich stattgefunden hat).
+
+**Betriebs-Voraussetzung für die mobile App:** `ALLOWED_ORIGINS`
+(Edge-Function-Secret, siehe `supabase/functions/_shared/cors.ts`) muss um
+die Origin der nativen WebView ergänzt werden (Capacitor-Default:
+`https://localhost`), sonst blockt die bestehende CORS-Prüfung jeden
+Edge-Function-Aufruf aus der mobile App – betrifft nicht nur Push, sondern
+alle Functions, die die mobile App aufruft.
+
 ## Weitere offene Auslöser (Push, nicht in Phase 5 umgesetzt)
 
 Nur als Idee notiert, bewusst nicht in diesem Schritt angebunden:
