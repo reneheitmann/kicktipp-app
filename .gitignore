@@ -10,6 +10,7 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+dist-mobile
 *.local
 .env
 .env.*
@@ -29,6 +30,9 @@ supabase/.temp
 # Claude Code lokale Einstellungen (können Secrets aus vergangenen
 # Tool-Aufrufen enthalten, z. B. in Permission-Regeln mitgeloggte curl-Befehle)
 .claude/settings.local.json
+
+# Lokaler Tool-Cache (impeccable-Plugin), keine Projektdatei
+.impeccable
 
 # Editor directories and files
 .vscode/*

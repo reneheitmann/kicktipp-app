@@ -83,6 +83,20 @@ Bewusst **keine** Insert/Delete-Policy: `profiles`-Zeilen entstehen über den
 Auth-Trigger (`handle_new_user`, siehe `0001_roles_profiles.sql`), nie
 direkt durch Clients.
 
+## `push_tokens`
+
+Push-Benachrichtigungs-Tokens der mobile App (siehe `mobile/`,
+`docs/mobile-app.md`).
+
+| Policy | Angelegt | Änderungen |
+|---|---|---|
+| `push_tokens_select` | `0069_push_tokens.sql` | keine spätere Änderung |
+| `push_tokens_insert` | `0069_push_tokens.sql` | keine spätere Änderung |
+| `push_tokens_delete` | `0069_push_tokens.sql` | keine spätere Änderung |
+
+Bewusst **keine** Update-Policy: ein erneuertes Token wird als Delete+Insert
+behandelt, kein Client darf ein bestehendes Token-Feld direkt überschreiben.
+
 ## Methodik
 
 Ermittelt per `grep -inE '(create|alter|drop)[[:space:]]+policy'` über

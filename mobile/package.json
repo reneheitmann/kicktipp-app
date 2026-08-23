@@ -1,0 +1,6 @@
+{
+  "name": "kicktipp-app-mobile",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Capacitor-Shell für die Kicktipp-App (iOS/Android) – teilt sich src/, Typen und den API-Layer mit der Web-Version im Repo-Root. Eigene Versionierung: siehe docs/mobile-app.md, Abschnitt Versionierung."
+}

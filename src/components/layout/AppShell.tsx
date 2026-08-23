@@ -64,7 +64,16 @@ export function AppShell() {
             aufzuklappen – ein Menü, das von einem oben-links sitzenden
             Button ausgeht, wird sonst leicht als "woanders herkommend"
             wahrgenommen. */}
-        <header className="relative flex items-center justify-between gap-2 border-b border-slate-200 bg-white px-4 py-3 md:hidden">
+        {/* paddingTop per inline style statt Tailwind-Utility: env(safe-area-inset-top)
+            ist auf Geräten/Browsern ohne Notch/Dynamic-Island 0 (kein Effekt
+            auf main/beta im normalen Browser) – als Inline-Style eindeutig
+            über der padding-top-Komponente von "py-3", statt von der
+            CSS-Generierungsreihenfolge zweier gleich spezifischer
+            Tailwind-Utilities abzuhängen. */}
+        <header
+          className="relative flex items-center justify-between gap-2 border-b border-slate-200 bg-white px-4 py-3 md:hidden"
+          style={{ paddingTop: 'calc(0.75rem + env(safe-area-inset-top, 0px))' }}
+        >
           <div className="flex min-w-0 items-center gap-2">
             <button
               onClick={() => setNavMenuOpen(true)}
@@ -177,7 +186,14 @@ export function AppShell() {
           </Modal>
         )}
 
-        <main id="main-content" tabIndex={-1} className="min-w-0 flex-1 overflow-x-hidden overflow-y-auto outline-none">
+        {/* paddingBottom für iOS-Home-Indicator/Android-Gestennavigation –
+            siehe Kommentar bei "safe-area-inset-top" oben, gleiches Prinzip. */}
+        <main
+          id="main-content"
+          tabIndex={-1}
+          className="min-w-0 flex-1 overflow-x-hidden overflow-y-auto outline-none"
+          style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+        >
           <Outlet />
         </main>
       </div>

@@ -15,6 +15,7 @@ import { sendSmtpMail, SmtpError } from '../_shared/smtp.ts'
 import { archiveToSentFolder } from '../_shared/mailArchive.ts'
 import { logAppError } from '../_shared/logging.ts'
 import { corsHeadersForOrigin } from '../_shared/cors.ts'
+import { sendPushToProfiles } from '../_shared/push.ts'
 
 type JsonResponder = (body: unknown, status?: number) => Response
 
@@ -148,6 +149,26 @@ async function handle(
   }
 
   await archiveToSentFolder(supabaseUrl, serviceRoleKey, 'send-contact-message', settings, rawMessage, { senderEmail })
+
+  // Push-Auslöser Nr. 1 (siehe docs/mobile-app.md, Phase 5) - zusätzlich zur
+  // E-Mail. Läuft nach dem erfolgreichen Mailversand und blockiert die
+  // Response nicht (Push-Zustellung ist best-effort, siehe push.ts).
+  const { data: recipients } = await adminClient
+    .from('profiles')
+    .select('id')
+    .in('role', ['admin', 'spielleiter'])
+    .eq('is_active', true)
+  if (recipients && recipients.length > 0) {
+    await sendPushToProfiles(
+      supabaseUrl,
+      serviceRoleKey,
+      'send-contact-message',
+      recipients.map((r) => r.id),
+      'Neue Kontaktanfrage',
+      `${senderName}: ${subject}`,
+      { type: 'contact_message', supabase_url: supabaseUrl },
+    )
+  }
 
   return jsonResponse({ ok: true })
 }

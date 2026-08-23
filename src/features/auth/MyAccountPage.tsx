@@ -11,12 +11,16 @@ import { listZahlungen } from '../players/zahlungenApi'
 import { listPlayerTransactions } from '../balances/balancesApi'
 import { centsToEuros } from '../../lib/money'
 import type { PasswordPolicy, Player, UserRole } from '../../types/database'
+import { useMobileInstance } from '../../mobile/MobileInstanceContext'
 
 const roleLabels = { admin: 'Administrator', spielleiter: 'Spielleiter', user: 'Spieler' } as const
 
 export function MyAccountPage() {
   const { profile, refreshProfile, switchToRole, switchBackToBaseRole, can } = useAuth()
   const isBetaBuild = import.meta.env.VITE_APP_CHANNEL === 'beta'
+  // Nur im mobile-Kanal gesetzt (siehe MobileApp.tsx) – auf main/beta bleibt
+  // dies immer null, der Abschnitt unten wird dort also nie gerendert.
+  const mobileInstance = useMobileInstance()
 
   const [name, setName] = useState(profile?.name ?? '')
   const [nameError, setNameError] = useState<string | null>(null)
@@ -284,6 +288,19 @@ export function MyAccountPage() {
               </li>
             ))}
           </ul>
+        </div>
+      )}
+
+      {mobileInstance && (
+        <div className="mb-6 rounded-xl border border-slate-200 bg-white p-4">
+          <h2 className="mb-1 text-base font-semibold text-slate-900">Instanz</h2>
+          <p className="mb-3 text-sm text-slate-500">
+            Aktuell verbunden mit <span className="font-medium text-slate-700">{mobileInstance.activeInstance.name}</span> (
+            {mobileInstance.activeInstance.url}).
+          </p>
+          <Button variant="secondary" onClick={mobileInstance.switchInstance}>
+            Instanz wechseln
+          </Button>
         </div>
       )}
 

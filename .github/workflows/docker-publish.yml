@@ -214,6 +214,24 @@ jobs:
           VITE_APP_CHANGELOG: ${{ steps.changelog_prod.outputs.changelog }}
         run: npm run build
 
+      # instance-info.json (siehe scripts/generate-instance-info.mjs,
+      # docs/mobile-app.md): Verbindungsdaten, über die die mobile App eine
+      # eingegebene Domain zu dieser Instanz auflöst. Existenz-Check statt
+      # fixem Aufruf, da dieser Schritt zunächst nur auf beta ankommt (siehe
+      # Kommentar oben zu build-main/build-beta) – wird beim nächsten
+      # beta->main-Merge automatisch mit aktiv, kein zweiter Schritt nötig.
+      - name: instance-info.json erzeugen (main)
+        working-directory: build-main
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+        run: |
+          if [ -f scripts/generate-instance-info.mjs ]; then
+            npm run build:instance-info
+          else
+            echo "scripts/generate-instance-info.mjs noch nicht auf main vorhanden - übersprungen."
+          fi
+
       - name: Beta-Build-Metadaten ermitteln
         id: beta_meta
         working-directory: build-beta
@@ -231,6 +249,13 @@ jobs:
           VITE_APP_BETA_BUILD_NUMBER: ${{ steps.beta_meta.outputs.build_number }}
           VITE_APP_BETA_BASE_VERSION: ${{ steps.prod_version.outputs.version }}
         run: npm run build
+
+      - name: instance-info.json erzeugen (beta)
+        working-directory: build-beta
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+        run: npm run build:instance-info
 
       - name: Builds für den Docker-Kontext bereitstellen
         # Der Workspace-Root selbst hat kein eigenes Checkout mehr (beide
