@@ -101,8 +101,13 @@ und Passwort"** (E-Mail-Login, kein OAuth/SSO).
 ## 4. Erste Version manuell hochladen
 
 **iOS (Xcode):**
-1. `mobile/ios/App/App.xcworkspace` öffnen – **nicht** die `.xcodeproj`
-   direkt (CocoaPods-Abhängigkeiten fehlen sonst).
+1. `mobile/ios/App/App.xcodeproj` öffnen. Capacitor 8 nutzt standardmäßig
+   **Swift Package Manager** statt CocoaPods – es gibt kein `Podfile` und
+   kein `.xcworkspace` in diesem Projekt (anders als bei älteren
+   Capacitor-Versionen/vielen älteren Anleitungen im Netz). Beim ersten
+   Öffnen löst Xcode automatisch die Paket-Abhängigkeit
+   `capacitor-swift-pm` auf ("Resolving Package Graph", braucht
+   Internetverbindung, dauert beim ersten Mal etwas).
 2. Projekt → Target "App" → Reiter "Signing & Capabilities" → eigenes
    Apple-Developer-Team auswählen.
 3. Menü **Product → Archive**.
