@@ -270,7 +270,7 @@ Play Console, Firebase Console, Supabase).
 - [x] Apple-Developer-Account + Google-Play-Developer-Account anlegen (beide kostenpflichtig)
 - [x] App-Icon/Splash-Screen-Assets erstellen (ein festes Set für die gesamte App, siehe Phase 3)
 - [x] Apple "App Privacy"-Angaben und Google Play "Data Safety"-Formular ausfüllen (Push-Tokens, lokale Zugangsdaten-Speicherung als Datentypen angeben)
-- [ ] Erste Version manuell über Xcode Organizer / Android Studio hochladen (Fastlane-Automatisierung erst als späterer Schritt, für den ersten Release nicht nötig)
+- [x] Erste Version manuell über Xcode Organizer / Android Studio hochladen (Fastlane-Automatisierung erst als späterer Schritt, für den ersten Release nicht nötig)
 - [ ] TestFlight- bzw. Play-Internal-Testing-Track mit dir selbst als erstem Tester einrichten, bevor ein öffentliches Review beantragt wird
 - [ ] Firebase-Projekt für FCM anlegen, Server-Key als neues Supabase-Secret für `send-push-notification` hinterlegen
 - [ ] `ALLOWED_ORIGINS` (Supabase Edge-Function-Secret) um die Capacitor-WebView-Origin (`https://localhost`) ergänzen, siehe Abschnitt "Push-Benachrichtigungen (Backend)" oben – sonst blockt CORS jeden Edge-Function-Aufruf aus der mobile App
