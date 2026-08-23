@@ -32,25 +32,71 @@ siehe `docs/mobile-app.md` Phase 3).
 
 ## 3. Apple "App Privacy" / Google Play "Data Safety"
 
-Formular-Fundort: App Store Connect → App auswählen → Reiter **"App-
-Datenschutz"** ("App Privacy"). Play Console → App auswählen → **"App-
-Inhalte"** → **"Datensicherheit"**.
+✅ Erledigt (2026-08). Ablauf und tatsächlich gestellte Fragen dokumentiert,
+inkl. der Abweichungen von der ursprünglichen Planung.
 
-Datentypen, die diese App tatsächlich erhebt (siehe `docs/mobile-app.md`
-Abschnitt 13 und `supabase/migrations/`):
+### Voraussetzungen
+
+**Apple:** Bundle-ID `de.magicprus.kicktipp` zuerst im Apple Developer
+Portal registrieren (Certificates, Identifiers & Profiles → Identifiers →
+"+" → App IDs → App, Capability "Push Notifications" anhaken), danach in
+App Store Connect (Meine Apps → "+" → Neue App) den App-Eintrag anlegen.
+
+**Google Play:** App in der Play Console anlegen (Alle Apps → "App
+erstellen"). **Anders als ursprünglich angenommen** ist der Paketname
+mittlerweile **Pflichtfeld direkt beim Anlegen**, nicht erst beim ersten
+AAB-Upload gebunden – dort ebenfalls exakt `de.magicprus.kicktipp`
+eintragen. Der Paketname ist danach **permanent**, vor dem Speichern
+genau prüfen.
+
+### Formular-Fundort
+
+App Store Connect → App → Reiter **"App-Datenschutz"**. Play Console → App
+→ **"App-Inhalte"** → **"Datensicherheit"** (Navigation wechselt öfter –
+am zuverlässigsten über die Dashboard-Aufgabenliste der App oder die
+Suchfunktion oben in der Play Console finden).
+
+### Datentypen (beide Formulare)
 
 | Datentyp | Zweck | An Nutzerkonto gebunden | Tracking/Werbung |
 |---|---|---|---|
 | Kontaktdaten (Name, E-Mail) | App-Funktion (Anmeldung, Zuordnung) | Ja | Nein |
 | Finanzdaten (Einsätze, Gewinne, Kontostände) | App-Funktion (Abrechnung der Spielrunde) | Ja | Nein |
-| Kennungen (Push-Device-Token) | App-Funktion (Benachrichtigungen) | Ja | Nein |
+| Kennungen (Push-Device-Token, bei Google zusätzlich Nutzer-IDs) | App-Funktion (Benachrichtigungen) | Ja | Nein |
+| Diagnosedaten (Fehlerprotokolle) | App-Funktion (Fehleranalyse) | Ja | Nein |
 
 Bei beiden Formularen: **kein** Tracking, **keine** Weitergabe an
 Werbenetzwerke, **keine** Nutzung zu Analysezwecken über die App-Funktion
 hinaus ankreuzen. Übertragung erfolgt verschlüsselt (HTTPS/TLS zu
 Supabase). Datenlöschung ist über eine Kontolöschung durch die Spielleitung
-möglich (bei Google Play ggf. zusätzlich einen Lösch-Kontaktweg angeben,
-z. B. die E-Mail aus `/admin/legal`).
+möglich – bei Google Play als Lösch-Link die eigene `/datenschutz`-Seite
+angeben (Löschungsweg steht dort bereits beschrieben). "Sitzungsspezifisch
+verarbeitet" bzw. "ephemeral" bei jedem Datentyp mit **Nein** beantworten
+(alles wird dauerhaft in der DB gespeichert). Kontoerstellung: **"Nutzername
+und Passwort"** (E-Mail-Login, kein OAuth/SSO).
+
+### Zusätzliche Google-Play-Schritte, die nicht in der ursprünglichen Planung standen
+
+- **Zielgruppe und Inhalte** (App-Inhalte → separater Abschnitt, Google
+  verlangt das vor dem Absenden der Datensicherheit): Zielgruppe nur
+  **"18 und älter"**, "Richtet sich die App auch an Kinder?" → Nein, keine
+  Werbung, kein Familienprogramm.
+- **Altersfreigaben (IARC-Fragebogen):** Kategorie **"Alle anderen
+  App-Typen"** (Hilfsprogramm/Tool, kein Spiel, keine Social-App). Fragen zu
+  Standort-Teilen/digitalen Käufen/Geldauszahlungs-Integration/Browser/
+  News&Bildung jeweils **Nein** – bei der Geldauszahlungs-Frage bewusste
+  Abgrenzung: die App *verbucht* Auszahlungen, *führt* aber keine Zahlung
+  selbst aus (kein Zahlungsdienstleister integriert), daher Nein statt Ja.
+  Werbe-ID-Nutzung: Nein.
+- **Anmeldedaten / App-Zugriff** (früher "App access"): **Ja**, App ist
+  komplett hinter Login. Google braucht funktionierende Test-Zugangsdaten
+  zur Überprüfung – dafür **kein** eigenes Admin-Konto herausgeben. Stattdessen
+  einen dedizierten Test-Nutzer mit Rolle "Spieler" (nicht Spielleiter/Admin)
+  über Admin → Nutzerverwaltung anlegen, ohne echte Finanzdaten, und dessen
+  E-Mail/Passwort eintragen.
+- **Online-Inhalte:** Ja – die App bindet auf der "Kicktipp"-Seite ein
+  Live-Widget von kicktipp.de ein (dynamisch nachgeladener Drittanbieter-
+  Inhalt, nicht Teil des ursprünglichen Downloads).
 
 ## 4. Erste Version manuell hochladen
 
