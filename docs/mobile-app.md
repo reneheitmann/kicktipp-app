@@ -262,9 +262,12 @@ nicht automatisch aus `package.json`.
 
 ## Go-Live-Checkliste (Store-Vorbereitung)
 
-Bewusst manuelle Schritte, analog zu `docs/go-live-checklist.md`:
+Bewusst manuelle Schritte, analog zu `docs/go-live-checklist.md`. Für die
+Punkte 2–8 siehe die ausführliche Schritt-für-Schritt-Anleitung in
+`docs/mobile-store-setup.md` (konkrete Klickpfade in App Store Connect,
+Play Console, Firebase Console, Supabase).
 
-- [ ] Apple-Developer-Account + Google-Play-Developer-Account anlegen (beide kostenpflichtig)
+- [x] Apple-Developer-Account + Google-Play-Developer-Account anlegen (beide kostenpflichtig)
 - [ ] App-Icon/Splash-Screen-Assets erstellen (ein festes Set für die gesamte App, siehe Phase 3)
 - [ ] Apple "App Privacy"-Angaben und Google Play "Data Safety"-Formular ausfüllen (Push-Tokens, lokale Zugangsdaten-Speicherung als Datentypen angeben)
 - [ ] Erste Version manuell über Xcode Organizer / Android Studio hochladen (Fastlane-Automatisierung erst als späterer Schritt, für den ersten Release nicht nötig)
