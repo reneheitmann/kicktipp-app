@@ -196,11 +196,24 @@ async function handle(
   // dieselbe Nachricht. Titel/Text sind bewusst NICHT durch dieselbe
   // Vorlagen-Variablen-Ersetzung wie die E-Mail gelaufen (keine
   // Personalisierung für Push in diesem Schritt, siehe SendEmailPage.tsx).
+  //
+  // pushDeviceCount wird zurückgemeldet, weil sendPushToProfiles() sonst
+  // komplett "fire and forget" läuft (siehe deren eigener Kommentar) - ohne
+  // diese Rückmeldung hätte der Admin keine Möglichkeit zu erkennen, dass
+  // "0 zugestellt" i. d. R. bedeutet: Empfänger haben (noch) kein Gerät mit
+  // aktivierten Push-Benachrichtigungen registriert, nicht dass etwas
+  // fehlgeschlagen ist.
+  let pushDeviceCount: number | null = null
   if (body.push?.title?.trim() && body.push?.body?.trim()) {
     const playerIds = [...new Set(recipients.map((r) => r.player_id).filter((id): id is string => !!id))]
     if (playerIds.length > 0) {
       const { data: links } = await adminClient.from('player_profile_links').select('profile_id').in('player_id', playerIds)
       const profileIds = [...new Set((links ?? []).map((l) => l.profile_id))]
+      const { count } = await adminClient
+        .from('push_tokens')
+        .select('id', { count: 'exact', head: true })
+        .in('profile_id', profileIds)
+      pushDeviceCount = count ?? 0
       await sendPushToProfiles(
         supabaseUrl,
         serviceRoleKey,
@@ -210,9 +223,11 @@ async function handle(
         body.push.body.trim(),
         { type: 'admin_message', supabase_url: supabaseUrl },
       )
+    } else {
+      pushDeviceCount = 0
     }
   }
 
-  return jsonResponse({ results })
+  return jsonResponse({ results, pushDeviceCount })
 }
 

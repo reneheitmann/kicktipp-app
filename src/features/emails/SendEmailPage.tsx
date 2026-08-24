@@ -71,6 +71,7 @@ export function SendEmailPage() {
   const [error, setError] = useState<string | null>(null)
   const [sending, setSending] = useState(false)
   const [results, setResults] = useState<BulkEmailResult[] | null>(null)
+  const [pushDeviceCount, setPushDeviceCount] = useState<number | null>(null)
 
   const [alsoPush, setAlsoPush] = useState(false)
   const [pushTitle, setPushTitle] = useState('')
@@ -211,6 +212,7 @@ export function SendEmailPage() {
     setSending(true)
     setError(null)
     setResults(null)
+    setPushDeviceCount(null)
     try {
       const recipients = contactableRecipients.map(({ player, balance }) => {
         const vars = recipientVariablesFor(player, balance)
@@ -222,7 +224,9 @@ export function SendEmailPage() {
         }
       })
       const push = alsoPush ? { title: pushTitle.trim(), body: pushBody.trim() } : undefined
-      setResults(await sendBulkEmail(recipients, push))
+      const sendResult = await sendBulkEmail(recipients, push)
+      setResults(sendResult.results)
+      setPushDeviceCount(sendResult.pushDeviceCount)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Versand fehlgeschlagen.')
     } finally {
@@ -311,7 +315,7 @@ export function SendEmailPage() {
                   value={playerSearch}
                   onChange={(e) => setPlayerSearch(e.target.value)}
                   placeholder="Spieler suchen..."
-                  className="mb-2 w-full max-w-sm rounded-lg border border-slate-300 px-2 py-1.5 text-sm focus:border-slate-900 focus:outline-none"
+                  className="mb-2 w-full max-w-sm rounded-lg border border-slate-300 px-2 py-1.5 text-base focus:border-slate-900 focus:outline-none"
                 />
                 <div className="max-h-48 max-w-sm overflow-y-auto rounded-lg border border-slate-200 p-2">
                   {filteredPlayers.length === 0 ? (
@@ -517,6 +521,14 @@ export function SendEmailPage() {
             <Button onClick={handleSend} disabled={sending || contactableRecipients.length === 0}>
               {sending ? 'Sende...' : `An ${contactableRecipients.length} Empfänger senden`}
             </Button>
+
+            {pushDeviceCount !== null && (
+              <p className="mt-4 text-sm text-slate-600">
+                {pushDeviceCount > 0
+                  ? `Push an ${pushDeviceCount} Gerät${pushDeviceCount === 1 ? '' : 'e'} zugestellt.`
+                  : 'Push konnte an kein Gerät zugestellt werden – die Empfänger haben (noch) kein Gerät mit aktivierten Benachrichtigungen registriert.'}
+              </p>
+            )}
 
             {results && (
               <ul className="mt-4 divide-y divide-slate-100 rounded-lg border border-slate-200">
