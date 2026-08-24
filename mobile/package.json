@@ -2,5 +2,13 @@
   "name": "kicktipp-app-mobile",
   "private": true,
   "version": "1.0.0",
-  "description": "Capacitor-Shell für die Kicktipp-App (iOS/Android) – teilt sich src/, Typen und den API-Layer mit der Web-Version im Repo-Root. Eigene Versionierung: siehe docs/mobile-app.md, Abschnitt Versionierung."
+  "description": "Capacitor-Shell für die Kicktipp-App (iOS/Android) – teilt sich src/, Typen und den API-Layer mit der Web-Version im Repo-Root. Eigene Versionierung: siehe docs/mobile-app.md, Abschnitt Versionierung.",
+  "dependencies": {
+    "@aparajita/capacitor-secure-storage": "^8.0.0",
+    "@capacitor/android": "^8.5.0",
+    "@capacitor/app": "^8.1.1",
+    "@capacitor/core": "^8.5.0",
+    "@capacitor/ios": "^8.5.0",
+    "@capacitor/push-notifications": "^8.1.2"
+  }
 }
