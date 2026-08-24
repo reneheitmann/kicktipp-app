@@ -102,6 +102,24 @@ server {
         add_header Content-Security-Policy "default-src 'self'; script-src 'self' https://www.kicktipp.de; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://rmfvzbmxcwccnezqqnen.supabase.co wss://rmfvzbmxcwccnezqqnen.supabase.co; frame-src https://www.kicktipp.de; frame-ancestors 'self'; base-uri 'self'; form-action 'self';" always;
     }
 
+    # instance-info.json ist die öffentliche Discovery-Datei für die mobile
+    # App (siehe scripts/generate-instance-info.mjs, docs/mobile-app.md):
+    # enthält nur ohnehin publizierbare Werte (Supabase-URL, publishable
+    # Anon-Key), aber ohne CORS-Header blockt die Capacitor-WebView (Origin
+    # capacitor://localhost auf iOS, https://localhost auf Android) den
+    # Fetch selbst dann, wenn der Server fehlerfrei antwortet - deshalb hier
+    # bewusst '*' statt der ALLOWED_ORIGINS-Liste (die ist für die Edge
+    # Functions gedacht, die echte Sessions/Secrets verarbeiten).
+    location ~ ^/(beta/)?instance-info\.json$ {
+        add_header Access-Control-Allow-Origin "*" always;
+        add_header Cache-Control "no-cache";
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header X-Frame-Options "SAMEORIGIN" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+        add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+        add_header Content-Security-Policy "default-src 'self'; script-src 'self' https://www.kicktipp.de; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://rmfvzbmxcwccnezqqnen.supabase.co wss://rmfvzbmxcwccnezqqnen.supabase.co; frame-src https://www.kicktipp.de; frame-ancestors 'self'; base-uri 'self'; form-action 'self';" always;
+    }
+
     location ~* \.(js|css|svg|png|jpg|jpeg|gif|woff2?)$ {
         expires 30d;
         add_header Cache-Control "public, immutable";
