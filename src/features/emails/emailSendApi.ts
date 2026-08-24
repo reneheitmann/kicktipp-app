@@ -21,12 +21,19 @@ export interface BulkEmailPush {
   body: string
 }
 
-export async function sendBulkEmail(recipients: BulkEmailRecipient[], push?: BulkEmailPush): Promise<BulkEmailResult[]> {
-  const { data, error } = await supabase.functions.invoke<{ results: BulkEmailResult[] }>('send-bulk-email', {
+export interface BulkEmailSendResult {
+  results: BulkEmailResult[]
+  // null: kein Push angefordert. 0: Push angefordert, aber kein Empfänger
+  // hat ein Gerät mit aktivierten Benachrichtigungen registriert.
+  pushDeviceCount: number | null
+}
+
+export async function sendBulkEmail(recipients: BulkEmailRecipient[], push?: BulkEmailPush): Promise<BulkEmailSendResult> {
+  const { data, error } = await supabase.functions.invoke<BulkEmailSendResult>('send-bulk-email', {
     body: { recipients, push },
   })
   if (error) throw await toDetailedError(error)
-  return data?.results ?? []
+  return { results: data?.results ?? [], pushDeviceCount: data?.pushDeviceCount ?? null }
 }
 
 // supabase-js wirft bei einer Nicht-2xx-Antwort der Edge Function nur die
