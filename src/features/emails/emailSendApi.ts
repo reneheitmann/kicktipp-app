@@ -5,6 +5,9 @@ export interface BulkEmailRecipient {
   to: string
   subject: string
   html: string
+  // Optional: nur gesetzt, wenn `push` mitgeschickt wird - löst dann
+  // zusätzlich eine Push-Benachrichtigung an diesen Spieler aus.
+  player_id?: string
 }
 
 export interface BulkEmailResult {
@@ -13,9 +16,14 @@ export interface BulkEmailResult {
   error?: string
 }
 
-export async function sendBulkEmail(recipients: BulkEmailRecipient[]): Promise<BulkEmailResult[]> {
+export interface BulkEmailPush {
+  title: string
+  body: string
+}
+
+export async function sendBulkEmail(recipients: BulkEmailRecipient[], push?: BulkEmailPush): Promise<BulkEmailResult[]> {
   const { data, error } = await supabase.functions.invoke<{ results: BulkEmailResult[] }>('send-bulk-email', {
-    body: { recipients },
+    body: { recipients, push },
   })
   if (error) throw await toDetailedError(error)
   return data?.results ?? []

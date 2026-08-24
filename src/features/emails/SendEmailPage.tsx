@@ -72,6 +72,10 @@ export function SendEmailPage() {
   const [sending, setSending] = useState(false)
   const [results, setResults] = useState<BulkEmailResult[] | null>(null)
 
+  const [alsoPush, setAlsoPush] = useState(false)
+  const [pushTitle, setPushTitle] = useState('')
+  const [pushBody, setPushBody] = useState('')
+
   useEffect(() => {
     Promise.all([listSeasons(), listPlayersWithProfiles(), listEmailTemplates()])
       .then(([seasonData, playerData, templateData]) => {
@@ -197,7 +201,12 @@ export function SendEmailPage() {
       setError('Betreff und Text sind erforderlich.')
       return
     }
-    if (!confirm(`E-Mail an ${contactableRecipients.length} Empfänger senden?`)) return
+    if (alsoPush && (!pushTitle.trim() || !pushBody.trim())) {
+      setError('Push-Titel und Push-Text sind erforderlich, wenn "Auch als Push senden" aktiv ist.')
+      return
+    }
+    const pushSuffix = alsoPush ? ' (zusätzlich als Push)' : ''
+    if (!confirm(`E-Mail an ${contactableRecipients.length} Empfänger senden${pushSuffix}?`)) return
 
     setSending(true)
     setError(null)
@@ -209,9 +218,11 @@ export function SendEmailPage() {
           to: player.profile!.email!,
           subject: renderTemplate(subject, vars),
           html: textToHtml(renderTemplate(bodyText, vars)),
+          player_id: player.id,
         }
       })
-      setResults(await sendBulkEmail(recipients))
+      const push = alsoPush ? { title: pushTitle.trim(), body: pushBody.trim() } : undefined
+      setResults(await sendBulkEmail(recipients, push))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Versand fehlgeschlagen.')
     } finally {
@@ -461,6 +472,48 @@ export function SendEmailPage() {
 
           <section className="rounded-xl border border-slate-200 bg-white p-4">
             <h2 className="mb-3 text-sm font-semibold text-slate-900">4. Versand</h2>
+
+            <label className="mb-3 flex items-center gap-2 text-sm text-slate-700">
+              <input
+                type="checkbox"
+                checked={alsoPush}
+                onChange={(e) => setAlsoPush(e.target.checked)}
+                className="h-4 w-4 shrink-0"
+              />
+              Auch als Push-Benachrichtigung senden (an Empfänger mit installierter mobiler App)
+            </label>
+
+            {alsoPush && (
+              <div className="mb-4 space-y-3 rounded-lg bg-slate-50 p-3">
+                <p className="text-xs text-slate-500">
+                  Push-Titel/-Text sind unabhängig von Betreff/Text oben, ohne Variablen – dieselbe kurze Nachricht geht
+                  an alle Empfänger.
+                </p>
+                <div>
+                  <label htmlFor="push-title" className="mb-1 block text-sm font-medium text-slate-700">
+                    Push-Titel
+                  </label>
+                  <input
+                    id="push-title"
+                    value={pushTitle}
+                    onChange={(e) => setPushTitle(e.target.value)}
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base focus:border-slate-900 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="push-body" className="mb-1 block text-sm font-medium text-slate-700">
+                    Push-Text
+                  </label>
+                  <input
+                    id="push-body"
+                    value={pushBody}
+                    onChange={(e) => setPushBody(e.target.value)}
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base focus:border-slate-900 focus:outline-none"
+                  />
+                </div>
+              </div>
+            )}
+
             <Button onClick={handleSend} disabled={sending || contactableRecipients.length === 0}>
               {sending ? 'Sende...' : `An ${contactableRecipients.length} Empfänger senden`}
             </Button>

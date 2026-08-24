@@ -15,6 +15,7 @@ import { sendSmtpMail, SmtpError } from '../_shared/smtp.ts'
 import { archiveManyToSentFolder } from '../_shared/mailArchive.ts'
 import { logAppError } from '../_shared/logging.ts'
 import { corsHeadersForOrigin } from '../_shared/cors.ts'
+import { sendPushToProfiles } from '../_shared/push.ts'
 
 type JsonResponder = (body: unknown, status?: number) => Response
 
@@ -24,6 +25,10 @@ interface Recipient {
   to: string
   subject: string
   html: string
+  // Optional: nur gesetzt, wenn zusätzlich eine Push-Benachrichtigung an
+  // denselben Empfänger gehen soll (siehe `push`-Feld im Request-Body) -
+  // die E-Mail selbst bleibt weiterhin allein über `to` adressiert.
+  player_id?: string
 }
 
 interface RecipientResult {
@@ -107,7 +112,7 @@ async function handle(
     return jsonResponse({ error: 'Keine Berechtigung zum E-Mail-Versand.' }, 403)
   }
 
-  let body: { recipients?: Recipient[] }
+  let body: { recipients?: Recipient[]; push?: { title?: string; body?: string } }
   try {
     body = await req.json()
   } catch {
@@ -183,6 +188,29 @@ async function handle(
       `${failures.length} von ${recipients.length} E-Mails fehlgeschlagen`,
       { failures, smtp_host: settings.smtp_host, smtp_port: settings.smtp_port, smtp_encryption: settings.smtp_encryption },
     )
+  }
+
+  // Push ist unabhängig vom E-Mail-Ergebnis: derselbe Empfänger-Kreis
+  // (player_id) soll auch dann erreicht werden, wenn die E-Mail-Zustellung
+  // (z. B. SMTP-Fehler) fehlschlägt - beides sind eigenständige Kanäle für
+  // dieselbe Nachricht. Titel/Text sind bewusst NICHT durch dieselbe
+  // Vorlagen-Variablen-Ersetzung wie die E-Mail gelaufen (keine
+  // Personalisierung für Push in diesem Schritt, siehe SendEmailPage.tsx).
+  if (body.push?.title?.trim() && body.push?.body?.trim()) {
+    const playerIds = [...new Set(recipients.map((r) => r.player_id).filter((id): id is string => !!id))]
+    if (playerIds.length > 0) {
+      const { data: links } = await adminClient.from('player_profile_links').select('profile_id').in('player_id', playerIds)
+      const profileIds = [...new Set((links ?? []).map((l) => l.profile_id))]
+      await sendPushToProfiles(
+        supabaseUrl,
+        serviceRoleKey,
+        'send-bulk-email',
+        profileIds,
+        body.push.title.trim(),
+        body.push.body.trim(),
+        { type: 'admin_message', supabase_url: supabaseUrl },
+      )
+    }
   }
 
   return jsonResponse({ results })
