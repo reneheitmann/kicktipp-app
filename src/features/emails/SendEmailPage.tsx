@@ -73,7 +73,8 @@ export function SendEmailPage() {
   const [results, setResults] = useState<BulkEmailResult[] | null>(null)
   const [pushDeviceCount, setPushDeviceCount] = useState<number | null>(null)
 
-  const [alsoPush, setAlsoPush] = useState(false)
+  const [sendEmail, setSendEmail] = useState(true)
+  const [sendPush, setSendPush] = useState(false)
   const [pushTitle, setPushTitle] = useState('')
   const [pushBody, setPushBody] = useState('')
 
@@ -144,11 +145,14 @@ export function SendEmailPage() {
       .map((player) => ({
         player,
         balance: balances.get(player.id) ?? { offen: 0, gewinneGesamt: 0 },
-        contactable: !!player.profile?.email && player.profile.is_active,
+        // E-Mail-Versand braucht eine hinterlegte Adresse, reiner Push-Versand
+        // (sendEmail aus) nicht - Push geht über player_profile_links, siehe
+        // handleSend()/send-bulk-email/index.ts.
+        contactable: !!player.profile?.is_active && (sendEmail ? !!player.profile.email : true),
         excluded: excludedIds.has(player.id),
       }))
       .sort((a, b) => a.player.name.localeCompare(b.player.name))
-  }, [players, baseRecipientIds, balances, excludedIds])
+  }, [players, baseRecipientIds, balances, excludedIds, sendEmail])
 
   const contactableRecipients = resolvedRecipients.filter((r) => r.contactable && !r.excluded)
 
@@ -197,33 +201,40 @@ export function SendEmailPage() {
   const previewVars = previewRecipient ? recipientVariablesFor(previewRecipient.player, previewRecipient.balance) : null
 
   async function handleSend() {
+    if (!sendEmail && !sendPush) {
+      setError('Mindestens ein Versandweg (E-Mail oder Push) muss aktiv sein.')
+      return
+    }
     if (contactableRecipients.length === 0) return
-    if (!subject.trim() || !bodyText.trim()) {
+    if (sendEmail && (!subject.trim() || !bodyText.trim())) {
       setError('Betreff und Text sind erforderlich.')
       return
     }
-    if (alsoPush && (!pushTitle.trim() || !pushBody.trim())) {
-      setError('Push-Titel und Push-Text sind erforderlich, wenn "Auch als Push senden" aktiv ist.')
+    if (sendPush && (!pushTitle.trim() || !pushBody.trim())) {
+      setError('Push-Titel und Push-Text sind erforderlich, wenn "Per Push senden" aktiv ist.')
       return
     }
-    const pushSuffix = alsoPush ? ' (zusätzlich als Push)' : ''
-    if (!confirm(`E-Mail an ${contactableRecipients.length} Empfänger senden${pushSuffix}?`)) return
+    const channels = [sendEmail && 'E-Mail', sendPush && 'Push'].filter(Boolean).join(' + ')
+    if (!confirm(`${channels} an ${contactableRecipients.length} Empfänger senden?`)) return
 
     setSending(true)
     setError(null)
     setResults(null)
     setPushDeviceCount(null)
     try {
-      const recipients = contactableRecipients.map(({ player, balance }) => {
-        const vars = recipientVariablesFor(player, balance)
-        return {
-          to: player.profile!.email!,
-          subject: renderTemplate(subject, vars),
-          html: textToHtml(renderTemplate(bodyText, vars)),
-          player_id: player.id,
-        }
-      })
-      const push = alsoPush ? { title: pushTitle.trim(), body: pushBody.trim() } : undefined
+      const recipients = sendEmail
+        ? contactableRecipients.map(({ player, balance }) => {
+            const vars = recipientVariablesFor(player, balance)
+            return {
+              to: player.profile!.email!,
+              subject: renderTemplate(subject, vars),
+              html: textToHtml(renderTemplate(bodyText, vars)),
+            }
+          })
+        : undefined
+      const push = sendPush
+        ? { title: pushTitle.trim(), body: pushBody.trim(), playerIds: contactableRecipients.map((r) => r.player.id) }
+        : undefined
       const sendResult = await sendBulkEmail(recipients, push)
       setResults(sendResult.results)
       setPushDeviceCount(sendResult.pushDeviceCount)
@@ -339,7 +350,7 @@ export function SendEmailPage() {
 
             <p className="mb-2 text-xs text-slate-500">
               {resolvedRecipients.length} Spieler gefunden, davon {contactableRecipients.length} kontaktierbar
-              (verknüpftes aktives Profil mit E-Mailadresse).
+              (verknüpftes aktives Profil{sendEmail ? ' mit E-Mailadresse' : ''}).
             </p>
 
             {resolvedRecipients.length > 0 && (
@@ -477,17 +488,33 @@ export function SendEmailPage() {
           <section className="rounded-xl border border-slate-200 bg-white p-4">
             <h2 className="mb-3 text-sm font-semibold text-slate-900">4. Versand</h2>
 
-            <label className="mb-3 flex items-center gap-2 text-sm text-slate-700">
-              <input
-                type="checkbox"
-                checked={alsoPush}
-                onChange={(e) => setAlsoPush(e.target.checked)}
-                className="h-4 w-4 shrink-0"
-              />
-              Auch als Push-Benachrichtigung senden (an Empfänger mit installierter mobiler App)
-            </label>
+            <div className="mb-3 space-y-2">
+              <label className="flex items-center gap-2 text-sm text-slate-700">
+                <input
+                  type="checkbox"
+                  checked={sendEmail}
+                  onChange={(e) => setSendEmail(e.target.checked)}
+                  className="h-4 w-4 shrink-0"
+                />
+                Per E-Mail senden
+              </label>
+              <label className="flex items-center gap-2 text-sm text-slate-700">
+                <input
+                  type="checkbox"
+                  checked={sendPush}
+                  onChange={(e) => setSendPush(e.target.checked)}
+                  className="h-4 w-4 shrink-0"
+                />
+                Per Push-Benachrichtigung senden (an Empfänger mit aktivierten Benachrichtigungen in der mobilen App)
+              </label>
+              {!sendEmail && !sendPush && (
+                <p role="alert" className="text-sm text-red-600">
+                  Mindestens ein Versandweg muss aktiv sein.
+                </p>
+              )}
+            </div>
 
-            {alsoPush && (
+            {sendPush && (
               <div className="mb-4 space-y-3 rounded-lg bg-slate-50 p-3">
                 <p className="text-xs text-slate-500">
                   Push-Titel/-Text sind unabhängig von Betreff/Text oben, ohne Variablen – dieselbe kurze Nachricht geht
@@ -518,7 +545,10 @@ export function SendEmailPage() {
               </div>
             )}
 
-            <Button onClick={handleSend} disabled={sending || contactableRecipients.length === 0}>
+            <Button
+              onClick={handleSend}
+              disabled={sending || contactableRecipients.length === 0 || (!sendEmail && !sendPush)}
+            >
               {sending ? 'Sende...' : `An ${contactableRecipients.length} Empfänger senden`}
             </Button>
 
@@ -530,7 +560,7 @@ export function SendEmailPage() {
               </p>
             )}
 
-            {results && (
+            {results && results.length > 0 && (
               <ul className="mt-4 divide-y divide-slate-100 rounded-lg border border-slate-200">
                 {results.map((r) => (
                   <li key={r.to} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">

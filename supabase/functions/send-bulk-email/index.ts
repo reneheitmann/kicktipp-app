@@ -25,10 +25,6 @@ interface Recipient {
   to: string
   subject: string
   html: string
-  // Optional: nur gesetzt, wenn zusätzlich eine Push-Benachrichtigung an
-  // denselben Empfänger gehen soll (siehe `push`-Feld im Request-Body) -
-  // die E-Mail selbst bleibt weiterhin allein über `to` adressiert.
-  player_id?: string
 }
 
 interface RecipientResult {
@@ -112,7 +108,7 @@ async function handle(
     return jsonResponse({ error: 'Keine Berechtigung zum E-Mail-Versand.' }, 403)
   }
 
-  let body: { recipients?: Recipient[]; push?: { title?: string; body?: string } }
+  let body: { recipients?: Recipient[]; push?: { title?: string; body?: string; player_ids?: string[] } }
   try {
     body = await req.json()
   } catch {
@@ -120,82 +116,98 @@ async function handle(
   }
 
   const recipients = body.recipients
-  if (!Array.isArray(recipients) || recipients.length === 0) {
-    return jsonResponse({ error: 'Mindestens ein Empfänger ist erforderlich.' }, 400)
+  const wantsEmail = Array.isArray(recipients) && recipients.length > 0
+  const wantsPush = !!(
+    body.push?.title?.trim() &&
+    body.push?.body?.trim() &&
+    Array.isArray(body.push.player_ids) &&
+    body.push.player_ids.length > 0
+  )
+  if (!wantsEmail && !wantsPush) {
+    return jsonResponse({ error: 'Mindestens ein E-Mail- oder Push-Empfänger ist erforderlich.' }, 400)
   }
-  if (recipients.length > MAX_RECIPIENTS) {
+  if (wantsPush && body.push!.player_ids!.length > MAX_RECIPIENTS) {
     return jsonResponse({ error: `Maximal ${MAX_RECIPIENTS} Empfänger je Versand.` }, 400)
-  }
-  for (const r of recipients) {
-    if (!r.to?.trim() || !r.subject?.trim() || !r.html?.trim()) {
-      return jsonResponse({ error: 'Jeder Empfänger benötigt Adresse, Betreff und Inhalt.' }, 400)
-    }
   }
 
   const adminClient = createClient(supabaseUrl, serviceRoleKey)
-  const { data: settings, error: settingsError } = await adminClient
-    .from('email_settings')
-    .select('*')
-    .eq('id', '00000000-0000-0000-0000-000000000001')
-    .maybeSingle()
+  let results: RecipientResult[] = []
 
-  if (settingsError || !settings) {
-    return jsonResponse({ error: 'E-Mail-Versand ist noch nicht konfiguriert (siehe Admin-Seite "E-Mail-Versand").' }, 400)
-  }
+  if (wantsEmail) {
+    if (recipients!.length > MAX_RECIPIENTS) {
+      return jsonResponse({ error: `Maximal ${MAX_RECIPIENTS} Empfänger je Versand.` }, 400)
+    }
+    for (const r of recipients!) {
+      if (!r.to?.trim() || !r.subject?.trim() || !r.html?.trim()) {
+        return jsonResponse({ error: 'Jeder Empfänger benötigt Adresse, Betreff und Inhalt.' }, 400)
+      }
+    }
 
-  const smtpConfig = {
-    hostname: settings.smtp_host,
-    port: settings.smtp_port,
-    encryption: settings.smtp_encryption,
-    username: settings.smtp_username,
-    password: settings.smtp_password,
-  }
+    const { data: settings, error: settingsError } = await adminClient
+      .from('email_settings')
+      .select('*')
+      .eq('id', '00000000-0000-0000-0000-000000000001')
+      .maybeSingle()
 
-  const results: RecipientResult[] = []
-  const failures: { to: string; error: string }[] = []
-  const sentRawMessages: string[] = []
-  for (const recipient of recipients) {
-    try {
-      const sent = await sendSmtpMail(smtpConfig, {
-        fromEmail: settings.sender_email,
-        fromName: settings.sender_name,
-        to: recipient.to,
-        subject: recipient.subject,
-        html: recipient.html,
-      })
-      results.push({ to: recipient.to, ok: true })
-      sentRawMessages.push(sent.raw)
-    } catch (err) {
-      const message = err instanceof SmtpError ? err.message : err instanceof Error ? err.message : String(err)
-      results.push({ to: recipient.to, ok: false, error: message })
-      failures.push({ to: recipient.to, error: message })
+    if (settingsError || !settings) {
+      return jsonResponse({ error: 'E-Mail-Versand ist noch nicht konfiguriert (siehe Admin-Seite "E-Mail-Versand").' }, 400)
+    }
+
+    const smtpConfig = {
+      hostname: settings.smtp_host,
+      port: settings.smtp_port,
+      encryption: settings.smtp_encryption,
+      username: settings.smtp_username,
+      password: settings.smtp_password,
+    }
+
+    const failures: { to: string; error: string }[] = []
+    const sentRawMessages: string[] = []
+    for (const recipient of recipients!) {
+      try {
+        const sent = await sendSmtpMail(smtpConfig, {
+          fromEmail: settings.sender_email,
+          fromName: settings.sender_name,
+          to: recipient.to,
+          subject: recipient.subject,
+          html: recipient.html,
+        })
+        results.push({ to: recipient.to, ok: true })
+        sentRawMessages.push(sent.raw)
+      } catch (err) {
+        const message = err instanceof SmtpError ? err.message : err instanceof Error ? err.message : String(err)
+        results.push({ to: recipient.to, ok: false, error: message })
+        failures.push({ to: recipient.to, error: message })
+      }
+    }
+
+    await archiveManyToSentFolder(supabaseUrl, serviceRoleKey, 'send-bulk-email', settings, sentRawMessages, {
+      count: sentRawMessages.length,
+    })
+
+    // Einzelne fehlgeschlagene Empfänger sind für den sendenden User bereits
+    // im Ergebnis (results) sichtbar – hier zusätzlich gesammelt für den
+    // Admin, damit sich Muster (z. B. derselbe SMTP-Fehler bei allen) auf
+    // einen Blick erkennen lassen, ohne jede einzelne Versand-Antwort
+    // durchsuchen zu müssen.
+    if (failures.length > 0) {
+      await logAppError(
+        supabaseUrl,
+        serviceRoleKey,
+        'send-bulk-email',
+        `${failures.length} von ${recipients!.length} E-Mails fehlgeschlagen`,
+        { failures, smtp_host: settings.smtp_host, smtp_port: settings.smtp_port, smtp_encryption: settings.smtp_encryption },
+      )
     }
   }
 
-  await archiveManyToSentFolder(supabaseUrl, serviceRoleKey, 'send-bulk-email', settings, sentRawMessages, {
-    count: sentRawMessages.length,
-  })
-
-  // Einzelne fehlgeschlagene Empfänger sind für den sendenden User bereits im
-  // Ergebnis (results) sichtbar – hier zusätzlich gesammelt für den Admin,
-  // damit sich Muster (z. B. derselbe SMTP-Fehler bei allen) auf einen Blick
-  // erkennen lassen, ohne jede einzelne Versand-Antwort durchsuchen zu müssen.
-  if (failures.length > 0) {
-    await logAppError(
-      supabaseUrl,
-      serviceRoleKey,
-      'send-bulk-email',
-      `${failures.length} von ${recipients.length} E-Mails fehlgeschlagen`,
-      { failures, smtp_host: settings.smtp_host, smtp_port: settings.smtp_port, smtp_encryption: settings.smtp_encryption },
-    )
-  }
-
-  // Push ist unabhängig vom E-Mail-Ergebnis: derselbe Empfänger-Kreis
-  // (player_id) soll auch dann erreicht werden, wenn die E-Mail-Zustellung
-  // (z. B. SMTP-Fehler) fehlschlägt - beides sind eigenständige Kanäle für
-  // dieselbe Nachricht. Titel/Text sind bewusst NICHT durch dieselbe
-  // Vorlagen-Variablen-Ersetzung wie die E-Mail gelaufen (keine
-  // Personalisierung für Push in diesem Schritt, siehe SendEmailPage.tsx).
+  // Push ist ein eigenständiger, von E-Mail unabhängiger Kanal (eigene
+  // player_ids statt aus den E-Mail-Empfängern abgeleitet) - so lässt sich
+  // eine Nachricht auch als reiner Push ohne E-Mail verschicken, z. B. an
+  // Spieler ohne hinterlegte E-Mail-Adresse. Titel/Text sind bewusst NICHT
+  // durch dieselbe Vorlagen-Variablen-Ersetzung wie die E-Mail gelaufen
+  // (keine Personalisierung für Push in diesem Schritt, siehe
+  // SendEmailPage.tsx).
   //
   // pushDeviceCount wird zurückgemeldet, weil sendPushToProfiles() sonst
   // komplett "fire and forget" läuft (siehe deren eigener Kommentar) - ohne
@@ -204,28 +216,24 @@ async function handle(
   // aktivierten Push-Benachrichtigungen registriert, nicht dass etwas
   // fehlgeschlagen ist.
   let pushDeviceCount: number | null = null
-  if (body.push?.title?.trim() && body.push?.body?.trim()) {
-    const playerIds = [...new Set(recipients.map((r) => r.player_id).filter((id): id is string => !!id))]
-    if (playerIds.length > 0) {
-      const { data: links } = await adminClient.from('player_profile_links').select('profile_id').in('player_id', playerIds)
-      const profileIds = [...new Set((links ?? []).map((l) => l.profile_id))]
-      const { count } = await adminClient
-        .from('push_tokens')
-        .select('id', { count: 'exact', head: true })
-        .in('profile_id', profileIds)
-      pushDeviceCount = count ?? 0
-      await sendPushToProfiles(
-        supabaseUrl,
-        serviceRoleKey,
-        'send-bulk-email',
-        profileIds,
-        body.push.title.trim(),
-        body.push.body.trim(),
-        { type: 'admin_message', supabase_url: supabaseUrl },
-      )
-    } else {
-      pushDeviceCount = 0
-    }
+  if (wantsPush) {
+    const playerIds = [...new Set(body.push!.player_ids!)]
+    const { data: links } = await adminClient.from('player_profile_links').select('profile_id').in('player_id', playerIds)
+    const profileIds = [...new Set((links ?? []).map((l) => l.profile_id))]
+    const { count } = await adminClient
+      .from('push_tokens')
+      .select('id', { count: 'exact', head: true })
+      .in('profile_id', profileIds)
+    pushDeviceCount = count ?? 0
+    await sendPushToProfiles(
+      supabaseUrl,
+      serviceRoleKey,
+      'send-bulk-email',
+      profileIds,
+      body.push!.title!.trim(),
+      body.push!.body!.trim(),
+      { type: 'admin_message', supabase_url: supabaseUrl },
+    )
   }
 
   return jsonResponse({ results, pushDeviceCount })
