@@ -15,4 +15,5 @@ App/App/config.xml
 # Firebase-Konfig enthält einen projektgebundenen API-Key; Repo ist
 # öffentlich, CI baut nur die Web-App (braucht die Datei nicht) - lokal
 # per Firebase Console -> Projekteinstellungen -> iOS-App neu laden.
-App/App/GoogleService-Info.plist
+# Liegt laut Xcode-Projektreferenz auf Höhe von App.xcodeproj, nicht in App/App/.
+App/GoogleService-Info.plist
