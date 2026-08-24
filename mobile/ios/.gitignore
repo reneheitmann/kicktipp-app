@@ -11,3 +11,8 @@ capacitor-cordova-ios-plugins
 # Generated Config files
 App/App/capacitor.config.json
 App/App/config.xml
+
+# Firebase-Konfig enthält einen projektgebundenen API-Key; Repo ist
+# öffentlich, CI baut nur die Web-App (braucht die Datei nicht) - lokal
+# per Firebase Console -> Projekteinstellungen -> iOS-App neu laden.
+App/App/GoogleService-Info.plist

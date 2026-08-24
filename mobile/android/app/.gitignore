@@ -1,2 +1,7 @@
 /build/*
 !/build/.npmkeep
+
+# Firebase-Konfig enthält einen projektgebundenen API-Key; Repo ist
+# öffentlich, CI baut nur die Web-App (braucht die Datei nicht) - lokal
+# per Firebase Console -> Projekteinstellungen -> Android-App neu laden.
+google-services.json
