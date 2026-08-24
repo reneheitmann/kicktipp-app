@@ -21,9 +21,6 @@ body,
 
 body {
   margin: 0;
-  /* iOS-Safe-Areas (Notch/Home-Indicator), relevant sobald die App im Vollbild/PWA-Modus läuft */
-  padding-top: env(safe-area-inset-top);
-  padding-bottom: env(safe-area-inset-bottom);
 }
 
 /* Touch-Targets: alle interaktiven Elemente mind. 44px hoch (Apple HIG / Material Guideline) */

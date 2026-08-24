@@ -9,10 +9,11 @@ interface AddInstanceDialogProps {
 }
 
 /**
- * Domain-Eingabe -> instance-info.json abrufen/validieren -> aufgelöste
- * supabase_url sichtbar bestätigen lassen, bevor die Instanz aktiv wird
- * (siehe docs/mobile-app.md, "instance-info.json-Validierung" – bewusste
- * Transparenz-Maßnahme, kein stiller Trust-Sprung auf eine fremde Domain).
+ * Domain-Eingabe -> instance-info.json abrufen/validieren -> gefundene
+ * Instanz (Name + Adresse) bestätigen lassen, bevor sie aktiv wird - kein
+ * stiller Trust-Sprung auf eine fremde Domain. Die aufgelöste supabase_url
+ * wird bewusst NICHT angezeigt (Implementierungsdetail ohne Mehrwert für
+ * den Nutzer, siehe docs/mobile-app.md, "instance-info.json-Validierung").
  */
 export function AddInstanceDialog({ onClose, onConnected }: AddInstanceDialogProps) {
   const [url, setUrl] = useState('')
@@ -54,13 +55,9 @@ export function AddInstanceDialog({ onClose, onConnected }: AddInstanceDialogPro
               <dt className="text-slate-500">Adresse</dt>
               <dd className="font-medium text-slate-900">{pendingInstance.url}</dd>
             </div>
-            <div>
-              <dt className="text-slate-500">Backend (Supabase-Projekt)</dt>
-              <dd className="font-medium text-slate-900 break-all">{pendingInstance.supabaseUrl}</dd>
-            </div>
           </dl>
           <p className="text-xs text-slate-500">
-            Prüfe, ob dir diese Adressen bekannt vorkommen, bevor du dich mit deinen Zugangsdaten anmeldest.
+            Prüfe, ob dir diese Adresse bekannt vorkommt, bevor du dich mit deinen Zugangsdaten anmeldest.
           </p>
           <div className="flex gap-2 pt-2">
             <Button type="button" variant="secondary" className="flex-1" onClick={onClose}>

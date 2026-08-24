@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Button } from '../components/ui/Button'
 import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import { AddInstanceDialog } from './AddInstanceDialog'
-import { listInstances, removeInstance, type SavedInstance } from '../lib/instanceStore'
+import { activateInstance, listInstances, removeInstance, type SavedInstance } from '../lib/instanceStore'
 
 /** mobile only: "Instanz wählen" – siehe docs/mobile-app.md, Phase 3. */
 export function InstancePickerPage({ onConnected }: { onConnected: (instance: SavedInstance) => void }) {
@@ -26,8 +26,19 @@ export function InstancePickerPage({ onConnected }: { onConnected: (instance: Sa
     await reload()
   }
 
+  async function connectTo(instance: SavedInstance) {
+    const activated = await activateInstance(instance.id)
+    if (activated) onConnected(activated)
+  }
+
   return (
-    <div className="flex min-h-full flex-col p-4 sm:p-6">
+    <div
+      className="flex min-h-full flex-col p-4 sm:p-6"
+      style={{
+        paddingTop: 'calc(1rem + env(safe-area-inset-top, 0px))',
+        paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))',
+      }}
+    >
       <h1 className="mb-1 text-xl font-semibold text-slate-900">Instanz wählen</h1>
       <p className="mb-6 text-sm text-slate-500">
         Wähle eine gespeicherte Instanz oder füge eine neue hinzu – jede Instanz ist eine eigenständige
@@ -46,7 +57,7 @@ export function InstancePickerPage({ onConnected }: { onConnected: (instance: Sa
             <li key={instance.id} className="flex items-center justify-between gap-3 px-4 py-3">
               <button
                 type="button"
-                onClick={() => onConnected(instance)}
+                onClick={() => connectTo(instance)}
                 className="min-w-0 flex-1 text-left hover:underline"
               >
                 <p className="truncate font-medium text-slate-900">{instance.name}</p>

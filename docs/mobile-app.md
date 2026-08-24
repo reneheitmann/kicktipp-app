@@ -229,7 +229,7 @@ eine Version in TestFlight/Play Internal Testing geht):
 |---|---|---|
 | App-Start, Instanz-Wähler erscheint | [ ] | [ ] |
 | Instanz hinzufügen: `gewinnauswertung.magicprus.de` | [ ] | [ ] |
-| Aufgelöste `supabase_url` wird vor dem Login angezeigt | [ ] | [ ] |
+| Gefundene Instanz (Name + Adresse, ohne Backend-URL) wird vor dem Login zur Bestätigung angezeigt | [ ] | [ ] |
 | Login gegen diese Instanz | [ ] | [ ] |
 | Zweite, andere Instanz hinzufügen: "Kicktipp Dev"-Projekt | [ ] | [ ] |
 | Instanz wechseln (Profil → "Instanz wechseln") | [ ] | [ ] |
