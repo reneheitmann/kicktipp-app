@@ -18,6 +18,17 @@ export async function getPushPermissionState(): Promise<'granted' | 'denied' | '
 }
 
 /**
+ * "Aktiv" heißt hier: für dieses Gerät ist aktuell ein Token hinterlegt
+ * (siehe LAST_TOKEN_STORAGE_KEY) – dieselbe Ablage, die
+ * requestPushPermissionAndRegister() setzt und removeCurrentDevicePushToken()
+ * löscht, daher ohne zusätzliche eigene Datenhaltung als
+ * Ein/Aus-Zustand für die Konto-Seite nutzbar (siehe MyAccountPage.tsx).
+ */
+export async function isPushEnabled(): Promise<boolean> {
+  return !!(await secureStorage.getItem(LAST_TOKEN_STORAGE_KEY))
+}
+
+/**
  * Fragt die native Berechtigung an und registriert das Gerät bei Erfolg.
  * Wird erst NACH einer In-App-Erklärung aufgerufen (siehe
  * MobilePushIntegration.tsx) – nie blind beim ersten Start, siehe

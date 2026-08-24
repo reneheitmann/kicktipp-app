@@ -12,6 +12,7 @@ import { listPlayerTransactions } from '../balances/balancesApi'
 import { centsToEuros } from '../../lib/money'
 import type { PasswordPolicy, Player, UserRole } from '../../types/database'
 import { useMobileInstance } from '../../mobile/MobileInstanceContext'
+import { getPushPermissionState, isPushEnabled, removeCurrentDevicePushToken, requestPushPermissionAndRegister } from '../../mobile/push'
 
 const roleLabels = { admin: 'Administrator', spielleiter: 'Spielleiter', user: 'Spieler' } as const
 
@@ -37,6 +38,41 @@ export function MyAccountPage() {
 
   const [exportingData, setExportingData] = useState(false)
   const [exportError, setExportError] = useState<string | null>(null)
+
+  const [pushEnabled, setPushEnabled] = useState<boolean | null>(null)
+  const [pushError, setPushError] = useState<string | null>(null)
+  const [pushSaving, setPushSaving] = useState(false)
+
+  useEffect(() => {
+    if (!mobileInstance) return
+    isPushEnabled().then(setPushEnabled)
+  }, [mobileInstance])
+
+  async function handleTogglePush(nextEnabled: boolean) {
+    if (!profile) return
+    setPushSaving(true)
+    setPushError(null)
+    try {
+      if (nextEnabled) {
+        const state = await getPushPermissionState()
+        if (state === 'denied') {
+          setPushError('Benachrichtigungen sind für diese App in den Geräte-Einstellungen deaktiviert – dort zuerst wieder erlauben.')
+          return
+        }
+        const ok = await requestPushPermissionAndRegister(profile.id)
+        if (!ok) {
+          setPushError('Aktivieren fehlgeschlagen.')
+          return
+        }
+        setPushEnabled(true)
+      } else {
+        await removeCurrentDevicePushToken()
+        setPushEnabled(false)
+      }
+    } finally {
+      setPushSaving(false)
+    }
+  }
 
   async function handleSwitchTo(role: UserRole) {
     setSwitching(true)
@@ -288,6 +324,26 @@ export function MyAccountPage() {
               </li>
             ))}
           </ul>
+        </div>
+      )}
+
+      {mobileInstance && (
+        <div className="mb-6 rounded-xl border border-slate-200 bg-white p-4">
+          <h2 className="mb-1 text-base font-semibold text-slate-900">Push-Benachrichtigungen</h2>
+          <p className="mb-3 text-sm text-slate-500">
+            Gilt nur für dieses Gerät. Jederzeit hier änderbar, unabhängig vom Berechtigungs-Dialog beim Login.
+          </p>
+          {pushError && <p role="alert" className="mb-3 text-sm text-red-600">{pushError}</p>}
+          <label className="flex items-center gap-2 text-sm text-slate-700">
+            <input
+              type="checkbox"
+              checked={pushEnabled ?? false}
+              disabled={pushEnabled === null || pushSaving}
+              onChange={(e) => handleTogglePush(e.target.checked)}
+              className="h-4 w-4 shrink-0"
+            />
+            Benachrichtigungen auf diesem Gerät aktiv
+          </label>
         </div>
       )}
 
