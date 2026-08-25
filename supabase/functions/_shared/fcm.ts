@@ -68,6 +68,8 @@ export interface PushResult {
   /** true, wenn FCM das Token als ungültig/nicht mehr registriert meldet – Aufrufer sollte es aus push_tokens entfernen. */
   invalidToken: boolean
   error?: string
+  /** Rohantwort von FCM (Erfolg wie Fehler) - für Diagnose, siehe sendPushToProfiles(). */
+  responseBody?: string
 }
 
 /**
@@ -103,7 +105,7 @@ export async function sendFcmPush(message: PushMessage): Promise<PushResult> {
     })
 
     if (response.ok) {
-      return { token: message.token, ok: true, invalidToken: false }
+      return { token: message.token, ok: true, invalidToken: false, responseBody: await response.text() }
     }
 
     const errorBody = await response.text()
@@ -111,7 +113,7 @@ export async function sendFcmPush(message: PushMessage): Promise<PushResult> {
     // UNREGISTERED - genau diese sollen aus push_tokens entfernt werden,
     // andere Fehler (z. B. vorübergehende Serverfehler) nicht.
     const invalidToken = errorBody.includes('UNREGISTERED') || errorBody.includes('INVALID_ARGUMENT')
-    return { token: message.token, ok: false, invalidToken, error: `FCM-Fehler ${response.status}: ${errorBody}` }
+    return { token: message.token, ok: false, invalidToken, error: `FCM-Fehler ${response.status}: ${errorBody}`, responseBody: errorBody }
   } catch (err) {
     return { token: message.token, ok: false, invalidToken: false, error: err instanceof Error ? err.message : String(err) }
   }
