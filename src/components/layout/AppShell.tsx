@@ -5,7 +5,6 @@ import { useAppBranding } from '../../features/app-settings/useAppBranding'
 import { getNavSettings, type NavSettingsValue } from '../../features/nav-settings/navSettingsApi'
 import { Modal } from '../ui/Modal'
 import { applyCustomLabels, applyCustomOrder, groupNavItems, navItems, visibleNavItems, type NavItem } from './navItems'
-import { useMobileInstance } from '../../mobile/MobileInstanceContext'
 
 const linkBaseClasses = 'flex items-center rounded-lg px-3 py-2.5 text-sm font-medium transition'
 const linkActiveClasses = 'bg-[var(--color-primary)] text-white'
@@ -16,10 +15,6 @@ const roleLabels = { admin: 'Administrator', spielleiter: 'Spielleiter', user: '
 export function AppShell() {
   const { profile, signOut, can } = useAuth()
   const { appName } = useAppBranding()
-  // Nur im mobile-Kanal gesetzt (siehe MobileApp.tsx) – auf main/beta bleibt
-  // dies immer null, die Spielrunden-Zeile im Header wird dort also nie
-  // gerendert.
-  const mobileInstance = useMobileInstance()
   // Admin-konfigurierbare Reihenfolge/Bezeichnungen (siehe nav-settings-
   // Feature) – einmal pro Shell-Mount geladen, kein globaler Context nötig,
   // da AppShell der einzige Ort ist, der navItems rendert. Leerer Zustand
@@ -91,21 +86,10 @@ export function AppShell() {
               <span className="h-0.5 w-5 rounded-full bg-slate-700" />
               <span className="h-0.5 w-5 rounded-full bg-slate-700" />
             </button>
-            <div className="flex min-w-0 flex-col">
-              <span className="flex min-w-0 items-center gap-2">
-                <span className="truncate text-base font-semibold text-slate-900">{appName}</span>
-                <BetaBadge />
-              </span>
-              {/* Dauerhafter Hinweis auf die aktive Spielrunde – vorher nur in
-                  "Mein Profil" sichtbar, dadurch kaum auffindbar für Nutzer mit
-                  mehreren Spielrunden. Tippen navigiert zum bestehenden
-                  Wechsel-Flow dort, statt eine zweite Wechsel-UI zu bauen. */}
-              {mobileInstance && (
-                <NavLink to="/profil" className="truncate text-xs text-slate-500 hover:underline">
-                  {mobileInstance.activeInstance.name}
-                </NavLink>
-              )}
-            </div>
+            <span className="flex min-w-0 items-center gap-2">
+              <span className="truncate text-base font-semibold text-slate-900">{appName}</span>
+              <BetaBadge />
+            </span>
           </div>
           <span className="relative shrink-0">
             <button
