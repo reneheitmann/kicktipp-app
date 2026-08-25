@@ -33,15 +33,33 @@ export async function isPushEnabled(): Promise<boolean> {
  * Wird erst NACH einer In-App-Erklärung aufgerufen (siehe
  * MobilePushIntegration.tsx) – nie blind beim ersten Start, siehe
  * docs/mobile-app.md.
+ *
+ * Listener MÜSSEN vor register() angehängt werden: ist der native Bridge-
+ * Roundtrip für addListener() langsamer als die tatsächliche Registrierung
+ * (z. B. weil iOS das Token aus einem vorherigen Lauf noch kennt), feuert
+ * das 'registration'-Event sonst, bevor überhaupt ein Listener existiert -
+ * das Promise hängt dann für immer (beobachtet: "Aktivieren"-Dialog schließt
+ * nie, Token landet nie in der DB). 10s-Timeout als Notbremse für den Fall,
+ * dass wirklich keins der beiden Events feuert.
  */
 export async function requestPushPermissionAndRegister(profileId: string): Promise<boolean> {
   const { receive } = await PushNotifications.requestPermissions()
   if (receive !== 'granted') return false
 
-  await PushNotifications.register()
-
   return new Promise((resolve) => {
-    PushNotifications.addListener('registration', async (token: Token) => {
+    let settled = false
+    const timeoutId = setTimeout(() => finish(false), 10_000)
+
+    function finish(result: boolean) {
+      if (settled) return
+      settled = true
+      clearTimeout(timeoutId)
+      registrationListener.then((l) => l.remove())
+      errorListener.then((l) => l.remove())
+      resolve(result)
+    }
+
+    const registrationListener = PushNotifications.addListener('registration', async (token: Token) => {
       try {
         await supabase.from('push_tokens').insert({
           profile_id: profileId,
@@ -53,9 +71,11 @@ export async function requestPushPermissionAndRegister(profileId: string): Promi
         // die Registrierung als Fehler zu behandeln.
       }
       await secureStorage.setItem(LAST_TOKEN_STORAGE_KEY, token.value)
-      resolve(true)
+      finish(true)
     })
-    PushNotifications.addListener('registrationError', () => resolve(false))
+    const errorListener = PushNotifications.addListener('registrationError', () => finish(false))
+
+    PushNotifications.register()
   })
 }
 
