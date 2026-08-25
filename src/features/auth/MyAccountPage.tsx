@@ -349,13 +349,13 @@ export function MyAccountPage() {
 
       {mobileInstance && (
         <div className="mb-6 rounded-xl border border-slate-200 bg-white p-4">
-          <h2 className="mb-1 text-base font-semibold text-slate-900">Instanz</h2>
+          <h2 className="mb-1 text-base font-semibold text-slate-900">Spielrunde</h2>
           <p className="mb-3 text-sm text-slate-500">
             Aktuell verbunden mit <span className="font-medium text-slate-700">{mobileInstance.activeInstance.name}</span> (
             {mobileInstance.activeInstance.url}).
           </p>
           <Button variant="secondary" onClick={mobileInstance.switchInstance}>
-            Instanz wechseln
+            Spielrunde wechseln
           </Button>
         </div>
       )}
