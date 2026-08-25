@@ -41,4 +41,18 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         config.delegateClass = SceneDelegate.self
         return config
     }
+
+    // Von @capacitor/push-notifications vorgeschriebener Standard-Schritt
+    // (fehlte bisher): ohne diese beiden Methoden erfährt die Capacitor-
+    // Bridge nie, ob PushNotifications.register() erfolgreich war oder
+    // fehlschlug - das JS-seitige 'registration'/'registrationError'-Event
+    // feuert dann nie, egal wie lange man wartet (kein Fehler, einfach
+    // Stille - genau das beobachtete Symptom).
+    func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+        NotificationCenter.default.post(name: .capacitorDidRegisterForRemoteNotifications, object: deviceToken)
+    }
+
+    func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
+        NotificationCenter.default.post(name: .capacitorDidFailToRegisterForRemoteNotifications, object: error)
+    }
 }
