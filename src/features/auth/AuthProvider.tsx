@@ -269,7 +269,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async function checkExpiry() {
       if (!isSessionExpired(maxSessionHours)) return
       setSessionExpired(true)
-      await supabase.auth.signOut({ scope: 'local' })
+      // Schlägt z. B. bei kurzzeitig fehlender Verbindung fehl – ohne
+      // .catch() bliebe die (technisch abgelaufene) Sitzung dann bestehen,
+      // kein SIGNED_OUT-Event feuert. Heilt sich beim nächsten 60s-Tick/
+      // visibilitychange von selbst, sobald wieder Netz da ist (gleiches
+      // Muster wie die anderen signOut({scope:'local'})-Aufrufe in dieser
+      // Datei).
+      await supabase.auth.signOut({ scope: 'local' }).catch((err) => console.error('Lokales Abmelden nach Sitzungs-Timeout fehlgeschlagen', err))
     }
 
     checkExpiry()
