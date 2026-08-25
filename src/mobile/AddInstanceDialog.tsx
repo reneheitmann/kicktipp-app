@@ -10,7 +10,7 @@ interface AddInstanceDialogProps {
 
 /**
  * Domain-Eingabe -> instance-info.json abrufen/validieren -> gefundene
- * Instanz (Name + Adresse) bestätigen lassen, bevor sie aktiv wird - kein
+ * Spielrunde (Name + Adresse) bestätigen lassen, bevor sie aktiv wird - kein
  * stiller Trust-Sprung auf eine fremde Domain. Die aufgelöste supabase_url
  * wird bewusst NICHT angezeigt (Implementierungsdetail ohne Mehrwert für
  * den Nutzer, siehe docs/mobile-app.md, "instance-info.json-Validierung").
@@ -44,7 +44,7 @@ export function AddInstanceDialog({ onClose, onConnected }: AddInstanceDialogPro
 
   if (pendingInstance) {
     return (
-      <Modal title="Instanz gefunden" onClose={onClose}>
+      <Modal title="Spielrunde gefunden" onClose={onClose}>
         <div className="space-y-4">
           <dl className="space-y-2 rounded-lg bg-slate-50 p-3 text-sm">
             <div>
@@ -73,11 +73,11 @@ export function AddInstanceDialog({ onClose, onConnected }: AddInstanceDialogPro
   }
 
   return (
-    <Modal title="Instanz hinzufügen" onClose={onClose}>
+    <Modal title="Spielrunde hinzufügen" onClose={onClose}>
       <form className="space-y-4" onSubmit={handleLookup}>
         <div>
           <label htmlFor="instance-url" className="mb-1 block text-sm font-medium text-slate-700">
-            Adresse der Instanz
+            Adresse der Spielrunde
           </label>
           <input
             id="instance-url"

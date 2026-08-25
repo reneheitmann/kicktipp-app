@@ -4,7 +4,7 @@ import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import { AddInstanceDialog } from './AddInstanceDialog'
 import { activateInstance, listInstances, removeInstance, type SavedInstance } from '../lib/instanceStore'
 
-/** mobile only: "Instanz wählen" – siehe docs/mobile-app.md, Phase 3. */
+/** mobile only: "Spielrunde wählen" – siehe docs/mobile-app.md, Phase 3. */
 export function InstancePickerPage({ onConnected }: { onConnected: (instance: SavedInstance) => void }) {
   const [instances, setInstances] = useState<SavedInstance[]>([])
   const [loading, setLoading] = useState(true)
@@ -39,9 +39,9 @@ export function InstancePickerPage({ onConnected }: { onConnected: (instance: Sa
         paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))',
       }}
     >
-      <h1 className="mb-1 text-xl font-semibold text-slate-900">Instanz wählen</h1>
+      <h1 className="mb-1 text-xl font-semibold text-slate-900">Spielrunde wählen</h1>
       <p className="mb-6 text-sm text-slate-500">
-        Wähle eine gespeicherte Instanz oder füge eine neue hinzu – jede Instanz ist eine eigenständige
+        Wähle eine gespeicherte Spielrunde oder füge eine neue hinzu – jede Spielrunde ist eine eigenständige
         Kicktipp-Auswertung mit eigenen Daten.
       </p>
 
@@ -49,7 +49,7 @@ export function InstancePickerPage({ onConnected }: { onConnected: (instance: Sa
         <p className="text-sm text-slate-500">Lade...</p>
       ) : instances.length === 0 ? (
         <p className="mb-6 rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-500">
-          Noch keine Instanz gespeichert.
+          Noch keine Spielrunde gespeichert.
         </p>
       ) : (
         <ul className="mb-6 divide-y divide-slate-200 overflow-hidden rounded-xl border border-slate-200 bg-white">
@@ -71,7 +71,7 @@ export function InstancePickerPage({ onConnected }: { onConnected: (instance: Sa
         </ul>
       )}
 
-      <Button onClick={() => setShowAddDialog(true)}>+ Instanz hinzufügen</Button>
+      <Button onClick={() => setShowAddDialog(true)}>+ Spielrunde hinzufügen</Button>
 
       {showAddDialog && (
         <AddInstanceDialog
@@ -85,7 +85,7 @@ export function InstancePickerPage({ onConnected }: { onConnected: (instance: Sa
 
       {removingInstance && (
         <ConfirmDialog
-          title="Instanz entfernen?"
+          title="Spielrunde entfernen?"
           message={`"${removingInstance.name}" (${removingInstance.url}) wird entfernt, inklusive der gespeicherten Zugangsdaten auf diesem Gerät.`}
           confirmLabel="Entfernen"
           danger

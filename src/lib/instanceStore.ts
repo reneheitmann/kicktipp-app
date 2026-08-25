@@ -59,29 +59,29 @@ export async function addInstance(
 
   const existing = await readInstances()
   if (existing.some((instance) => instance.url === url)) {
-    return { ok: false, error: 'Diese Instanz ist bereits gespeichert.' }
+    return { ok: false, error: 'Diese Spielrunde ist bereits gespeichert.' }
   }
 
   let response: Response
   try {
     response = await fetch(`${url}/instance-info.json`)
   } catch {
-    return { ok: false, error: 'Instanz nicht erreichbar. Adresse und Internetverbindung prüfen.' }
+    return { ok: false, error: 'Spielrunde nicht erreichbar. Adresse und Internetverbindung prüfen.' }
   }
   if (!response.ok) {
-    return { ok: false, error: `Instanz antwortete mit Status ${response.status}.` }
+    return { ok: false, error: `Spielrunde antwortete mit Status ${response.status}.` }
   }
 
   let data: unknown
   try {
     data = await response.json()
   } catch {
-    return { ok: false, error: 'Antwort der Instanz ist kein gültiges JSON.' }
+    return { ok: false, error: 'Antwort der Spielrunde ist kein gültiges JSON.' }
   }
 
   const validated = validateInstanceInfo(data)
   if (!validated.ok) {
-    return { ok: false, error: `Ungültige Instanz-Antwort: ${validated.error}` }
+    return { ok: false, error: `Ungültige Antwort der Spielrunde: ${validated.error}` }
   }
 
   const instance: SavedInstance = {
