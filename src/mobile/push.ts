@@ -43,6 +43,20 @@ export async function requestPushPermission(): Promise<boolean> {
   return receive === 'granted'
 }
 
+// Läuft der Hintergrund-Aufruf aus MobilePushIntegration.tsx (Dialog
+// schließt sofort, siehe requestPushPermission()) noch, während z. B.
+// MyAccountPage.tsx' Ein/Aus-Schalter ebenfalls registerPushDevice()
+// aufruft (weil der zwischenzeitliche isPushEnabled()-Check den
+// Hintergrund-Aufruf noch nicht sehen konnte - der ist ja bis zu ~20s
+// unterwegs), würden ohne diese Dedupe zwei parallele native
+// register()-Aufrufe samt eigener Listener-Paare laufen: funktional
+// unschädlich (derselbe Token, doppelter Insert wird eh abgefangen),
+// aber der zweite Aufruf startet dieselbe ~20s-Wartezeit noch einmal von
+// vorn - wirkt dann, als würde der Schalter gar nicht reagieren. Beide
+// Aufrufer warten stattdessen auf denselben bereits laufenden Versuch
+// (gleiches Muster wie loadingPromiseRef in AuthProvider.tsx).
+let pendingRegistration: Promise<boolean> | null = null
+
 /**
  * Registriert das Gerät bei FCM/APNs und speichert das Token. Setzt bereits
  * erteilte Berechtigung voraus (siehe requestPushPermission()).
@@ -56,6 +70,15 @@ export async function requestPushPermission(): Promise<boolean> {
  * beiden Events feuert.
  */
 export async function registerPushDevice(profileId: string): Promise<boolean> {
+  if (pendingRegistration) return pendingRegistration
+  const promise = registerPushDeviceUncached(profileId).finally(() => {
+    pendingRegistration = null
+  })
+  pendingRegistration = promise
+  return promise
+}
+
+function registerPushDeviceUncached(profileId: string): Promise<boolean> {
   return new Promise((resolve) => {
     let settled = false
     const timeoutId = setTimeout(() => finish(false), 10_000)
