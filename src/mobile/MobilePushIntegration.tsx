@@ -5,7 +5,7 @@ import { Modal } from '../components/ui/Modal'
 import { Button } from '../components/ui/Button'
 import { useAuth } from '../features/auth/useAuth'
 import { useMobileInstance } from './MobileInstanceContext'
-import { getPushPermissionState, removeCurrentDevicePushToken, requestPushPermissionAndRegister } from './push'
+import { getPushPermissionState, registerPushDevice, removeCurrentDevicePushToken, requestPushPermission } from './push'
 
 /**
  * mobile only, innerhalb von AuthProvider gerendert (siehe MobileApp.tsx):
@@ -71,9 +71,13 @@ export function MobilePushIntegration() {
 
   async function handleEnable() {
     setRequesting(true)
-    await requestPushPermissionAndRegister(profile!.id)
+    const granted = await requestPushPermission()
     setRequesting(false)
     setShowPrompt(false)
+    // Geräte-Registrierung (APNs-Roundtrip, bis zu ~20s) bewusst nicht
+    // abgewartet, siehe push.ts requestPushPermission() - der Dialog hat
+    // seinen Zweck erfüllt, sobald die Berechtigung erteilt/verweigert ist.
+    if (granted) registerPushDevice(profile!.id)
   }
 
   return (

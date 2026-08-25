@@ -29,23 +29,33 @@ export async function isPushEnabled(): Promise<boolean> {
 }
 
 /**
- * Fragt die native Berechtigung an und registriert das Gerät bei Erfolg.
- * Wird erst NACH einer In-App-Erklärung aufgerufen (siehe
- * MobilePushIntegration.tsx) – nie blind beim ersten Start, siehe
- * docs/mobile-app.md.
+ * Fragt nur die native Berechtigung an (löst den System-Dialog aus), OHNE
+ * auf die anschließende Geräte-Registrierung zu warten. Getrennt von
+ * registerPushDevice(), weil der APNs-Roundtrip mehrere Sekunden bis
+ * ~20s dauern kann (beobachtet) – ein Erklärungsdialog, der darauf
+ * wartet, bevor er sich schließt, fühlt sich dadurch spürbar hängend an,
+ * obwohl technisch alles normal läuft (siehe MobilePushIntegration.tsx:
+ * schließt sich direkt nach dieser Antwort, registerPushDevice() läuft
+ * im Hintergrund weiter).
+ */
+export async function requestPushPermission(): Promise<boolean> {
+  const { receive } = await PushNotifications.requestPermissions()
+  return receive === 'granted'
+}
+
+/**
+ * Registriert das Gerät bei FCM/APNs und speichert das Token. Setzt bereits
+ * erteilte Berechtigung voraus (siehe requestPushPermission()).
  *
  * Listener MÜSSEN vor register() angehängt werden: ist der native Bridge-
  * Roundtrip für addListener() langsamer als die tatsächliche Registrierung
  * (z. B. weil iOS das Token aus einem vorherigen Lauf noch kennt), feuert
  * das 'registration'-Event sonst, bevor überhaupt ein Listener existiert -
- * das Promise hängt dann für immer (beobachtet: "Aktivieren"-Dialog schließt
- * nie, Token landet nie in der DB). 10s-Timeout als Notbremse für den Fall,
- * dass wirklich keins der beiden Events feuert.
+ * das Promise hängt dann für immer (beobachtet: Token landet nie in der
+ * DB). 10s-Timeout als Notbremse für den Fall, dass wirklich keins der
+ * beiden Events feuert.
  */
-export async function requestPushPermissionAndRegister(profileId: string): Promise<boolean> {
-  const { receive } = await PushNotifications.requestPermissions()
-  if (receive !== 'granted') return false
-
+export async function registerPushDevice(profileId: string): Promise<boolean> {
   return new Promise((resolve) => {
     let settled = false
     const timeoutId = setTimeout(() => finish(false), 10_000)
@@ -77,6 +87,20 @@ export async function requestPushPermissionAndRegister(profileId: string): Promi
 
     PushNotifications.register()
   })
+}
+
+/**
+ * Fragt die native Berechtigung an und registriert das Gerät bei Erfolg -
+ * für Aufrufer, die das (langsamere) Endergebnis wirklich brauchen, z. B.
+ * den Ein/Aus-Schalter in MyAccountPage.tsx (der Toggle-Zustand muss den
+ * tatsächlichen Registrierungserfolg widerspiegeln). Der einmalige
+ * Erklärungsdialog (MobilePushIntegration.tsx) nutzt stattdessen
+ * requestPushPermission() + registerPushDevice() getrennt, siehe dort.
+ */
+export async function requestPushPermissionAndRegister(profileId: string): Promise<boolean> {
+  const granted = await requestPushPermission()
+  if (!granted) return false
+  return registerPushDevice(profileId)
 }
 
 /**
