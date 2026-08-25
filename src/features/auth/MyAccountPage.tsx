@@ -46,6 +46,17 @@ export function MyAccountPage() {
   useEffect(() => {
     if (!mobileInstance) return
     isPushEnabled().then(setPushEnabled)
+    // Der Ein/Aus-Dialog (MobilePushIntegration.tsx) schließt sofort und
+    // registriert das Gerät im Hintergrund weiter (bis zu ~20s) - kommt
+    // man schneller als das hierher, zeigt der einmalige Check oben
+    // fälschlich "aus". visibilitychange (z. B. App-Wechsel und zurück,
+    // oder einfach kurz warten und die Seite neu fokussieren) holt den
+    // dann fertig registrierten Zustand nach.
+    function recheck() {
+      isPushEnabled().then(setPushEnabled)
+    }
+    document.addEventListener('visibilitychange', recheck)
+    return () => document.removeEventListener('visibilitychange', recheck)
   }, [mobileInstance])
 
   async function handleTogglePush(nextEnabled: boolean) {
