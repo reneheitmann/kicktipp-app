@@ -43,4 +43,29 @@ describe('fetchPermissionsWithRetry', () => {
     await expect(resultPromise).rejects.toThrow('endgültig fehlgeschlagen')
     expect(fetcher).toHaveBeenCalledTimes(4)
   })
+
+  it('behandelt ein leeres Ergebnis ohne Fehler als Fehlschlag und versucht es erneut (RLS-Race direkt nach Login)', async () => {
+    const fetcher = vi
+      .fn()
+      .mockResolvedValueOnce(new Set())
+      .mockResolvedValueOnce(new Set(['page.dashboard.view']))
+
+    const resultPromise = fetchPermissionsWithRetry('admin', fetcher)
+    await vi.runAllTimersAsync()
+    const result = await resultPromise
+
+    expect(result).toEqual(new Set(['page.dashboard.view']))
+    expect(fetcher).toHaveBeenCalledTimes(2)
+  })
+
+  it('akzeptiert ein leeres Ergebnis im letzten Versuch als endgültig "0 Rechte"', async () => {
+    const fetcher = vi.fn().mockResolvedValue(new Set())
+
+    const resultPromise = fetchPermissionsWithRetry('admin', fetcher)
+    await vi.runAllTimersAsync()
+    const result = await resultPromise
+
+    expect(result).toEqual(new Set())
+    expect(fetcher).toHaveBeenCalledTimes(4)
+  })
 })
