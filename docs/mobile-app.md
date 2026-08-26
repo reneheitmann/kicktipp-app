@@ -228,12 +228,12 @@ eine Version in TestFlight/Play Internal Testing geht):
 | Schritt | iOS (physisches Gerät) | Android (Gerät/Emulator) |
 |---|---|---|
 | App-Start, Instanz-Wähler erscheint | [ ] | [ ] |
-| Instanz hinzufügen: `gewinnauswertung.magicprus.de` | [ ] | [ ] |
-| Gefundene Instanz (Name + Adresse, ohne Backend-URL) wird vor dem Login zur Bestätigung angezeigt | [ ] | [ ] |
-| Login gegen diese Instanz | [ ] | [ ] |
-| Zweite, andere Instanz hinzufügen: "Kicktipp Dev"-Projekt | [ ] | [ ] |
+| Instanz hinzufügen: `gewinnauswertung.magicprus.de` | [x] | [ ] |
+| Gefundene Instanz (Name + Adresse, ohne Backend-URL) wird vor dem Login zur Bestätigung angezeigt | [x] | [ ] |
+| Login gegen diese Instanz | [x] | [ ] |
+| Zweite, andere Instanz hinzufügen: "Kicktipp Dev"-Projekt | [x] | [ ] |
 | Instanz wechseln (Profil → "Instanz wechseln") | [x] | [ ] |
-| Login gegen die zweite Instanz | [ ] | [ ] |
+| Login gegen die zweite Instanz | [x] | [ ] |
 | App-Neustart: zuletzt aktive Instanz bleibt aktiv (kein erneuter Login nötig) | [x] | [ ] |
 | Instanz entfernen (inkl. Zugangsdaten-Löschung, siehe Sicherheitsarchitektur) | [x] | [ ] |
 | Safe-Area (Notch/Home-Indicator bzw. Gestennavigation) sieht korrekt aus | [x] | [ ] |
