@@ -239,9 +239,9 @@ eine Version in TestFlight/Play Internal Testing geht):
 | Safe-Area (Notch/Home-Indicator bzw. Gestennavigation) sieht korrekt aus | [x] | [ ] |
 | Zurück-Taste/-Geste navigiert statt die App zu schließen | [ ] | [ ] |
 | VoiceOver/TalkBack: Instanz-Wähler + Hinzufügen-Dialog bedienbar (Phase 8) | [x] | [ ] |
-| Push-Erklärung erscheint vor dem System-Dialog, nicht danach | [ ] | [ ] |
-| Push bei neuer Kontaktnachricht kommt an, Tap navigiert zu `/kontakt` | [ ] | [ ] |
-| Push bei abgeschlossener Gewinnberechnung kommt an, Tap navigiert zur Saison | [ ] | [ ] |
+| Push-Erklärung erscheint vor dem System-Dialog, nicht danach | [x] | [ ] |
+| Push bei neuer Kontaktnachricht kommt an, Tap navigiert zu `/kontakt` | [x] | [ ] |
+| Push bei abgeschlossener Gewinnberechnung kommt an, Tap navigiert zur Saison | [x] | [ ] |
 
 Wichtig: gegen **zwei echte, unterschiedliche Instanzen** durchspielen (nicht
 nur theoretisch gegen eine einzige) – erst das prüft wirklich, dass Instanzen
