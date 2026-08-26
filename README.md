@@ -203,14 +203,11 @@ Lint zusätzlich als Build-Gate, siehe `docker-publish.yml`; der Typecheck
 läuft dort nur implizit über `npm run build`).
 
 Ein Push nach `main` **oder** `beta` baut immer **ein einziges** Docker-Image
-(`:latest`), das DREI Versionen gleichzeitig enthält: `main` unter `/`,
-`beta` unter `/beta/`, `dev` unter `/dev/` – ausgeliefert von einem
-einzelnen Container. Wer die Beta-Version sehen darf, entscheidet
+(`:latest`), das beide Versionen gleichzeitig enthält: `main` unter `/`,
+`beta` unter `/beta/` – ausgeliefert von einem einzelnen Container, kein
+separates Beta-Deployment mehr. Wer die Beta-Version sehen darf, entscheidet
 das granulare Recht `beta.access` (vergeben über **Rollen & Berechtigungen**);
-der Wechsel passiert über einen Link im eigenen Profil. `/dev/` braucht keine
-solche Freischaltung (siehe unten, eigenständiges Supabase-Projekt mit
-eigener Anmeldung) und ist nur über die direkte URL erreichbar, kein Link
-dorthin in der App-Navigation.
+der Wechsel passiert über einen Link im eigenen Profil.
 
 `main` und `beta` teilen sich weiterhin ein einzelnes Supabase-Projekt (ein
 eigenes Beta-Projekt scheiterte am 2-Projekte-Limit des Free-Tiers). **Fester
@@ -220,24 +217,28 @@ den manuellen GitHub-Actions-Workflow `db-backup.yml` ein GPG-verschlüsseltes
 Backup gezogen, bevor `supabase db push --linked` läuft (Restore-Ablauf:
 [`docs/unraid-deployment.md`](docs/unraid-deployment.md), Teil 4).
 
-Für lokale Entwicklung UND für `/dev/` (siehe oben) gibt es ein drittes,
-eigenständiges Supabase-Projekt ("Kicktipp Dev"), auf das `.env` lokal zeigt
-(siehe `.env.example`). Seine Daten (inkl. `auth.users`) lassen sich
-jederzeit per manuellem GitHub-Actions-Workflow `sync-dev-from-prod.yml`
-komplett aus Prod auffrischen – überschreibt dabei den kompletten
-Dev-Datenbestand. Klarnamen und E-Mail-Adressen werden dabei automatisch
-durch synthetische Platzhalter ersetzt (`supabase/anonymize_dev_data.sql`,
-Zweckbindungsgrundsatz DSGVO) – IDs/Verknüpfungen zwischen den Tabellen
-bleiben dabei erhalten. `/dev/` baut immer vom `beta`-Checkout (kein eigener
-Branch), zeigt aber auf dieses eigenständige Backend statt auf das
-gemeinsame main/beta-Projekt – z. B. nützlich, um in der mobilen App eine
-zweite, unabhängige Spielrunde zum Testen des Instanz-Wechsels zu haben.
+Für lokale Entwicklung gibt es ein drittes, eigenständiges Supabase-Projekt
+("Kicktipp Dev"), auf das `.env` lokal zeigt (siehe `.env.example`). Seine
+Daten (inkl. `auth.users`) lassen sich jederzeit per manuellem
+GitHub-Actions-Workflow `sync-dev-from-prod.yml` komplett aus Prod
+auffrischen – überschreibt dabei den kompletten Dev-Datenbestand.
+Klarnamen und E-Mail-Adressen werden dabei automatisch durch synthetische
+Platzhalter ersetzt (`supabase/anonymize_dev_data.sql`, Zweckbindungsgrundsatz
+DSGVO) – IDs/Verknüpfungen zwischen den Tabellen bleiben dabei erhalten.
+
+Zusätzlich gibt es einen **komplett eigenständigen dritten Container** nur
+für Dev (`.github/workflows/deploy-dev.yml`, `Dockerfile.dev`,
+`nginx.dev.conf.template`, Image-Tag `:dev`) – bewusst kein Bezug zu
+main/beta, weder im Image noch im Netzwerk-Traffic (eigenes Backend, eigene
+Domain/IP empfohlen). Baut bei jedem Push nach `beta` (die Dev-Datenbank
+trackt die aktive Entwicklung), unabhängig vom main/beta-Workflow. Praktisch
+z. B. für eine zweite, unabhängige Spielrunde zum Testen des mobilen
+Instanz-Wechsels.
 
 Bei jedem Push nach `main` oder `beta` baut `.github/workflows/docker-publish.yml`
-main und beta unabhängig voneinander (dev als zusätzlicher Build-Schritt aus
-dem beta-Checkout) und veröffentlicht das gemeinsame Image zu GHCR; ein
-Watchtower-Container auf dem Ziel-Unraid-Host zieht neue Images automatisch.
-**Ausnahme:** Besteht der Push nur aus einem `[skip ci]`-Commit
+beide Branches unabhängig voneinander und veröffentlicht das gemeinsame Image
+zu GHCR; ein Watchtower-Container auf dem Ziel-Unraid-Host zieht neue Images
+automatisch. **Ausnahme:** Besteht der Push nur aus einem `[skip ci]`-Commit
 (automatischer Versions-Bump auf `main`, oder ein Fast-Forward-Merge, der
 zufällig genau darauf landet) – dann baut GitHub Actions absichtlich nicht
 (verhindert eine Bump-Endlosschleife auf `main`), das deployte Image bleibt

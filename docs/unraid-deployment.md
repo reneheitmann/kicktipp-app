@@ -10,12 +10,12 @@ separat angegangen werden.
 ## Funktionsweise
 
 1. Bei jedem Push nach `main` **oder `beta`** baut **GitHub Actions**
-   automatisch **ein einziges** Docker-Image, das DREI Versionen enthält:
-   main (Produktion) unter `/`, beta (zum Testen) unter `/beta/`, dev unter
-   `/dev/` – jeweils ein eigener, unabhängig gebauter statischer React-Build,
-   gemeinsam über nginx ausgeliefert. Veröffentlicht als `:latest`
-   (zusätzlich mit dem Commit-Hash als eigenem Tag) in der **GitHub
-   Container Registry** (`ghcr.io`).
+   automatisch **ein einziges** Docker-Image, das BEIDE Versionen enthält:
+   main (Produktion) unter `/`, beta (zum Testen) unter `/beta/` – jeweils
+   ein eigener, unabhängig gebauter statischer React-Build, gemeinsam über
+   nginx ausgeliefert. Veröffentlicht als `:latest` (zusätzlich mit dem
+   Commit-Hash als eigenem Tag) in der **GitHub Container Registry**
+   (`ghcr.io`).
 2. Auf Unraid läuft dafür **ein einziger** Container, `kicktipp-app`, der
    `:latest` zieht – keine zweite IP/kein zweiter Container mehr nötig.
 3. **Watchtower** (ein weiterer, kleiner Container auf Unraid) prüft
@@ -25,10 +25,7 @@ separat angegangen werden.
    eigenen Profil gibt es einen Link "Beta-Version testen", sichtbar nur mit
    dem Recht `beta.access` (vergeben über **Rollen & Berechtigungen** im
    Admin-Bereich). Von dort zurück zur Produktivversion geht jederzeit ohne
-   weitere Berechtigung. `/dev/` zeigt auf ein komplett eigenständiges
-   Supabase-Projekt ("Kicktipp Dev", eigene Anmeldung, eigene Daten) – braucht
-   deshalb keine In-App-Freischaltung und ist nur über die direkte URL
-   erreichbar, kein Navigationseintrag dorthin.
+   weitere Berechtigung.
 5. **Ausnahme:** Besteht ein Push nur aus einem `[skip ci]`-Commit (der
    automatische Versions-Bump auf `main`, oder ein Fast-Forward-Merge von
    `main` nach `beta`, der zufällig genau auf so einem Commit landet – z. B.
@@ -39,15 +36,18 @@ separat angegangen werden.
    nachgetriggert wird: `gh workflow run docker-publish.yml --ref beta`
    (bzw. `--ref main`), oder über den **Actions**-Tab im Repo.
 
+Der Dev-Kanal (eigenständiges "Kicktipp Dev"-Supabase-Projekt) läuft NICHT
+in diesem Image mit, sondern als komplett eigenständiger, dritter Container
+– siehe Teil 7 unten.
+
 ```
 Code-Änderung (lokal) → git push nach beta → GitHub Actions baut EIN Image
-                                     (main + beta + dev zusammen) → ghcr.io
+                                              (main + beta zusammen) → ghcr.io
                                                                              │
                                                     Watchtower aktualisiert kicktipp-app
                                                                              │
                                         (unter .../beta/ im eigenen Profil testen,
-                                         sichtbar nur mit beta.access-Recht;
-                                         .../dev/ zeigt auf das separate Dev-Backend)
+                                         sichtbar nur mit beta.access-Recht)
                                                                              │
                                           "auf Prod übernehmen" → beta wird nach main gemerged
                                                                              │
@@ -528,6 +528,37 @@ auf die alte/interne Adresse):
    lässt sich nicht auslesen, daher vorher den bisherigen Wert notieren
    oder aus der eigenen Dokumentation/dem letzten Setup-Schritt
    nachschlagen).
+
+## Teil 7 – Eigenständiger Dev-Container
+
+Optional: ein **zweiter, komplett unabhängiger Container** nur für den
+Dev-Kanal – anders als main/beta (ein Container, zwei Pfade) hat Dev
+bewusst **keinerlei Bezug** zu main/beta: eigenes Image (`:dev`-Tag statt
+`:latest`), eigenes eigenständiges Supabase-Backend ("Kicktipp Dev"), im
+Idealfall eigene IP/Domain. Praktisch z. B. für eine zweite, unabhängige
+Spielrunde beim Testen des Instanz-Wählers der mobilen App.
+
+1. **Bild-Herkunft**: `.github/workflows/deploy-dev.yml` baut bei jedem Push
+   nach `beta` automatisch `ghcr.io/reneheitmann/kicktipp-app:dev`
+   (`Dockerfile.dev`, `nginx.dev.conf.template`) – dieselben GitHub-Secrets
+   `VITE_SUPABASE_URL_DEV`/`VITE_SUPABASE_ANON_KEY_DEV` wie das
+   Haupt-Repository.
+2. **Container anlegen** (analog zu Teil 2, hier nur die Abweichungen):
+   - **Name**: z. B. `kicktipp-app-dev` (unterscheidbar vom main/beta-
+     Container)
+   - **Repository**: `ghcr.io/reneheitmann/kicktipp-app:dev` (eigener
+     Tag-Namensraum, überschneidet sich nicht mit `:latest`)
+   - **Netzwerk**: eigene `Fixed IP address` im `br0`-Netzwerk wählen –
+     eine ANDERE als die des main/beta-Containers (z. B. `192.168.1.51`)
+   - `LISTEN_PORT` optional wie gewohnt setzen
+   - Icon-URL/WebUI-Feld wie in Teil 2, Schritt 7/8
+3. **Watchtower**: derselbe Watchtower-Container aus Teil 2.2 aktualisiert
+   automatisch auch diesen zweiten Container, solange sein Name (z. B.
+   `kicktipp-app-dev`) im Watchtower-Kommando mit aufgeführt ist – sonst
+   überwacht Watchtower nur die dort explizit genannten Container-Namen.
+4. **Für die mobile App**: die neue IP/Domain als zweite Spielrunde über
+   "Spielrunde hinzufügen" eintragen (siehe `docs/mobile-app.md`) – zeigt
+   auf das komplett andere Dev-Backend, unabhängig von main/beta.
 
 ## Ausblick (nicht Teil dieser Anleitung)
 

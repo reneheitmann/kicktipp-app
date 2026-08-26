@@ -4,14 +4,14 @@
 #
 # Anders als früher baut dieses Image nicht mehr selbst per npm/Vite: der
 # GitHub-Actions-Workflow (docker-publish.yml) checkt main UND beta separat
-# aus, baut main/beta/dev getrennt (unterschiedliche VITE_APP_CHANNEL/
+# aus, baut beide Branches getrennt (unterschiedliche VITE_APP_CHANNEL/
 # base-Pfade, siehe vite.config.ts) und liefert die fertigen dist-Ordner als
-# dist-prod/dist-beta/dist-dev in den Build-Kontext – ein Container liefert
-# dadurch alle drei Versionen gleichzeitig aus (Prod unter /, Beta unter
-# /beta/, Dev unter /dev/, siehe nginx.conf.template), statt mehrere
-# komplett getrennte Container/Images zu brauchen. Dev baut vom beta-
-# Checkout (dev-Datenbank tracked die aktive Entwicklung, siehe
-# docker-publish.yml), zeigt aber auf ein eigenständiges Supabase-Projekt.
+# dist-prod/dist-beta in den Build-Kontext – ein Container liefert dadurch
+# beide Versionen gleichzeitig aus (Prod unter /, Beta unter /beta/, siehe
+# nginx.conf.template), statt zwei komplett getrennte Container/Images zu
+# brauchen. Dev läuft bewusst als GANZ EIGENER, unabhängiger Container mit
+# eigenem Image (siehe Dockerfile.dev) statt als dritte Route hier - siehe
+# dortiger Kommentar für die Begründung.
 
 FROM nginx:alpine AS runtime
 
@@ -26,7 +26,6 @@ ENV TZ=Europe/Berlin
 
 COPY dist-prod /usr/share/nginx/html
 COPY dist-beta /usr/share/nginx/html/beta
-COPY dist-dev /usr/share/nginx/html/dev
 
 # .template statt direkt nach conf.d – das offizielle nginx-Image ersetzt
 # ${LISTEN_PORT} beim Container-Start automatisch per envsubst (siehe

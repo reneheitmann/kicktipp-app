@@ -38,17 +38,16 @@ export default defineConfig({
   // relativ zu diesem Pfad aufgelöst werden. Vite rewritet dafür sowohl
   // index.html-Referenzen (z. B. <link href="/icon.png">) als auch alle
   // Bundle-Assets automatisch und setzt import.meta.env.BASE_URL passend,
-  // das App.tsx wiederum als React-Router-basename verwendet. Dev läuft
-  // nach demselben Muster unter /dev/, zeigt aber auf ein komplett
-  // eigenständiges Supabase-Projekt (siehe docker-publish.yml) statt auf
-  // das gemeinsame main/beta-Backend.
+  // das App.tsx wiederum als React-Router-basename verwendet. Dev (siehe
+  // Dockerfile.dev) läuft dagegen als GANZ EIGENER Container an dessen
+  // eigener Wurzel "/" - kein Unterpfad, daher hier kein eigener Fall.
   //
   // mobile (Capacitor, siehe mobile/) serviert das gebündelte App-Paket
   // intern über einen lokalen Webserver unter capacitor://localhost bzw.
   // https://localhost (nicht als rohes file://) – absolute Pfade ab "/"
   // funktionieren dort genauso wie bei production, daher kein eigener Fall
   // nötig (fällt unten auf denselben Default wie main).
-  base: process.env.VITE_APP_CHANNEL === 'beta' ? '/beta/' : process.env.VITE_APP_CHANNEL === 'dev' ? '/dev/' : '/',
+  base: process.env.VITE_APP_CHANNEL === 'beta' ? '/beta/' : '/',
   define: {
     __APP_VERSION__: JSON.stringify(displayVersion),
   },

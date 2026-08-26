@@ -1,0 +1,43 @@
+# Eigenständiger Container NUR für den Dev-Kanal (siehe deploy-dev.yml) -
+# enthält ausschließlich den Dev-Build, keinen Bezug zu main/beta (weder im
+# Image noch im Netzwerk-Traffic: eigenes Supabase-Backend, eigene Domain/IP
+# empfohlen). Bewusst getrennt vom main/beta-Image (Dockerfile) statt einer
+# dritten Route darin - der Nutzer wollte einen sauber isolierten zweiten
+# Container speziell zum Testen (z. B. zweite Spielrunde im mobilen
+# Instanz-Wähler), unabhängig vom laufenden main/beta-Container.
+
+FROM nginx:alpine AS runtime
+
+# Zeitzone für Container-interne Zeitstempel (z. B. nginx-Access-Logs,
+# `docker logs`) – hat KEINEN Einfluss auf Datums-/Zeitangaben innerhalb der
+# App selbst, die werden clientseitig im Browser mit dessen Zeitzone
+# formatiert. tzdata bringt die Zonendaten mit, die musl-libc (Alpine) braucht,
+# um den TZ-Wert überhaupt aufzulösen. Default hier, überschreibbar per
+# Umgebungsvariable (z. B. über ein Unraid-GUI-Feld), ohne neuen Build.
+RUN apk add --no-cache tzdata
+ENV TZ=Europe/Berlin
+
+COPY dist /usr/share/nginx/html
+
+# .template statt direkt nach conf.d – das offizielle nginx-Image ersetzt
+# ${LISTEN_PORT} beim Container-Start automatisch per envsubst (siehe
+# nginx.dev.conf.template). Default hier, überschreibbar per
+# Umgebungsvariable (z. B. über ein Unraid-GUI-Feld), ohne neuen Build.
+COPY nginx.dev.conf.template /etc/nginx/templates/default.conf.template
+ENV LISTEN_PORT=8080
+
+# Von Unraids Docker-Manager gelesene Labels für Icon/WebUI-Link – nur PNG
+# wird von Unraid für das Icon-Label zuverlässig gerendert (SVG/WEBP nicht,
+# empirisch verifiziert). WebUI-Link zeigt den Default-Port – bei
+# geändertem LISTEN_PORT im Template-Feld anpassen.
+LABEL net.unraid.docker.icon="https://raw.githubusercontent.com/reneheitmann/kicktipp-app/main/public/icon.png"
+LABEL net.unraid.docker.webui="http://[IP]:8080/"
+
+EXPOSE 8080
+
+# Non-root (USER nginx): siehe Kommentar im main/beta-Dockerfile für die
+# konkret ermittelten, beschreibbar zu haltenden Pfade in diesem Unraid-
+# Setup - identisch hier, da dasselbe nginx:alpine-Basis-Image.
+RUN chown -R nginx:nginx /etc/nginx/conf.d /var/cache/nginx /run /var/log/nginx
+
+USER nginx
