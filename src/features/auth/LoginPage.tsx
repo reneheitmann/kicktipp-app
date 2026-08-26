@@ -4,10 +4,12 @@ import { useAuth } from './useAuth'
 import { useAppBranding } from '../app-settings/useAppBranding'
 import { visibleNavItems } from '../../components/layout/navItems'
 import { requestPasswordReset } from './passwordResetApi'
+import { useMobileInstance } from '../../mobile/MobileInstanceContext'
 
 export function LoginPage() {
   const { session, profile, loading, can, signIn, sessionExpired, clearSessionExpired } = useAuth()
   const { appName } = useAppBranding()
+  const mobileInstance = useMobileInstance()
   const location = useLocation()
   const [mode, setMode] = useState<'login' | 'forgot'>('login')
   const [email, setEmail] = useState('')
@@ -71,6 +73,16 @@ export function LoginPage() {
 
   return (
     <div className="flex min-h-full flex-col items-center justify-center bg-slate-50 px-4 py-12">
+      {mobileInstance && (
+        <button
+          type="button"
+          onClick={mobileInstance.switchInstance}
+          title="Spielrunde wechseln"
+          className="mb-4 max-w-[16rem] truncate rounded bg-slate-100 px-2 py-1 text-xs font-medium text-slate-600"
+        >
+          {mobileInstance.activeInstance.name}
+        </button>
+      )}
       <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200 sm:p-8">
         <h1 className="mb-1 text-xl font-semibold text-slate-900">{appName}</h1>
 
