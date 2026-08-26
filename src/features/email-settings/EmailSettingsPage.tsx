@@ -212,6 +212,7 @@ export function EmailSettingsPage() {
             <input
               id="brevo-api-key"
               type="password"
+              required={!hasBrevoApiKey}
               value={brevoApiKey}
               onChange={(e) => setBrevoApiKey(e.target.value)}
               placeholder={hasBrevoApiKey ? '••••••••  (unverändert lassen = leer)' : ''}
