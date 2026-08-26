@@ -76,19 +76,24 @@ export async function registerPushDevice(profileId: string): Promise<boolean> {
 async function registerPushDeviceUncached(profileId: string): Promise<boolean> {
   try {
     const { token } = await FirebaseMessaging.getToken()
-    try {
-      await supabase.from('push_tokens').insert({
-        profile_id: profileId,
-        platform: /android/i.test(navigator.userAgent) ? 'android' : 'ios',
-        token,
-      })
-    } catch {
-      // z. B. Token bereits registriert (unique-Constraint) – kein Grund,
-      // die Registrierung als Fehler zu behandeln.
+    const { error } = await supabase.from('push_tokens').insert({
+      profile_id: profileId,
+      platform: /android/i.test(navigator.userAgent) ? 'android' : 'ios',
+      token,
+    })
+    // 23505 = unique_violation – derselbe Token ist schon registriert, kein
+    // echter Fehler. Jeder andere Fehler (RLS, Netzwerk, falsches Schema, ...)
+    // wurde bisher komplett ignoriert (die Insert-Antwort wurde gar nicht
+    // ausgewertet) – dadurch zeigte isPushEnabled() "an", obwohl serverseitig
+    // nie eine Zeile ankam (beobachtet: Schalter an, push_tokens leer).
+    if (error && error.code !== '23505') {
+      console.error('Push-Token konnte nicht gespeichert werden', error)
+      return false
     }
     await secureStorage.setItem(LAST_TOKEN_STORAGE_KEY, token)
     return true
-  } catch {
+  } catch (err) {
+    console.error('Push-Registrierung fehlgeschlagen', err)
     return false
   }
 }
