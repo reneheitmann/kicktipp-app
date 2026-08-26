@@ -34,7 +34,20 @@ export function AppShell() {
   const [navMenuOpen, setNavMenuOpen] = useState(false)
 
   return (
-    <div className="flex h-full flex-col md:flex-row">
+    <div
+      className="flex h-full flex-col md:flex-row"
+      // Notch/Dynamic-Island-Schutz für BEIDE Seiten hier zentral statt nur
+      // im mobilen Header (der ist ab der md-Breakpoint-Breite "md:hidden"
+      // - ein iPhone im Querformat ist bei so gut wie jedem aktuellen Modell
+      // BREITER als der md-Breakpoint, das Desktop-Sidebar-Layout greift
+      // dann ohne jede eigene Notch-Behandlung). env(safe-area-inset-left/
+      // -right) ist auf Geräten ohne Notch/Dynamic-Island (inkl. jedem
+      // normalen Desktop-Browser) 0 - unkritisch, hier immer zu setzen.
+      style={{
+        paddingLeft: 'env(safe-area-inset-left, 0px)',
+        paddingRight: 'env(safe-area-inset-right, 0px)',
+      }}
+    >
       {/* Tastatur-Sprungmarke: ohne sie muss ein Tastatur-/Screenreader-Nutzer
           bei jedem Seitenaufruf erst durch die komplette Sidebar/Kontoleiste
           tabben, bevor der eigentliche Seiteninhalt erreichbar ist. */}
@@ -186,15 +199,21 @@ export function AppShell() {
           </Modal>
         )}
 
-        {/* paddingBottom für iOS-Home-Indicator/Android-Gestennavigation –
-            siehe Kommentar bei "safe-area-inset-top" oben, gleiches Prinzip. */}
         <main
           id="main-content"
           tabIndex={-1}
           className="min-w-0 flex-1 overflow-x-hidden overflow-y-auto outline-none"
-          style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
         >
           <Outlet />
+          {/* Echtes Spacer-Element statt padding-bottom auf <main> selbst
+              (iOS-Home-Indicator/Android-Gestennavigation): WebKit hat einen
+              bekannten Bug, bei dem padding-bottom auf einem scrollenden
+              Flex-Kind (overflow-y-auto + flex-1) am Ende nicht zuverlässig
+              sichtbaren Platz reserviert - beobachtet als Home-Indicator-
+              Linie, die über dem letzten Inhalt liegt statt darüber, in
+              Hoch- UND Querformat. Ein echtes Element im normalen
+              Dokumentfluss (statt Padding) umgeht das zuverlässig. */}
+          <div style={{ height: 'env(safe-area-inset-bottom, 0px)' }} aria-hidden="true" />
         </main>
       </div>
     </div>
