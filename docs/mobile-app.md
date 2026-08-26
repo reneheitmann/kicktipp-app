@@ -227,7 +227,7 @@ eine Version in TestFlight/Play Internal Testing geht):
 
 | Schritt | iOS (physisches Gerät) | Android (Gerät/Emulator) |
 |---|---|---|
-| App-Start, Instanz-Wähler erscheint | [ ] | [ ] |
+| App-Start, Instanz-Wähler erscheint | [x] | [ ] |
 | Instanz hinzufügen: `gewinnauswertung.magicprus.de` | [x] | [ ] |
 | Gefundene Instanz (Name + Adresse, ohne Backend-URL) wird vor dem Login zur Bestätigung angezeigt | [x] | [ ] |
 | Login gegen diese Instanz | [x] | [ ] |
