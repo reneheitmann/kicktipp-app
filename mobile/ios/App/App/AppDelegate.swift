@@ -42,17 +42,19 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         return config
     }
 
-    // Von @capacitor/push-notifications vorgeschriebener Standard-Schritt
-    // (fehlte bisher): ohne diese beiden Methoden erfährt die Capacitor-
-    // Bridge nie, ob PushNotifications.register() erfolgreich war oder
-    // fehlschlug - das JS-seitige 'registration'/'registrationError'-Event
-    // feuert dann nie, egal wie lange man wartet (kein Fehler, einfach
-    // Stille - genau das beobachtete Symptom).
+    // Von @capacitor-firebase/messaging vorgeschriebener Standard-Schritt:
+    // ohne diese drei Methoden erfährt die Capacitor-Bridge nie, ob die
+    // APNs-Registrierung erfolgreich war/fehlschlug, und Hintergrund-Pushes
+    // erreichen das Plugin nicht (siehe Plugin-README, "iOS" -> "Setup").
     func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
         NotificationCenter.default.post(name: .capacitorDidRegisterForRemoteNotifications, object: deviceToken)
     }
 
     func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
         NotificationCenter.default.post(name: .capacitorDidFailToRegisterForRemoteNotifications, object: error)
+    }
+
+    func application(_ application: UIApplication, didReceiveRemoteNotification userInfo: [AnyHashable: Any], fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void) {
+        NotificationCenter.default.post(name: Notification.Name.init("didReceiveRemoteNotification"), object: completionHandler, userInfo: userInfo)
     }
 }
