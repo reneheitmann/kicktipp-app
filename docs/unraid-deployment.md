@@ -420,6 +420,7 @@ unterschiedlicher Stelle rotierbar:
 |---|---|---|
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase Dashboard → Project Settings → API (Edge-Function-Secret, siehe `supabase/functions/_shared/cors.ts`) | Im Dashboard neu generieren, danach `gh secret set`/`supabase secrets set` mit dem neuen Wert aktualisieren. |
 | SMTP-Zugangsdaten | In-App unter `/admin/email` (Tabelle `email_settings`, siehe `0017_email_settings.sql`) | Neue Zugangsdaten beim E-Mail-Provider erzeugen, dort eintragen. |
+| Brevo-API-Key | In-App unter `/admin/email` (Tabelle `email_settings`, siehe `0070_email_provider_brevo.sql`) | Neuen Key im Brevo-Dashboard erzeugen, dort eintragen. |
 | `BACKUP_ENCRYPTION_PASSPHRASE` | GitHub-Repo-Secret (siehe oben, Teil 4) | `openssl rand -base64 32`, dann `gh secret set BACKUP_ENCRYPTION_PASSPHRASE`, **sofort in einem Passwortmanager sichern** – alte, damit verschlüsselte Backups werden mit der neuen Passphrase unlesbar, ggf. vorher ein letztes Backup mit der alten Passphrase entschlüsseln/archivieren. |
 
 ## Teil 5 – Monitoring

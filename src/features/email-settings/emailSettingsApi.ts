@@ -1,6 +1,6 @@
 import { FunctionsHttpError } from '@supabase/supabase-js'
 import { supabase } from '../../lib/supabaseClient'
-import type { Database, EmailSettingsSafe, SmtpEncryption } from '../../types/database'
+import type { Database, EmailProvider, EmailSettingsSafe, SmtpEncryption } from '../../types/database'
 
 type EmailSettingsInsert = Database['public']['Tables']['email_settings']['Insert']
 
@@ -8,11 +8,13 @@ type EmailSettingsInsert = Database['public']['Tables']['email_settings']['Inser
 const SETTINGS_ID = '00000000-0000-0000-0000-000000000001'
 
 export interface EmailSettingsInput {
-  smtp_host: string
-  smtp_port: number
+  provider: EmailProvider
+  smtp_host: string | null
+  smtp_port: number | null
   smtp_username: string | null
   smtp_password?: string
   smtp_encryption: SmtpEncryption
+  brevo_api_key?: string
   sender_email: string
   sender_name: string | null
   imap_host: string | null
@@ -25,17 +27,18 @@ export async function getEmailSettings(): Promise<EmailSettingsSafe | null> {
   const { data, error } = await supabase.from('email_settings').select('*').eq('id', SETTINGS_ID).maybeSingle()
   if (error) throw error
   if (!data) return null
-  const { smtp_password, ...rest } = data
-  return { ...rest, has_password: !!smtp_password }
+  const { smtp_password, brevo_api_key, ...rest } = data
+  return { ...rest, has_password: !!smtp_password, has_brevo_api_key: !!brevo_api_key }
 }
 
-// Ein leeres/undefiniertes `smtp_password` lässt das bisherige Passwort
-// unverändert: der Key wird dann gar nicht erst ins Upsert-Payload
-// aufgenommen, sodass PostgREST die Spalte beim ON CONFLICT DO UPDATE
-// ausspart statt sie zu überschreiben.
+// Ein leeres/undefiniertes `smtp_password`/`brevo_api_key` lässt den
+// bisherigen Wert unverändert: der Key wird dann gar nicht erst ins
+// Upsert-Payload aufgenommen, sodass PostgREST die Spalte beim ON CONFLICT
+// DO UPDATE ausspart statt sie zu überschreiben.
 export async function saveEmailSettings(input: EmailSettingsInput): Promise<void> {
   const payload: EmailSettingsInsert = {
     id: SETTINGS_ID,
+    provider: input.provider,
     smtp_host: input.smtp_host,
     smtp_port: input.smtp_port,
     smtp_username: input.smtp_username,
@@ -49,6 +52,7 @@ export async function saveEmailSettings(input: EmailSettingsInput): Promise<void
     updated_by: input.updated_by,
   }
   if (input.smtp_password) payload.smtp_password = input.smtp_password
+  if (input.brevo_api_key) payload.brevo_api_key = input.brevo_api_key
 
   const { error } = await supabase.from('email_settings').upsert(payload)
   if (error) throw error
