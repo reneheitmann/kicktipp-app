@@ -100,10 +100,19 @@ function isSessionExpired(maxHours: number): boolean {
   return Date.now() - loginAt > maxHours * 60 * 60 * 1000
 }
 
+// Mobile bekommt ein eigenes, deutlich längeres Limit (siehe
+// session_policy.mobile_max_duration_hours, Migration 0071) statt des
+// kurzen Web-Limits – ein Handy bleibt typischerweise über Tage/Wochen
+// eingeloggt, "wie eine normale App". Dieselbe Kanal-Erkennung wie an
+// den anderen VITE_APP_CHANNEL === 'mobile'-Stellen im Code (z. B.
+// supabaseClient.ts), kein Context-Umweg nötig.
+const IS_MOBILE = import.meta.env.VITE_APP_CHANNEL === 'mobile'
+const SESSION_PLATFORM: 'web' | 'mobile' = IS_MOBILE ? 'mobile' : 'web'
+
 async function fetchMaxSessionHours(): Promise<number> {
   try {
     const policy = await getSessionPolicy()
-    return policy.max_duration_hours
+    return IS_MOBILE ? policy.mobile_max_duration_hours : policy.max_duration_hours
   } catch (err) {
     console.error('Sitzungsrichtlinie konnte nicht geladen werden', err)
     return DEFAULT_MAX_SESSION_HOURS
@@ -196,7 +205,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         // Serverseitige Registrierung ist idempotent (on conflict do
         // nothing) – fire-and-forget, darf den Ladevorgang nicht blockieren.
-        registerSession().catch((err) => console.error('Sitzung konnte nicht registriert werden', err))
+        registerSession(SESSION_PLATFORM).catch((err) => console.error('Sitzung konnte nicht registriert werden', err))
         await loadProfileDataIfNeeded(data.session.user.id)
       }
     }
@@ -253,7 +262,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Echter Neu-Login (nicht Token-Refresh/Session-Restore) – Frist
         // startet jetzt neu.
         localStorage.setItem(LOGIN_AT_STORAGE_KEY, String(Date.now()))
-        registerSession().catch((err) => console.error('Sitzung konnte nicht registriert werden', err))
+        registerSession(SESSION_PLATFORM).catch((err) => console.error('Sitzung konnte nicht registriert werden', err))
       }
       if (event === 'SIGNED_OUT') {
         localStorage.removeItem(LOGIN_AT_STORAGE_KEY)

@@ -9,6 +9,7 @@ export function SessionPolicyPage() {
 
   const [loading, setLoading] = useState(true)
   const [maxDurationHours, setMaxDurationHours] = useState(8)
+  const [mobileMaxDurationHours, setMobileMaxDurationHours] = useState(720)
 
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -19,6 +20,7 @@ export function SessionPolicyPage() {
     getSessionPolicy()
       .then((policy) => {
         setMaxDurationHours(policy.max_duration_hours)
+        setMobileMaxDurationHours(policy.mobile_max_duration_hours)
         setError(null)
       })
       .catch((err) => setError(err instanceof Error ? err.message : 'Richtlinie konnte nicht geladen werden.'))
@@ -36,7 +38,11 @@ export function SessionPolicyPage() {
     setError(null)
     setInfo(null)
     try {
-      await saveSessionPolicy({ max_duration_hours: maxDurationHours, updated_by: profile.id })
+      await saveSessionPolicy({
+        max_duration_hours: maxDurationHours,
+        mobile_max_duration_hours: mobileMaxDurationHours,
+        updated_by: profile.id,
+      })
       setInfo('Sitzungs-Zeitlimit gespeichert.')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Speichern fehlgeschlagen.')
@@ -75,6 +81,25 @@ export function SessionPolicyPage() {
             className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base focus:border-slate-900 focus:outline-none"
           />
           <p className="mt-1 text-xs text-slate-500">Zwischen 1 und 168 Stunden (7 Tage). Standard: 8 Stunden.</p>
+        </div>
+
+        <div className="border-t border-slate-200 pt-4">
+          <label htmlFor="mobile-max-duration-hours" className="mb-1 block text-sm font-medium text-slate-700">
+            Sitzungsdauer mobile App (Stunden)
+          </label>
+          <input
+            id="mobile-max-duration-hours"
+            type="number"
+            min={1}
+            max={8760}
+            value={mobileMaxDurationHours}
+            onChange={(e) => setMobileMaxDurationHours(Number(e.target.value))}
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base focus:border-slate-900 focus:outline-none"
+          />
+          <p className="mt-1 text-xs text-slate-500">
+            Eigenes, üblicherweise deutlich längeres Limit für die iOS-/Android-App. Zwischen 1 und 8760 Stunden (1
+            Jahr). Standard: 720 Stunden (30 Tage).
+          </p>
         </div>
 
         <Button type="submit" disabled={saving}>
