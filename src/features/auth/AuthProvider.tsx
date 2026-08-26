@@ -6,12 +6,16 @@ import type { PermissionKey, Profile, UserRole } from '../../types/database'
 import { AuthContext } from './AuthContext'
 import { fetchPermissionsWithRetry } from './permissionsRetry'
 
-async function fetchProfile(userId: string): Promise<Profile | null> {
+// Wirft bewusst statt still null zurückzugeben – sonst ist ein echter
+// Ladefehler (z. B. ein vom Server abgelehntes/abgelaufenes Token) nicht
+// von "Profil existiert nicht" unterscheidbar. Beides führte vorher zum
+// selben, nie mehr verlassenen "Lade..."-Zustand in ProtectedRoute (die
+// dortige `session && !profile`-Bedingung ist als reine Übergangs-, nicht
+// als Dauerlage gedacht) – wirft jetzt hierher hoch, siehe
+// loadProfileDataIfNeeded() für die Behandlung (lokal abmelden).
+async function fetchProfile(userId: string): Promise<Profile> {
   const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single()
-  if (error) {
-    console.error('Profil konnte nicht geladen werden', error)
-    return null
-  }
+  if (error) throw error
   return data
 }
 
@@ -124,33 +128,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (loadedUserIdRef.current === userId) return Promise.resolve()
       if (loadingPromiseRef.current) return loadingPromiseRef.current
 
+      // loadedUserIdRef wird NUR bei vollständigem Erfolg gesetzt. Jeder
+      // Fehler in dieser Kette (Profil-Abruf, Rechte-Abruf nach allen
+      // fetchPermissionsWithRetry()-Versuchen) führt zum lokalen Abmelden
+      // statt mit unvollständigem/gar keinem Profil weiterzurendern. Sonst
+      // bliebe z. B. ein Admin bis zum nächsten Token-Refresh (oft erst
+      // nach ~50–60 Minuten) in einem Zustand fest, in dem nur der
+      // Adminbereich sichtbar ist und jeder normale Menüpunkt fehlt (bei
+      // fehlenden Rechten), oder – bei einem fehlgeschlagenen Profil-Abruf
+      // (z. B. ein vom Server abgelehntes Token) – dauerhaft auf "Lade..."
+      // (ProtectedRoute's `session && !profile`-Zustand ist als reine
+      // Übergangs-, nicht als Dauerlage gedacht, siehe fetchProfile()).
+      // Gleiches Muster wie beim Stall-Reload-Fallback unten (zweiter Stall
+      // in initSession), bewusst ohne Banner/sessionExpired, weil es kein
+      // echtes Zeitlimit ist, sondern ein Ladefehler.
       const promise = (async () => {
-        const [loadedProfile, hours] = await Promise.all([fetchProfile(userId), fetchMaxSessionHours()])
-        if (!isMounted) return
-        setProfile(loadedProfile)
-        setMaxSessionHours(hours)
-        if (!loadedProfile) {
-          setPermissions(new Set())
-          loadedUserIdRef.current = userId
-          return
-        }
-        // loadedUserIdRef wird NUR bei Erfolg gesetzt. fetchPermissionsWithRetry()
-        // (permissionsRetry.ts) versucht es mehrfach mit Backoff – schlagen
-        // ALLE Versuche fehl, wird lokal abgemeldet statt mit bereits gesetzter Rolle
-        // (profile.role) aber leeren/fehlenden Rechten weiterzurendern. Sonst
-        // bliebe z. B. ein Admin bis zum nächsten Token-Refresh (oft erst
-        // nach ~50–60 Minuten) in einem Zustand fest, in dem nur der
-        // Adminbereich sichtbar ist und jeder normale Menüpunkt fehlt –
-        // gleiches Muster wie beim Stall-Reload-Fallback unten (zweiter
-        // Stall in initSession), bewusst ohne Banner/sessionExpired, weil es
-        // kein echtes Zeitlimit ist, sondern ein Ladefehler.
         try {
+          const [loadedProfile, hours] = await Promise.all([fetchProfile(userId), fetchMaxSessionHours()])
           const loadedPermissions = await fetchPermissionsWithRetry(loadedProfile.role, fetchPermissions)
           if (!isMounted) return
+          setProfile(loadedProfile)
+          setMaxSessionHours(hours)
           setPermissions(loadedPermissions)
           loadedUserIdRef.current = userId
         } catch (err) {
-          console.error('Berechtigungen konnten auch nach mehreren Versuchen nicht geladen werden – melde lokal ab', err)
+          console.error('Profil/Rechte konnten nicht geladen werden – melde lokal ab', err)
           if (!isMounted) return
           await supabase.auth.signOut({ scope: 'local' }).catch((signOutErr) => console.error('Lokales Abmelden fehlgeschlagen', signOutErr))
         }
@@ -299,11 +301,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function refreshProfile() {
     if (!session) return
     const loadedProfile = await fetchProfile(session.user.id)
-    if (!loadedProfile) {
-      setProfile(null)
-      setPermissions(new Set())
-      return
-    }
     // Rechte ZUERST laden, erst danach zusammen mit dem Profil committen.
     // Sonst entsteht bei switchToRole()/switchBackToBaseRole() kurzzeitig
     // dieselbe Lücke wie in loadProfileDataIfNeeded oben: neue Rolle im
