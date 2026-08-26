@@ -8,7 +8,7 @@
 // können oder fremde Postfächer als eigenes Login zu kapern.
 
 import { createClient } from 'jsr:@supabase/supabase-js@2'
-import { sendSmtpMail, SmtpError } from '../_shared/smtp.ts'
+import { sendEmail, EmailSendError } from '../_shared/email.ts'
 import { archiveToSentFolder } from '../_shared/mailArchive.ts'
 import { logAppError } from '../_shared/logging.ts'
 import { corsHeadersForOrigin, isAllowedOrigin } from '../_shared/cors.ts'
@@ -137,30 +137,21 @@ async function handle(
 
   let rawMessage: string
   try {
-    const sent = await sendSmtpMail(
-      {
-        hostname: settings.smtp_host,
-        port: settings.smtp_port,
-        encryption: settings.smtp_encryption,
-        username: settings.smtp_username,
-        password: settings.smtp_password,
-      },
-      {
-        fromEmail: settings.sender_email,
-        fromName: settings.sender_name,
-        to: email,
-        subject: `E-Mail-Adresse bestätigen – ${appName}`,
-        html: [
-          '<p>Hallo,</p>',
-          `<p>bitte bestätige über diesen Link deine neue E-Mail-Adresse für ${escapeHtml(appName)}:</p>`,
-          `<p><a href="${escapedConfirmLink}">${escapedConfirmLink}</a></p>`,
-          '<p>Der Link ist 24 Stunden gültig. Falls du das nicht angefordert hast, kannst du diese E-Mail ignorieren.</p>',
-        ].join('\n'),
-      },
-    )
+    const sent = await sendEmail(settings, {
+      fromEmail: settings.sender_email,
+      fromName: settings.sender_name,
+      to: email,
+      subject: `E-Mail-Adresse bestätigen – ${appName}`,
+      html: [
+        '<p>Hallo,</p>',
+        `<p>bitte bestätige über diesen Link deine neue E-Mail-Adresse für ${escapeHtml(appName)}:</p>`,
+        `<p><a href="${escapedConfirmLink}">${escapedConfirmLink}</a></p>`,
+        '<p>Der Link ist 24 Stunden gültig. Falls du das nicht angefordert hast, kannst du diese E-Mail ignorieren.</p>',
+      ].join('\n'),
+    })
     rawMessage = sent.raw
   } catch (err) {
-    const message = err instanceof SmtpError ? err.message : err instanceof Error ? err.message : String(err)
+    const message = err instanceof EmailSendError ? err.message : err instanceof Error ? err.message : String(err)
     await logAppError(supabaseUrl, serviceRoleKey, 'update-own-email', message, { email })
     return jsonResponse({ error: 'Bestätigungsmail konnte nicht verschickt werden.' }, 500)
   }

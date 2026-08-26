@@ -11,7 +11,7 @@
 // role_permissions-System geprüft ('email.send'), nicht über role==='admin'.
 
 import { createClient } from 'jsr:@supabase/supabase-js@2'
-import { sendSmtpMail, SmtpError } from '../_shared/smtp.ts'
+import { sendEmail, EmailSendError } from '../_shared/email.ts'
 import { archiveManyToSentFolder } from '../_shared/mailArchive.ts'
 import { logAppError } from '../_shared/logging.ts'
 import { corsHeadersForOrigin } from '../_shared/cors.ts'
@@ -153,19 +153,11 @@ async function handle(
       return jsonResponse({ error: 'E-Mail-Versand ist noch nicht konfiguriert (siehe Admin-Seite "E-Mail-Versand").' }, 400)
     }
 
-    const smtpConfig = {
-      hostname: settings.smtp_host,
-      port: settings.smtp_port,
-      encryption: settings.smtp_encryption,
-      username: settings.smtp_username,
-      password: settings.smtp_password,
-    }
-
     const failures: { to: string; error: string }[] = []
     const sentRawMessages: string[] = []
     for (const recipient of recipients!) {
       try {
-        const sent = await sendSmtpMail(smtpConfig, {
+        const sent = await sendEmail(settings, {
           fromEmail: settings.sender_email,
           fromName: settings.sender_name,
           to: recipient.to,
@@ -175,7 +167,7 @@ async function handle(
         results.push({ to: recipient.to, ok: true })
         sentRawMessages.push(sent.raw)
       } catch (err) {
-        const message = err instanceof SmtpError ? err.message : err instanceof Error ? err.message : String(err)
+        const message = err instanceof EmailSendError ? err.message : err instanceof Error ? err.message : String(err)
         results.push({ to: recipient.to, ok: false, error: message })
         failures.push({ to: recipient.to, error: message })
       }

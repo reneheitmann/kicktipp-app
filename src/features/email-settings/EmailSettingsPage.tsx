@@ -3,7 +3,7 @@ import { Button } from '../../components/ui/Button'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { useAuth } from '../auth/useAuth'
 import { getEmailSettings, saveEmailSettings, sendTestEmail } from './emailSettingsApi'
-import type { SmtpEncryption } from '../../types/database'
+import type { EmailProvider, SmtpEncryption } from '../../types/database'
 
 const encryptionLabels: Record<SmtpEncryption, string> = {
   none: 'Keine',
@@ -11,16 +11,24 @@ const encryptionLabels: Record<SmtpEncryption, string> = {
   tls: 'TLS (implizit)',
 }
 
+const providerLabels: Record<EmailProvider, string> = {
+  smtp: 'SMTP (eigener Mailserver)',
+  brevo: 'Brevo (API)',
+}
+
 export function EmailSettingsPage() {
   const { profile } = useAuth()
 
   const [loading, setLoading] = useState(true)
+  const [provider, setProvider] = useState<EmailProvider>('smtp')
   const [hasPassword, setHasPassword] = useState(false)
   const [host, setHost] = useState('')
   const [port, setPort] = useState(587)
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [encryption, setEncryption] = useState<SmtpEncryption>('starttls')
+  const [hasBrevoApiKey, setHasBrevoApiKey] = useState(false)
+  const [brevoApiKey, setBrevoApiKey] = useState('')
   const [senderEmail, setSenderEmail] = useState('')
   const [senderName, setSenderName] = useState('')
   const [imapHost, setImapHost] = useState('')
@@ -41,10 +49,12 @@ export function EmailSettingsPage() {
     getEmailSettings()
       .then((settings) => {
         if (settings) {
-          setHost(settings.smtp_host)
-          setPort(settings.smtp_port)
+          setProvider(settings.provider)
+          setHost(settings.smtp_host ?? '')
+          setPort(settings.smtp_port ?? 587)
           setUsername(settings.smtp_username ?? '')
           setEncryption(settings.smtp_encryption)
+          setHasBrevoApiKey(settings.has_brevo_api_key)
           setSenderEmail(settings.sender_email)
           setSenderName(settings.sender_name ?? '')
           setImapHost(settings.imap_host ?? '')
@@ -70,11 +80,13 @@ export function EmailSettingsPage() {
     setInfo(null)
     try {
       await saveEmailSettings({
-        smtp_host: host.trim(),
-        smtp_port: port,
+        provider,
+        smtp_host: provider === 'smtp' ? host.trim() : null,
+        smtp_port: provider === 'smtp' ? port : null,
         smtp_username: username.trim() || null,
         smtp_password: password || undefined,
         smtp_encryption: encryption,
+        brevo_api_key: brevoApiKey || undefined,
         sender_email: senderEmail.trim(),
         sender_name: senderName.trim() || null,
         imap_host: imapHost.trim() || null,
@@ -83,7 +95,9 @@ export function EmailSettingsPage() {
         updated_by: profile.id,
       })
       if (password) setHasPassword(true)
+      if (brevoApiKey) setHasBrevoApiKey(true)
       setPassword('')
+      setBrevoApiKey('')
       setInfo('Einstellungen gespeichert.')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Einstellungen konnten nicht gespeichert werden.')
@@ -119,54 +133,99 @@ export function EmailSettingsPage() {
         {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
         {info && <p className="text-sm text-emerald-700">{info}</p>}
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <div className="sm:col-span-2">
-            <label htmlFor="smtp-host" className="mb-1 block text-sm font-medium text-slate-700">
-              SMTP-Host
-            </label>
-            <input
-              id="smtp-host"
-              required
-              value={host}
-              onChange={(e) => setHost(e.target.value)}
-              placeholder="smtp.example.com"
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base focus:border-slate-900 focus:outline-none"
-            />
-          </div>
-          <div>
-            <label htmlFor="smtp-port" className="mb-1 block text-sm font-medium text-slate-700">
-              Port
-            </label>
-            <input
-              id="smtp-port"
-              type="number"
-              required
-              min={1}
-              max={65535}
-              value={port}
-              onChange={(e) => setPort(Number(e.target.value))}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base focus:border-slate-900 focus:outline-none"
-            />
-          </div>
-        </div>
-
         <div>
-          <label htmlFor="smtp-encryption" className="mb-1 block text-sm font-medium text-slate-700">
-            Verschlüsselung
+          <label htmlFor="email-provider" className="mb-1 block text-sm font-medium text-slate-700">
+            Versandart
           </label>
           <select
-            id="smtp-encryption"
-            value={encryption}
-            onChange={(e) => setEncryption(e.target.value as SmtpEncryption)}
+            id="email-provider"
+            value={provider}
+            onChange={(e) => setProvider(e.target.value as EmailProvider)}
             className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base focus:border-slate-900 focus:outline-none sm:w-64"
           >
-            {Object.entries(encryptionLabels).map(([value, label]) => (
+            {Object.entries(providerLabels).map(([value, label]) => (
               <option key={value} value={value}>
                 {label}
               </option>
             ))}
           </select>
         </div>
+
+        {provider === 'smtp' && (
+          <>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <div className="sm:col-span-2">
+                <label htmlFor="smtp-host" className="mb-1 block text-sm font-medium text-slate-700">
+                  SMTP-Host
+                </label>
+                <input
+                  id="smtp-host"
+                  required
+                  value={host}
+                  onChange={(e) => setHost(e.target.value)}
+                  placeholder="smtp.example.com"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base focus:border-slate-900 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label htmlFor="smtp-port" className="mb-1 block text-sm font-medium text-slate-700">
+                  Port
+                </label>
+                <input
+                  id="smtp-port"
+                  type="number"
+                  required
+                  min={1}
+                  max={65535}
+                  value={port}
+                  onChange={(e) => setPort(Number(e.target.value))}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base focus:border-slate-900 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="smtp-encryption" className="mb-1 block text-sm font-medium text-slate-700">
+                Verschlüsselung
+              </label>
+              <select
+                id="smtp-encryption"
+                value={encryption}
+                onChange={(e) => setEncryption(e.target.value as SmtpEncryption)}
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base focus:border-slate-900 focus:outline-none sm:w-64"
+              >
+                {Object.entries(encryptionLabels).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </>
+        )}
+
+        {provider === 'brevo' && (
+          <div>
+            <label htmlFor="brevo-api-key" className="mb-1 block text-sm font-medium text-slate-700">
+              Brevo-API-Key
+            </label>
+            <input
+              id="brevo-api-key"
+              type="password"
+              value={brevoApiKey}
+              onChange={(e) => setBrevoApiKey(e.target.value)}
+              placeholder={hasBrevoApiKey ? '••••••••  (unverändert lassen = leer)' : ''}
+              className="w-full max-w-sm rounded-lg border border-slate-300 px-3 py-2 text-base focus:border-slate-900 focus:outline-none"
+            />
+          </div>
+        )}
+
+        {provider === 'brevo' && (
+          <p className="text-sm text-slate-500">
+            Benutzername/Passwort werden bei Brevo nicht zum Versand benötigt, nur optional für die
+            "Gesendet-Ordner"-Ablage weiter unten (IMAP-Login desselben Postfachs).
+          </p>
+        )}
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>

@@ -1,18 +1,19 @@
-// Edge Function: verschickt eine E-Mail über die in `email_settings` hinterlegte
-// SMTP-Konfiguration (Admin-Seite "/admin/email"). Läuft serverseitig mit dem
+// Edge Function: verschickt eine E-Mail über die in `email_settings`
+// hinterlegte Konfiguration (Admin-Seite "/admin/email") – wahlweise SMTP
+// oder Brevo, siehe `_shared/email.ts`. Läuft serverseitig mit dem
 // service_role-Key, da `email_settings` per RLS nur für Admins lesbar ist und
-// das SMTP-Passwort niemals ins Frontend-Bundle darf.
+// das SMTP-Passwort/der Brevo-API-Key niemals ins Frontend-Bundle dürfen.
 //
-// Nutzt einen selbst geschriebenen SMTP-Client (_shared/smtp.ts) statt einer
-// fertigen Library: die naheliegende Bibliothek "denomailer" brachte die
-// Edge-Function reproduzierbar zum Absturz, sobald zuvor schon ein fetch()
-// lief (z. B. für den Auth-Check oder das Lesen von email_settings) – siehe
-// Kommentar in smtp.ts für die Details der Verifikation. Ist ein
+// SMTP läuft über einen selbst geschriebenen Client (_shared/smtp.ts) statt
+// einer fertigen Library: die naheliegende Bibliothek "denomailer" brachte
+// die Edge-Function reproduzierbar zum Absturz, sobald zuvor schon ein
+// fetch() lief (z. B. für den Auth-Check oder das Lesen von email_settings)
+// – siehe Kommentar in smtp.ts für die Details der Verifikation. Ist ein
 // Gesendet-Ordner konfiguriert (_shared/imap.ts), landet danach zusätzlich
 // eine Kopie dort.
 
 import { createClient } from 'jsr:@supabase/supabase-js@2'
-import { sendSmtpMail, SmtpError } from '../_shared/smtp.ts'
+import { sendEmail, EmailSendError } from '../_shared/email.ts'
 import { archiveToSentFolder } from '../_shared/mailArchive.ts'
 import { logAppError } from '../_shared/logging.ts'
 import { corsHeadersForOrigin } from '../_shared/cors.ts'
@@ -112,33 +113,25 @@ async function handle(
 
   let rawMessage: string
   try {
-    const sent = await sendSmtpMail(
-      {
-        hostname: settings.smtp_host,
-        port: settings.smtp_port,
-        encryption: settings.smtp_encryption,
-        username: settings.smtp_username,
-        password: settings.smtp_password,
-      },
-      {
-        fromEmail: settings.sender_email,
-        fromName: settings.sender_name,
-        to,
-        subject,
-        html,
-      },
-    )
+    const sent = await sendEmail(settings, {
+      fromEmail: settings.sender_email,
+      fromName: settings.sender_name,
+      to,
+      subject,
+      html,
+    })
     rawMessage = sent.raw
   } catch (err) {
-    const message = err instanceof SmtpError ? err.message : err instanceof Error ? err.message : String(err)
+    const message = err instanceof EmailSendError ? err.message : err instanceof Error ? err.message : String(err)
     await logAppError(supabaseUrl, serviceRoleKey, 'send-email', message, {
       to,
       subject,
+      provider: settings.provider,
       smtp_host: settings.smtp_host,
       smtp_port: settings.smtp_port,
       smtp_encryption: settings.smtp_encryption,
     })
-    return jsonResponse({ error: `SMTP-Fehler: ${message}` }, 502)
+    return jsonResponse({ error: `Versand-Fehler: ${message}` }, 502)
   }
 
   await archiveToSentFolder(supabaseUrl, serviceRoleKey, 'send-email', settings, rawMessage, { to })

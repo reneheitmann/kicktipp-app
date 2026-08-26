@@ -11,7 +11,7 @@
 // das ist der ganze Zweck dieser Function.
 
 import { createClient } from 'jsr:@supabase/supabase-js@2'
-import { sendSmtpMail, SmtpError } from '../_shared/smtp.ts'
+import { sendEmail, EmailSendError } from '../_shared/email.ts'
 import { archiveToSentFolder } from '../_shared/mailArchive.ts'
 import { logAppError } from '../_shared/logging.ts'
 import { corsHeadersForOrigin } from '../_shared/cors.ts'
@@ -119,31 +119,22 @@ async function handle(
 
   let rawMessage: string
   try {
-    const sent = await sendSmtpMail(
-      {
-        hostname: settings.smtp_host,
-        port: settings.smtp_port,
-        encryption: settings.smtp_encryption,
-        username: settings.smtp_username,
-        password: settings.smtp_password,
-      },
-      {
-        fromEmail: settings.sender_email,
-        fromName: settings.sender_name,
-        to: settings.sender_email,
-        replyTo: senderEmail || undefined,
-        subject: `Kontaktanfrage über ${appName}: ${subject}`,
-        html: [
-          `<p>Nachricht von <strong>${escapeHtml(senderName)}</strong>` +
-            (senderEmail ? ` (${escapeHtml(senderEmail)})` : '') +
-            ':</p>',
-          `<p>${escapeHtml(message).replace(/\n/g, '<br>')}</p>`,
-        ].join('\n'),
-      },
-    )
+    const sent = await sendEmail(settings, {
+      fromEmail: settings.sender_email,
+      fromName: settings.sender_name,
+      to: settings.sender_email,
+      replyTo: senderEmail || undefined,
+      subject: `Kontaktanfrage über ${appName}: ${subject}`,
+      html: [
+        `<p>Nachricht von <strong>${escapeHtml(senderName)}</strong>` +
+          (senderEmail ? ` (${escapeHtml(senderEmail)})` : '') +
+          ':</p>',
+        `<p>${escapeHtml(message).replace(/\n/g, '<br>')}</p>`,
+      ].join('\n'),
+    })
     rawMessage = sent.raw
   } catch (err) {
-    const errMessage = err instanceof SmtpError ? err.message : err instanceof Error ? err.message : String(err)
+    const errMessage = err instanceof EmailSendError ? err.message : err instanceof Error ? err.message : String(err)
     await logAppError(supabaseUrl, serviceRoleKey, 'send-contact-message', errMessage, { senderEmail })
     return jsonResponse({ error: 'Nachricht konnte nicht verschickt werden.' }, 500)
   }

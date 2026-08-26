@@ -336,14 +336,17 @@ export type AppLog = {
 }
 
 export type SmtpEncryption = 'none' | 'starttls' | 'tls'
+export type EmailProvider = 'smtp' | 'brevo'
 
 export type EmailSettings = {
   id: string
-  smtp_host: string
-  smtp_port: number
+  provider: EmailProvider
+  smtp_host: string | null
+  smtp_port: number | null
   smtp_username: string | null
   smtp_password: string | null
   smtp_encryption: SmtpEncryption
+  brevo_api_key: string | null
   sender_email: string
   sender_name: string | null
   imap_host: string | null
@@ -353,10 +356,14 @@ export type EmailSettings = {
   updated_by: string | null
 }
 
-// Für die Anzeige im Admin-Formular: das SMTP-Passwort wird beim Lesen nie ans
-// Frontend übertragen (siehe emailSettingsApi.ts) – ein leeres Passwortfeld beim
-// Speichern bedeutet "unverändert lassen", nicht "Passwort löschen".
-export type EmailSettingsSafe = Omit<EmailSettings, 'smtp_password'> & { has_password: boolean }
+// Für die Anzeige im Admin-Formular: das SMTP-Passwort und der Brevo-API-Key
+// werden beim Lesen nie ans Frontend übertragen (siehe emailSettingsApi.ts) –
+// ein leeres Passwort-/Key-Feld beim Speichern bedeutet "unverändert lassen",
+// nicht "löschen".
+export type EmailSettingsSafe = Omit<EmailSettings, 'smtp_password' | 'brevo_api_key'> & {
+  has_password: boolean
+  has_brevo_api_key: boolean
+}
 
 // Push-Benachrichtigungs-Tokens der mobile App, siehe
 // supabase/migrations/0069_push_tokens.sql, docs/mobile-app.md.
@@ -660,11 +667,13 @@ export interface Database {
         Row: EmailSettings
         Insert: {
           id?: string
-          smtp_host: string
-          smtp_port: number
+          provider?: EmailProvider
+          smtp_host?: string | null
+          smtp_port?: number | null
           smtp_username?: string | null
           smtp_password?: string | null
           smtp_encryption?: SmtpEncryption
+          brevo_api_key?: string | null
           sender_email: string
           sender_name?: string | null
           imap_host?: string | null
@@ -675,11 +684,13 @@ export interface Database {
         }
         Update: {
           id?: string
-          smtp_host?: string
-          smtp_port?: number
+          provider?: EmailProvider
+          smtp_host?: string | null
+          smtp_port?: number | null
           smtp_username?: string | null
           smtp_password?: string | null
           smtp_encryption?: SmtpEncryption
+          brevo_api_key?: string | null
           sender_email?: string
           sender_name?: string | null
           imap_host?: string | null
