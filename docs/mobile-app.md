@@ -237,7 +237,7 @@ eine Version in TestFlight/Play Internal Testing geht):
 | App-Neustart: zuletzt aktive Instanz bleibt aktiv (kein erneuter Login nötig) | [x] | [ ] |
 | Instanz entfernen (inkl. Zugangsdaten-Löschung, siehe Sicherheitsarchitektur) | [x] | [ ] |
 | Safe-Area (Notch/Home-Indicator bzw. Gestennavigation) sieht korrekt aus | [x] | [ ] |
-| Zurück-Taste/-Geste navigiert statt die App zu schließen | [ ] | [ ] |
+| Zurück-Taste/-Geste navigiert statt die App zu schließen | [x] | [ ] |
 | VoiceOver/TalkBack: Instanz-Wähler + Hinzufügen-Dialog bedienbar (Phase 8) | [x] | [ ] |
 | Push-Erklärung erscheint vor dem System-Dialog, nicht danach | [x] | [ ] |
 | Push bei neuer Kontaktnachricht kommt an, Tap navigiert zu `/kontakt` | [x] | [ ] |
@@ -274,5 +274,5 @@ Play Console, Firebase Console, Supabase).
 - [x] TestFlight- bzw. Play-Internal-Testing-Track mit dir selbst als erstem Tester einrichten, bevor ein öffentliches Review beantragt wird
 - [x] Firebase-Projekt für FCM anlegen, Server-Key als neues Supabase-Secret für `send-push-notification` hinterlegen
 - [x] `ALLOWED_ORIGINS` (Supabase Edge-Function-Secret) um die Capacitor-WebView-Origin (`https://localhost`) ergänzen, siehe Abschnitt "Push-Benachrichtigungen (Backend)" oben – sonst blockt CORS jeden Edge-Function-Aufruf aus der mobile App
-- [x] Echten Restore-/Manuell-Test gemäß der Testmatrix oben auf einem physischen iOS-Gerät durchspielen, inkl. VoiceOver-Spotcheck (Zurück-Geste bewusst übersprungen, siehe Testmatrix)
+- [x] Echten Restore-/Manuell-Test gemäß der Testmatrix oben auf einem physischen iOS-Gerät durchspielen, inkl. VoiceOver-Spotcheck
 - [ ] Denselben Test auf einem Android-Gerät/Emulator durchspielen, inkl. TalkBack-Spotcheck und der Zurück-Tasten-Navigation
