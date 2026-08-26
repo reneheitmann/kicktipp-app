@@ -1,6 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { App as CapacitorApp } from '@capacitor/app'
 import { Button } from '../components/ui/Button'
 import { useAppBranding } from '../features/app-settings/useAppBranding'
+import { useMobileInstance } from '../mobile/MobileInstanceContext'
 
 const buildDateFormatter = new Intl.DateTimeFormat('de-DE', {
   dateStyle: 'medium',
@@ -62,19 +64,34 @@ function getDeviceInfo(): DeviceInfo {
 
 export function AboutPage() {
   const { appName, iconUrl } = useAppBranding()
+  const mobileInstance = useMobileInstance()
   const commitSha = import.meta.env.VITE_APP_COMMIT_SHA
   const buildDate = import.meta.env.VITE_APP_BUILD_DATE
   const rawChannel = import.meta.env.VITE_APP_CHANNEL
-  const channel = rawChannel === 'beta' ? 'Beta' : rawChannel === 'dev' ? 'Dev' : 'Produktiv'
+  const channel =
+    rawChannel === 'beta' ? 'Beta' : rawChannel === 'dev' ? 'Dev' : rawChannel === 'mobile' ? 'Mobile' : 'Produktiv'
   const changelog = parseChangelog(import.meta.env.VITE_APP_CHANGELOG)
   const [changelogOpen, setChangelogOpen] = useState(true)
   const [device] = useState(getDeviceInfo)
   const [copied, setCopied] = useState(false)
+  // Store-Version (App Store Connect/Play Console) läuft unabhängig von der
+  // Web-Bundle-Version in package.json (siehe docs/mobile-app.md,
+  // "Versionierung") – nur @capacitor/app kennt die tatsächlich installierte
+  // native Version/Build-Nummer. Nur auf mobile abgefragt (mobileInstance !=
+  // null), auf Web wirft getInfo() ("Not implemented on web").
+  const [nativeVersion, setNativeVersion] = useState<string | null>(null)
+  useEffect(() => {
+    if (!mobileInstance) return
+    CapacitorApp.getInfo()
+      .then((info) => setNativeVersion(`${info.version} (${info.build})`))
+      .catch(() => {})
+  }, [mobileInstance])
+  const displayVersion = nativeVersion ?? __APP_VERSION__
 
   async function handleCopy() {
     const text = [
       `${appName} – Diagnose-Info`,
-      `Version: ${__APP_VERSION__} (${channel})`,
+      `Version: ${displayVersion} (${channel})`,
       `Build: ${commitSha || 'lokal'} (${formatBuildDate(buildDate)})`,
       `Browser: ${device.userAgent}`,
       `Plattform: ${device.platform}`,
@@ -111,7 +128,7 @@ export function AboutPage() {
         <dl className="space-y-2 text-sm">
           <div className="flex items-center justify-between gap-3">
             <dt className="text-slate-500">Version</dt>
-            <dd className="font-medium text-slate-900">{__APP_VERSION__}</dd>
+            <dd className="font-medium text-slate-900">{displayVersion}</dd>
           </div>
           <div className="flex items-center justify-between gap-3">
             <dt className="text-slate-500">Kanal</dt>

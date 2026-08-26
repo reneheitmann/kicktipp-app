@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "build:instance-info": "node scripts/generate-instance-info.mjs dist",
-    "build:mobile": "tsc -b && VITE_APP_CHANNEL=mobile vite build --outDir dist-mobile",
+    "build:mobile": "node scripts/build-mobile.mjs",
     "cap": "cd mobile && npx cap",
     "lint": "oxlint",
     "preview": "vite preview",
