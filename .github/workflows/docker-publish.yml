@@ -8,6 +8,10 @@ name: Docker Image bauen und veröffentlichen
 # src/App.tsx). Tags: immer :latest und :<sha>, unabhängig davon, welcher
 # Branch den Build ausgelöst hat.
 #
+# Der eigenständige Dev-Kanal (eigenes Supabase-Projekt) läuft NICHT als
+# dritte Route in diesem Image, sondern als komplett unabhängiges,
+# separates Image/Deployment - siehe deploy-dev.yml/Dockerfile.dev.
+#
 # Dafür werden main UND beta in JEDEM Lauf unabhängig voneinander in eigene
 # Unterverzeichnisse ausgecheckt und einzeln gebaut (build-main/build-beta) –
 # der jeweils NICHT gepushte Branch wird dabei einfach in seinem aktuellen

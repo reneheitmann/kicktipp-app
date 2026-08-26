@@ -38,7 +38,9 @@ export default defineConfig({
   // relativ zu diesem Pfad aufgelöst werden. Vite rewritet dafür sowohl
   // index.html-Referenzen (z. B. <link href="/icon.png">) als auch alle
   // Bundle-Assets automatisch und setzt import.meta.env.BASE_URL passend,
-  // das App.tsx wiederum als React-Router-basename verwendet.
+  // das App.tsx wiederum als React-Router-basename verwendet. Dev (siehe
+  // Dockerfile.dev) läuft dagegen als GANZ EIGENER Container an dessen
+  // eigener Wurzel "/" - kein Unterpfad, daher hier kein eigener Fall.
   //
   // mobile (Capacitor, siehe mobile/) serviert das gebündelte App-Paket
   // intern über einen lokalen Webserver unter capacitor://localhost bzw.

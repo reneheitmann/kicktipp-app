@@ -34,7 +34,20 @@ export function AppShell() {
   const [navMenuOpen, setNavMenuOpen] = useState(false)
 
   return (
-    <div className="flex h-full flex-col md:flex-row">
+    <div
+      className="flex h-full flex-col md:flex-row"
+      // Notch/Dynamic-Island-Schutz für BEIDE Seiten hier zentral statt nur
+      // im mobilen Header (der ist ab der md-Breakpoint-Breite "md:hidden"
+      // - ein iPhone im Querformat ist bei so gut wie jedem aktuellen Modell
+      // BREITER als der md-Breakpoint, das Desktop-Sidebar-Layout greift
+      // dann ohne jede eigene Notch-Behandlung). env(safe-area-inset-left/
+      // -right) ist auf Geräten ohne Notch/Dynamic-Island (inkl. jedem
+      // normalen Desktop-Browser) 0 - unkritisch, hier immer zu setzen.
+      style={{
+        paddingLeft: 'env(safe-area-inset-left, 0px)',
+        paddingRight: 'env(safe-area-inset-right, 0px)',
+      }}
+    >
       {/* Tastatur-Sprungmarke: ohne sie muss ein Tastatur-/Screenreader-Nutzer
           bei jedem Seitenaufruf erst durch die komplette Sidebar/Kontoleiste
           tabben, bevor der eigentliche Seiteninhalt erreichbar ist. */}
@@ -48,7 +61,7 @@ export function AppShell() {
       <aside className="hidden w-60 shrink-0 flex-col overflow-y-auto border-r border-slate-200 bg-white p-4 md:flex">
         <div className="mb-6 flex items-center gap-2 px-2 text-lg font-semibold text-slate-900">
           {appName}
-          <BetaBadge />
+          <ChannelBadge />
         </div>
         <nav className="flex flex-1 flex-col gap-1">
           <NavLinks items={items} variant="desktop" />
@@ -88,7 +101,7 @@ export function AppShell() {
             </button>
             <span className="flex min-w-0 items-center gap-2">
               <span className="truncate text-base font-semibold text-slate-900">{appName}</span>
-              <BetaBadge />
+              <ChannelBadge />
             </span>
           </div>
           <span className="relative shrink-0">
@@ -186,15 +199,21 @@ export function AppShell() {
           </Modal>
         )}
 
-        {/* paddingBottom für iOS-Home-Indicator/Android-Gestennavigation –
-            siehe Kommentar bei "safe-area-inset-top" oben, gleiches Prinzip. */}
         <main
           id="main-content"
           tabIndex={-1}
           className="min-w-0 flex-1 overflow-x-hidden overflow-y-auto outline-none"
-          style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
         >
           <Outlet />
+          {/* Echtes Spacer-Element statt padding-bottom auf <main> selbst
+              (iOS-Home-Indicator/Android-Gestennavigation): WebKit hat einen
+              bekannten Bug, bei dem padding-bottom auf einem scrollenden
+              Flex-Kind (overflow-y-auto + flex-1) am Ende nicht zuverlässig
+              sichtbaren Platz reserviert - beobachtet als Home-Indicator-
+              Linie, die über dem letzten Inhalt liegt statt darüber, in
+              Hoch- UND Querformat. Ein echtes Element im normalen
+              Dokumentfluss (statt Padding) umgeht das zuverlässig. */}
+          <div style={{ height: 'env(safe-area-inset-bottom, 0px)' }} aria-hidden="true" />
         </main>
       </div>
     </div>
@@ -288,17 +307,30 @@ function getInitials(name?: string): string {
   return (first + last).toUpperCase()
 }
 
-/** Zeigt "BETA" neben dem App-Namen, wenn dieser Build aus dem beta-Branch
- * stammt (VITE_APP_CHANNEL per Docker-Build-Arg gesetzt, siehe
- * docker-publish.yml) – damit auf einen Blick erkennbar ist, in welcher
- * Umgebung man sich befindet, ohne extra auf die "Über"-Seite zu wechseln. */
-function BetaBadge() {
-  if (import.meta.env.VITE_APP_CHANNEL !== 'beta') return null
-  return (
-    <span className="shrink-0 rounded bg-violet-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-violet-800">
-      Beta
-    </span>
-  )
+/** Zeigt "BETA"/"DEV" neben dem App-Namen, wenn dieser Build aus dem
+ * jeweiligen Branch/Kanal stammt (VITE_APP_CHANNEL per Docker-Build-Arg
+ * gesetzt, siehe docker-publish.yml) – damit auf einen Blick erkennbar
+ * ist, in welcher Umgebung man sich befindet, ohne extra auf die
+ * "Über"-Seite zu wechseln. Eigene Farbe für Dev (zeigt auf ein komplett
+ * anderes Supabase-Projekt als main/beta, siehe vite.config.ts) statt
+ * derselben wie Beta, um eine Verwechslung auszuschließen. */
+function ChannelBadge() {
+  const channel = import.meta.env.VITE_APP_CHANNEL
+  if (channel === 'beta') {
+    return (
+      <span className="shrink-0 rounded bg-violet-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-violet-800">
+        Beta
+      </span>
+    )
+  }
+  if (channel === 'dev') {
+    return (
+      <span className="shrink-0 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-800">
+        Dev
+      </span>
+    )
+  }
+  return null
 }
 
 /** Markierung für "agiert aktuell als Spieler". `title` bedient Desktop-Hover,

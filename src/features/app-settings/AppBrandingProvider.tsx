@@ -22,8 +22,9 @@ function darkenHexColor(hex: string, amount = 0.12): string {
 }
 
 function applyBranding(settings: Pick<AppSettings, 'app_name' | 'icon_url' | 'primary_color'>) {
-  const isBeta = import.meta.env.VITE_APP_CHANNEL === 'beta'
-  document.title = isBeta ? `${settings.app_name} (Beta)` : settings.app_name
+  const channel = import.meta.env.VITE_APP_CHANNEL
+  const suffix = channel === 'beta' ? ' (Beta)' : channel === 'dev' ? ' (Dev)' : ''
+  document.title = `${settings.app_name}${suffix}`
 
   const iconHref = settings.icon_url ?? '/icon.png'
   document.querySelectorAll('link[rel="icon"], link[rel="apple-touch-icon"]').forEach((el) => {

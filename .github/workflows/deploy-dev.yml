@@ -1,0 +1,105 @@
+name: Dev-Image bauen und veröffentlichen
+
+# Baut bei jedem Push nach beta ein eigenständiges Docker-Image für den
+# Dev-Kanal (eigenständiges "Kicktipp Dev"-Supabase-Projekt, siehe
+# vite.config.ts/Dockerfile.dev) – komplett getrennt vom main/beta-Image aus
+# docker-publish.yml, für einen ebenso komplett getrennten zweiten Container
+# (auf Nutzerwunsch: sauber isoliert, kein Bezug zu main/beta, z. B. für eine
+# zweite Spielrunde beim Testen des mobilen Instanz-Wählers).
+#
+# Läuft auf beta statt main, weil die "Kicktipp Dev"-Datenbank die aktive
+# Entwicklung trackt (neue Migrationen laufen dort immer zuerst) – deutlich
+# einfacher als docker-publish.yml, da hier nur EIN Branch/EIN Build/EIN
+# Image entsteht, kein main+beta-Nebeneinander mit Versions-Bump/Changelog.
+#
+# Tag ist immer :dev (+ :dev-<sha> zur Nachverfolgung) – bewusst im eigenen
+# Namensraum, nicht :latest/:<sha> wie das main/beta-Image, damit sich beide
+# Images in derselben GHCR-Registry nicht überschreiben.
+
+on:
+  push:
+    branches: [beta]
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Auschecken
+        uses: actions/checkout@v4
+
+      - name: Node einrichten
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Abhängigkeiten installieren
+        run: npm ci
+
+      - name: Lint prüfen
+        run: npm run lint
+
+      - name: Tests ausführen
+        run: npm run test
+
+      - name: Bei GitHub Container Registry anmelden
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Docker Buildx einrichten
+        uses: docker/setup-buildx-action@v3
+
+      - name: Dev-Bundle bauen
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL_DEV }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY_DEV }}
+          VITE_APP_COMMIT_SHA: ${{ github.sha }}
+          VITE_APP_BUILD_DATE: ${{ github.event.head_commit.timestamp }}
+          VITE_APP_CHANNEL: dev
+        # --outDir dist-standalone-dev statt des Defaults "dist": .dockerignore
+        # (repo-weit, auch vom main/beta-Dockerfile genutzt) schließt "dist"
+        # bewusst aus dem Docker-Build-Kontext aus (schützt vor einem
+        # versehentlich mitgebauten lokalen Dev-Artefakt) - träfe hier
+        # genauso zu und würde COPY im Dockerfile.dev leer laufen lassen.
+        run: npm run build -- --outDir dist-standalone-dev
+
+      - name: instance-info.json erzeugen
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL_DEV }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY_DEV }}
+        run: node scripts/generate-instance-info.mjs dist-standalone-dev
+
+      - name: Image bauen und veröffentlichen
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.dev
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:dev
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:dev-${{ github.sha }}
+
+      # Zunächst bewusst nicht blockierend (continue-on-error + exit-code 0):
+      # Findings sollen im Log sichtbar sein, aber bestehende, noch
+      # ungefixte Basis-Image-CVEs nicht sofort jeden Deploy stoppen –
+      # gleiches Muster wie im main/beta-Workflow (docker-publish.yml).
+      - name: Container-Image scannen (Trivy)
+        uses: aquasecurity/trivy-action@v0.36.0
+        continue-on-error: true
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:dev-${{ github.sha }}
+          format: table
+          severity: HIGH,CRITICAL
+          exit-code: "0"

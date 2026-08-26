@@ -226,6 +226,15 @@ Klarnamen und E-Mail-Adressen werden dabei automatisch durch synthetische
 Platzhalter ersetzt (`supabase/anonymize_dev_data.sql`, Zweckbindungsgrundsatz
 DSGVO) – IDs/Verknüpfungen zwischen den Tabellen bleiben dabei erhalten.
 
+Zusätzlich gibt es einen **komplett eigenständigen dritten Container** nur
+für Dev (`.github/workflows/deploy-dev.yml`, `Dockerfile.dev`,
+`nginx.dev.conf.template`, Image-Tag `:dev`) – bewusst kein Bezug zu
+main/beta, weder im Image noch im Netzwerk-Traffic (eigenes Backend, eigene
+Domain/IP empfohlen). Baut bei jedem Push nach `beta` (die Dev-Datenbank
+trackt die aktive Entwicklung), unabhängig vom main/beta-Workflow. Praktisch
+z. B. für eine zweite, unabhängige Spielrunde zum Testen des mobilen
+Instanz-Wechsels.
+
 Bei jedem Push nach `main` oder `beta` baut `.github/workflows/docker-publish.yml`
 beide Branches unabhängig voneinander und veröffentlicht das gemeinsame Image
 zu GHCR; ein Watchtower-Container auf dem Ziel-Unraid-Host zieht neue Images

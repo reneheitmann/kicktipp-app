@@ -9,7 +9,9 @@
 # dist-prod/dist-beta in den Build-Kontext – ein Container liefert dadurch
 # beide Versionen gleichzeitig aus (Prod unter /, Beta unter /beta/, siehe
 # nginx.conf.template), statt zwei komplett getrennte Container/Images zu
-# brauchen.
+# brauchen. Dev läuft bewusst als GANZ EIGENER, unabhängiger Container mit
+# eigenem Image (siehe Dockerfile.dev) statt als dritte Route hier - siehe
+# dortiger Kommentar für die Begründung.
 
 FROM nginx:alpine AS runtime
 
