@@ -227,14 +227,14 @@ eine Version in TestFlight/Play Internal Testing geht):
 
 | Schritt | iOS (physisches Gerät) | Android (Gerät/Emulator) |
 |---|---|---|
-| App-Start, Instanz-Wähler erscheint | [x] | [ ] |
-| Instanz hinzufügen: `gewinnauswertung.magicprus.de` | [x] | [ ] |
-| Gefundene Instanz (Name + Adresse, ohne Backend-URL) wird vor dem Login zur Bestätigung angezeigt | [x] | [ ] |
-| Login gegen diese Instanz | [x] | [ ] |
-| Zweite, andere Instanz hinzufügen: "Kicktipp Dev"-Projekt | [x] | [ ] |
-| Instanz wechseln (Profil → "Instanz wechseln") | [x] | [ ] |
-| Login gegen die zweite Instanz | [x] | [ ] |
-| App-Neustart: zuletzt aktive Instanz bleibt aktiv (kein erneuter Login nötig) | [x] | [ ] |
+| App-Start, Instanz-Wähler erscheint | [x] | [x] |
+| Instanz hinzufügen: `gewinnauswertung.magicprus.de` | [x] | [x] |
+| Gefundene Instanz (Name + Adresse, ohne Backend-URL) wird vor dem Login zur Bestätigung angezeigt | [x] | [x] |
+| Login gegen diese Instanz | [x] | [x] |
+| Zweite, andere Instanz hinzufügen: "Kicktipp Dev"-Projekt | [x] | [x] |
+| Instanz wechseln (Profil → "Instanz wechseln") | [x] | [x] |
+| Login gegen die zweite Instanz | [x] | [x] |
+| App-Neustart: zuletzt aktive Instanz bleibt aktiv (kein erneuter Login nötig) | [x] | [x] |
 | Instanz entfernen (inkl. Zugangsdaten-Löschung, siehe Sicherheitsarchitektur) | [x] | [ ] |
 | Safe-Area (Notch/Home-Indicator bzw. Gestennavigation) sieht korrekt aus | [x] | [ ] |
 | Zurück-Taste/-Geste navigiert statt die App zu schließen | [x] | [ ] |
