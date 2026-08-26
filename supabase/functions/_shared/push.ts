@@ -43,18 +43,4 @@ export async function sendPushToProfiles(
       failures: failures.map((f) => f.error),
     })
   }
-
-  // ponytail: temporäres Diagnose-Log für die volle FCM-Antwort (auch bei
-  // Erfolg) - hilft zu unterscheiden, ob FCM die Nachricht wirklich zur
-  // Zustellung angenommen hat oder ob der Fehler erst zwischen FCM und
-  // APNs passiert (dort sichtbar wir nicht). Kandidat zum Entfernen,
-  // sobald der aktuelle Zustellungs-Fall geklärt ist.
-  await logAppError(
-    supabaseUrl,
-    serviceRoleKey,
-    source,
-    'Push-Zustellung Diagnose',
-    { results: results.map((r) => ({ ok: r.ok, invalidToken: r.invalidToken, responseBody: r.responseBody })) },
-    'warn',
-  )
 }
