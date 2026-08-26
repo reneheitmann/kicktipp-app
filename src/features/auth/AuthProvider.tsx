@@ -52,6 +52,19 @@ const DEFAULT_MAX_SESSION_HOURS = 8
 const INIT_SESSION_TIMEOUT_MS = 5_000
 const STALL_RELOAD_FLAG = 'kicktipp_auth_stall_reload_attempted'
 
+// supabase-js' signOut() räumt den lokalen Zustand (Session/Storage) erst
+// NACH einem awaited Netzwerk-Aufruf gegen /auth/v1/logout auf – auch mit
+// scope: 'local' (das bestimmt nur, was serverseitig widerrufen wird, nicht
+// ob der Client überhaupt eine Anfrage stellt). Dieser Aufruf hat in
+// auth-js selbst kein Timeout. Ohne die Race unten würde ein
+// hängendes/unerreichbares Auth-Backend genau die Recovery-Pfade, die die
+// App aus einem dauerhaften "Lade..." befreien sollen, selbst dauerhaft
+// hängen lassen (beobachtet beim Wechsel auf eine zweite Spielrunde mit
+// kurzzeitig gestörter Verbindung). Der lokale State wird deshalb unten an
+// jeder Stelle zusätzlich explizit gesetzt, statt sich allein auf das
+// SIGNED_OUT-Event von signOut() zu verlassen.
+const SIGN_OUT_TIMEOUT_MS = 3_000
+
 // supabase-js meldet einen Recovery-Link-Klick per PASSWORD_RECOVERY-Event
 // erst NACH einem awaited Netzwerk-Roundtrip (Token-Validierung gegen
 // /auth/v1/user, siehe _getSessionFromURL() in GoTrueClient), zusätzlich per
@@ -154,7 +167,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } catch (err) {
           console.error('Profil/Rechte konnten nicht geladen werden – melde lokal ab', err)
           if (!isMounted) return
-          await supabase.auth.signOut({ scope: 'local' }).catch((signOutErr) => console.error('Lokales Abmelden fehlgeschlagen', signOutErr))
+          await Promise.race([supabase.auth.signOut({ scope: 'local' }), timeout(SIGN_OUT_TIMEOUT_MS)]).catch(
+            (signOutErr) => console.error('Lokales Abmelden fehlgeschlagen', signOutErr),
+          )
+          if (!isMounted) return
+          setSession(null)
+          setProfile(null)
+          setPermissions(new Set())
+          loadedUserIdRef.current = null
         }
       })().finally(() => {
         loadingPromiseRef.current = null
@@ -202,12 +222,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // `setLoading(false)` würde ProtectedRoute mit diesem inkonsistenten
           // Zwischenstand rendern lassen – can() liefert dann für jedes Recht
           // fälschlich false, was auf /unauthorized statt /login führt, obwohl
-          // eine gültige Sitzung bestand. Stattdessen lokal abmelden (gleiches
-          // Muster wie checkExpiry() oben) – das räumt Session/Profil/Rechte
-          // über den bestehenden onAuthStateChange(SIGNED_OUT)-Pfad sauber auf
-          // und landet garantiert auf der Login-Seite statt einer falschen
-          // Zugriffsverweigerung.
-          await supabase.auth.signOut({ scope: 'local' }).catch((err) => console.error('Lokales Abmelden fehlgeschlagen', err))
+          // eine gültige Sitzung bestand. Stattdessen lokal abmelden und landet
+          // garantiert auf der Login-Seite statt einer falschen
+          // Zugriffsverweigerung. signOut() selbst mit Timeout geraced und der
+          // lokale State direkt danach zusätzlich explizit geräumt (siehe
+          // SIGN_OUT_TIMEOUT_MS oben) – ein hängendes Auth-Backend darf gerade
+          // diesen letzten Ausweg nicht ebenfalls blockieren.
+          await Promise.race([supabase.auth.signOut({ scope: 'local' }), timeout(SIGN_OUT_TIMEOUT_MS)]).catch((err) =>
+            console.error('Lokales Abmelden fehlgeschlagen', err),
+          )
+          if (isMounted) {
+            setSession(null)
+            setProfile(null)
+            setPermissions(new Set())
+            loadedUserIdRef.current = null
+          }
         }
         if (isMounted) setLoading(false)
       })
