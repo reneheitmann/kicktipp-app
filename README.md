@@ -50,13 +50,15 @@ diese App bildet ausschließlich die Verwaltung/Abrechnung drumherum ab.
   Datenschutz & Impressum), kein Code-Deployment für Adressänderungen nötig
 - **Feingranulare Berechtigungen** – rollenbasierte Rechte pro Seite/Aktion,
   unabhängig von den drei Basisrollen konfigurierbar
-- **E-Mail-Versand** – Einzel-/Massen-Mails an Spieler mit Vorlagen, eigener
-  SMTP-Client (kein Drittanbieter-Mailversand); optional legt ein eigener
-  IMAP-Client zusätzlich eine Kopie im admin-konfigurierten Gesendet-Ordner
-  des Postfachs ab (reiner SMTP-Versand macht das sonst nicht von selbst).
-  Passwort-Reset- und Benutzer-Neuanlage-Einladungsmail nutzen eigene,
-  admin-editierbare System-Vorlagen (genau eine je Anlass, über dieselbe
-  Vorlagenmaske wie die Massenmail-Vorlagen)
+- **E-Mail-Versand** – Einzel-/Massen-Mails an Spieler mit Vorlagen, zwei
+  admin-umschaltbare Versandarten (eigener SMTP-Client ohne
+  Drittanbieter-Mailversand, oder wahlweise Brevo als API-basierter
+  Versand); bei SMTP legt ein eigener IMAP-Client optional zusätzlich eine
+  Kopie im admin-konfigurierten Gesendet-Ordner des Postfachs ab (reiner
+  SMTP-Versand macht das sonst nicht von selbst). Passwort-Reset- und
+  Benutzer-Neuanlage-Einladungsmail nutzen eigene, admin-editierbare
+  System-Vorlagen (genau eine je Anlass, über dieselbe Vorlagenmaske wie
+  die Massenmail-Vorlagen)
 - **Kontakt** – Formular für jeden User, verschickt eine Nachricht per E-Mail
   an den Spielleiter (Antworten geht direkt an den Absender)
 - **Hilfe** – erklärt für jeden User kurz, was die App macht, und verlinkt auf
@@ -69,6 +71,13 @@ diese App bildet ausschließlich die Verwaltung/Abrechnung drumherum ab.
 - **Logs & Diagnose** – client- und serverseitige Fehlerprotokollierung, einsehbar
   im Admin-Bereich
 - **Excel-Export** für Auswertungen
+- **Native iOS-/Android-App** (Capacitor, `mobile/`) – derselbe Web-Code wie
+  oben, zusätzlich fähig, mehrere unabhängige Spielrunden (je eine eigene
+  Domain + eigenes Supabase-Projekt) auf einem Gerät zu speichern und
+  jederzeit zu wechseln (antippbar über den App-Titel im Header bzw. auf
+  dem Login-Screen), inkl. Push-Benachrichtigungen (Firebase Cloud
+  Messaging) und verschlüsselter lokaler Zugangsdaten-Ablage (iOS Keychain
+  / Android Keystore). Details: [`docs/mobile-app.md`](docs/mobile-app.md).
 
 ## Tech-Stack
 
@@ -77,6 +86,8 @@ diese App bildet ausschließlich die Verwaltung/Abrechnung drumherum ab.
 - Recharts (Diagramme), ExcelJS (Export)
 - Supabase (Postgres + Auth + Storage + Edge Functions), abgesichert über
   RLS-Policies auf jeder Tabelle
+- Capacitor (native iOS-/Android-App aus demselben Web-Code, siehe
+  [`docs/mobile-app.md`](docs/mobile-app.md))
 - Deployment: Docker (nginx) auf Unraid, Auto-Update per Watchtower
 
 ## Lokale Entwicklung
@@ -129,14 +140,15 @@ Läuft außerdem automatisch in CI bei jeder Änderung unter `supabase/**`
 Alle Edge Functions (`admin-create-user`, `admin-update-user`,
 `admin-delete-user`, `update-own-password`, `update-own-email`,
 `confirm-email-change`, `send-email`, `send-bulk-email`, `send-password-reset`,
-`send-contact-message`) nutzen `SUPABASE_URL` und `SUPABASE_SERVICE_ROLE_KEY`,
+`send-contact-message`, `send-push-notification`) nutzen `SUPABASE_URL` und
+`SUPABASE_SERVICE_ROLE_KEY`,
 die Supabase Edge Functions automatisch zur Verfügung stehen. Zusätzlich
 braucht das Projekt das Secret `ALLOWED_ORIGINS` (kommagetrennte Liste
 erlaubter Origins für CORS und Redirect-Allowlist, siehe
 `supabase/functions/_shared/cors.ts`), gesetzt per
 `supabase secrets set ALLOWED_ORIGINS=... --project-ref <project-ref>`.
-SMTP-Zugangsdaten kommen dagegen nicht aus Secrets, sondern werden in der
-Datenbank verwaltet (Admin-Bereich > E-Mail-Einstellungen).
+SMTP-Zugangsdaten bzw. der Brevo-API-Key kommen dagegen nicht aus Secrets,
+sondern werden in der Datenbank verwaltet (Admin-Bereich > E-Mail-Einstellungen).
 
 ## Projektstruktur
 
@@ -170,8 +182,14 @@ supabase/
   migrations/              SQL-Migrationen (fortlaufend nummeriert)
   functions/                Edge Functions
   bootstrap_first_admin.sql
+mobile/                    Capacitor-Projekt (iOS/Android), teilt sich src/
+                            mit der Web-Version, siehe docs/mobile-app.md
 docs/
   unraid-deployment.md     Deployment-Anleitung für Unraid/Docker
+  mobile-app.md            Architektur/Sicherheitsmodell der nativen App
+  mobile-store-setup.md    Schritt-für-Schritt-Anleitung für App Store/Play Store
+  go-live-checklist.md     Checkliste für den ersten Produktions-Rollout
+  rls-history.md           Historie der RLS-Policy-Entscheidungen
 ```
 
 ## Rollen & Berechtigungen
