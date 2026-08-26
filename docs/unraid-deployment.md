@@ -10,12 +10,12 @@ separat angegangen werden.
 ## Funktionsweise
 
 1. Bei jedem Push nach `main` **oder `beta`** baut **GitHub Actions**
-   automatisch **ein einziges** Docker-Image, das BEIDE Versionen enthält:
-   main (Produktion) unter `/`, beta (zum Testen) unter `/beta/` – jeweils
-   ein eigener, unabhängig gebauter statischer React-Build, gemeinsam über
-   nginx ausgeliefert. Veröffentlicht als `:latest` (zusätzlich mit dem
-   Commit-Hash als eigenem Tag) in der **GitHub Container Registry**
-   (`ghcr.io`).
+   automatisch **ein einziges** Docker-Image, das DREI Versionen enthält:
+   main (Produktion) unter `/`, beta (zum Testen) unter `/beta/`, dev unter
+   `/dev/` – jeweils ein eigener, unabhängig gebauter statischer React-Build,
+   gemeinsam über nginx ausgeliefert. Veröffentlicht als `:latest`
+   (zusätzlich mit dem Commit-Hash als eigenem Tag) in der **GitHub
+   Container Registry** (`ghcr.io`).
 2. Auf Unraid läuft dafür **ein einziger** Container, `kicktipp-app`, der
    `:latest` zieht – keine zweite IP/kein zweiter Container mehr nötig.
 3. **Watchtower** (ein weiterer, kleiner Container auf Unraid) prüft
@@ -25,7 +25,10 @@ separat angegangen werden.
    eigenen Profil gibt es einen Link "Beta-Version testen", sichtbar nur mit
    dem Recht `beta.access` (vergeben über **Rollen & Berechtigungen** im
    Admin-Bereich). Von dort zurück zur Produktivversion geht jederzeit ohne
-   weitere Berechtigung.
+   weitere Berechtigung. `/dev/` zeigt auf ein komplett eigenständiges
+   Supabase-Projekt ("Kicktipp Dev", eigene Anmeldung, eigene Daten) – braucht
+   deshalb keine In-App-Freischaltung und ist nur über die direkte URL
+   erreichbar, kein Navigationseintrag dorthin.
 5. **Ausnahme:** Besteht ein Push nur aus einem `[skip ci]`-Commit (der
    automatische Versions-Bump auf `main`, oder ein Fast-Forward-Merge von
    `main` nach `beta`, der zufällig genau auf so einem Commit landet – z. B.
@@ -38,12 +41,13 @@ separat angegangen werden.
 
 ```
 Code-Änderung (lokal) → git push nach beta → GitHub Actions baut EIN Image
-                                              (main + beta zusammen) → ghcr.io
+                                     (main + beta + dev zusammen) → ghcr.io
                                                                              │
                                                     Watchtower aktualisiert kicktipp-app
                                                                              │
                                         (unter .../beta/ im eigenen Profil testen,
-                                         sichtbar nur mit beta.access-Recht)
+                                         sichtbar nur mit beta.access-Recht;
+                                         .../dev/ zeigt auf das separate Dev-Backend)
                                                                              │
                                           "auf Prod übernehmen" → beta wird nach main gemerged
                                                                              │

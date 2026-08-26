@@ -1,18 +1,24 @@
 name: Docker Image bauen und veröffentlichen
 
 # Baut bei jedem Push nach main ODER beta automatisch ein neues, EINZIGES
-# Docker-Image, das beide Versionen gleichzeitig enthält: main unter /, beta
-# unter /beta/ (siehe Dockerfile/nginx.conf.template) – ein Container/eine
-# Adresse statt vormals zwei getrennter Images/Container. Wer welchen Pfad
+# Docker-Image, das DREI Versionen gleichzeitig enthält: main unter /, beta
+# unter /beta/, dev unter /dev/ (siehe Dockerfile/nginx.conf.template) – ein
+# Container/eine Adresse statt getrennter Images/Container. Wer welchen Pfad
 # sehen darf, entscheidet die App selbst (siehe beta.access-Recht,
-# src/App.tsx). Tags: immer :latest und :<sha>, unabhängig davon, welcher
-# Branch den Build ausgelöst hat.
+# src/App.tsx – dev braucht keine solche Freischaltung, da es auf ein
+# komplett eigenständiges Supabase-Projekt mit eigener Anmeldung zeigt).
+# Tags: immer :latest und :<sha>, unabhängig davon, welcher Branch den Build
+# ausgelöst hat.
 #
 # Dafür werden main UND beta in JEDEM Lauf unabhängig voneinander in eigene
 # Unterverzeichnisse ausgecheckt und einzeln gebaut (build-main/build-beta) –
 # der jeweils NICHT gepushte Branch wird dabei einfach in seinem aktuellen
 # Stand mitgebaut, nicht neu verifiziert (der hat seine eigene Lint/Test-
-# Prüfung schon bei seinem letzten Push durchlaufen).
+# Prüfung schon bei seinem letzten Push durchlaufen). dev bekommt bewusst
+# KEINEN eigenen Checkout: es ist exakt derselbe Commit wie beta (die
+# separate "Kicktipp Dev"-Datenbank trackt die aktive Entwicklung, neue
+# Migrationen laufen dort immer zuerst), nur ein zweiter Build desselben
+# Checkouts mit anderen VITE_SUPABASE_*-Werten und eigenem --outDir.
 #
 # Nur beim Bauen von main wird zusätzlich automatisch die Version in
 # package.json erhöht, außer package.json wurde im selben Push bereits selbst
@@ -257,6 +263,34 @@ jobs:
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
         run: npm run build:instance-info
 
+      # Dev nutzt bewusst denselben build-beta-Checkout (siehe Kommentar ganz
+      # oben) statt eines eigenen dritten Checkouts – erspart einen weiteren
+      # npm-ci-Lauf für exakt denselben Commit. --outDir sorgt dafür, dass
+      # der reguläre Beta-Build (dist/, bereits oben abgeschlossen) dabei
+      # nicht überschrieben wird.
+      - name: Dev-Bundle bauen (dev, aus dem beta-Checkout, eigenständiges Supabase-Projekt)
+        working-directory: build-beta
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL_DEV }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY_DEV }}
+          VITE_APP_COMMIT_SHA: ${{ steps.meta.outputs.commit_sha_beta }}
+          VITE_APP_BUILD_DATE: ${{ steps.meta.outputs.build_date }}
+          VITE_APP_CHANNEL: dev
+          VITE_APP_CHANGELOG: ${{ steps.changelog_beta.outputs.changelog }}
+        run: npm run build -- --outDir dist-dev
+
+      - name: instance-info.json erzeugen (dev)
+        working-directory: build-beta
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL_DEV }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY_DEV }}
+        # Kein "npm run build:instance-info" hier: das Skript hat "dist" fest
+        # als Zielordner einprogrammiert (siehe scripts/generate-instance-
+        # info.mjs, für main/beta korrekt, da deren --outDir Default bleibt),
+        # ein via "--" angehängtes zweites Argument würde nur zusätzlich zum
+        # fest kodierten "dist" übergeben, nicht es ersetzen.
+        run: node scripts/generate-instance-info.mjs dist-dev
+
       - name: Builds für den Docker-Kontext bereitstellen
         # Der Workspace-Root selbst hat kein eigenes Checkout mehr (beide
         # Branches liegen nur unter build-main/build-beta) – Dockerfile und
@@ -270,6 +304,7 @@ jobs:
         run: |
           cp -r build-main/dist ./dist-prod
           cp -r build-beta/dist ./dist-beta
+          cp -r build-beta/dist-dev ./dist-dev
           cp ${{ steps.triggered.outputs.dir }}/Dockerfile ./Dockerfile
           cp ${{ steps.triggered.outputs.dir }}/nginx.conf.template ./nginx.conf.template
 

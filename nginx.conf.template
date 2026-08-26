@@ -30,6 +30,9 @@
 # docker-publish.yml/.env.example) – bei einem Projektwechsel muss dieser
 # Wert hier manuell mit aktualisiert werden, ein envsubst-Platzhalter wie bei
 # LISTEN_PORT lohnt sich für einen praktisch nie wechselnden Wert nicht.
+# Dev (/dev/, siehe unten) zeigt bewusst auf ein GANZ ANDERES, eigenständiges
+# Supabase-Projekt (evbpltahndvboskmflfq statt rmfvzbmxcwccnezqqnen) - eigene
+# CSP-Locations mit eigenem connect-src, nicht dieselbe wie main/beta.
 # script-src/frame-src erlauben ausschließlich kicktipp.de für das
 # eingebettete Kicktipp-Widget (siehe KicktippWidgetPage.tsx). style-src
 # erlaubt 'unsafe-inline', da die zur Laufzeit admin-konfigurierbare
@@ -53,6 +56,14 @@ server {
     location /beta/ {
         alias /usr/share/nginx/html/beta/;
         try_files $uri $uri/ /beta/index.html;
+    }
+
+    # Dev-Bundle unter /dev/ - eigenständiges Supabase-Projekt (siehe CSP
+    # unten), für lokale Entwicklung/Tests (z. B. zweite Spielrunde für den
+    # mobilen Instanz-Wähler), nie mit main/beta-Zugangsdaten nutzbar.
+    location /dev/ {
+        alias /usr/share/nginx/html/dev/;
+        try_files $uri $uri/ /dev/index.html;
     }
 
     location / {
@@ -84,6 +95,15 @@ server {
         add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
         add_header Content-Security-Policy "default-src 'self'; script-src 'self' https://www.kicktipp.de; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://rmfvzbmxcwccnezqqnen.supabase.co wss://rmfvzbmxcwccnezqqnen.supabase.co; frame-src https://www.kicktipp.de; frame-ancestors 'self'; base-uri 'self'; form-action 'self';" always;
     }
+    location = /dev/index.html {
+        alias /usr/share/nginx/html/dev/index.html;
+        add_header Cache-Control "no-cache";
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header X-Frame-Options "SAMEORIGIN" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+        add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+        add_header Content-Security-Policy "default-src 'self'; script-src 'self' https://www.kicktipp.de; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://evbpltahndvboskmflfq.supabase.co wss://evbpltahndvboskmflfq.supabase.co; frame-src https://www.kicktipp.de; frame-ancestors 'self'; base-uri 'self'; form-action 'self';" always;
+    }
 
     # icon.png ist das statische Default-Favicon (siehe index.html/
     # AppBrandingProvider.tsx) unter fester, nie wechselnder URL – die
@@ -93,7 +113,7 @@ server {
     # der Server ausliefert. Muss VOR dem allgemeinen Regex-Block stehen,
     # da nginx Regex-Locations in Datei-Reihenfolge prüft und beim ersten
     # Treffer stoppt.
-    location ~ ^/(beta/)?icon\.png$ {
+    location ~ ^/(beta/|dev/)?icon\.png$ {
         add_header Cache-Control "no-cache";
         add_header X-Content-Type-Options "nosniff" always;
         add_header X-Frame-Options "SAMEORIGIN" always;
@@ -110,7 +130,7 @@ server {
     # Fetch selbst dann, wenn der Server fehlerfrei antwortet - deshalb hier
     # bewusst '*' statt der ALLOWED_ORIGINS-Liste (die ist für die Edge
     # Functions gedacht, die echte Sessions/Secrets verarbeiten).
-    location ~ ^/(beta/)?instance-info\.json$ {
+    location ~ ^/(beta/|dev/)?instance-info\.json$ {
         add_header Access-Control-Allow-Origin "*" always;
         add_header Cache-Control "no-cache";
         add_header X-Content-Type-Options "nosniff" always;

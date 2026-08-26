@@ -48,7 +48,7 @@ export function AppShell() {
       <aside className="hidden w-60 shrink-0 flex-col overflow-y-auto border-r border-slate-200 bg-white p-4 md:flex">
         <div className="mb-6 flex items-center gap-2 px-2 text-lg font-semibold text-slate-900">
           {appName}
-          <BetaBadge />
+          <ChannelBadge />
         </div>
         <nav className="flex flex-1 flex-col gap-1">
           <NavLinks items={items} variant="desktop" />
@@ -88,7 +88,7 @@ export function AppShell() {
             </button>
             <span className="flex min-w-0 items-center gap-2">
               <span className="truncate text-base font-semibold text-slate-900">{appName}</span>
-              <BetaBadge />
+              <ChannelBadge />
             </span>
           </div>
           <span className="relative shrink-0">
@@ -288,17 +288,30 @@ function getInitials(name?: string): string {
   return (first + last).toUpperCase()
 }
 
-/** Zeigt "BETA" neben dem App-Namen, wenn dieser Build aus dem beta-Branch
- * stammt (VITE_APP_CHANNEL per Docker-Build-Arg gesetzt, siehe
- * docker-publish.yml) – damit auf einen Blick erkennbar ist, in welcher
- * Umgebung man sich befindet, ohne extra auf die "Über"-Seite zu wechseln. */
-function BetaBadge() {
-  if (import.meta.env.VITE_APP_CHANNEL !== 'beta') return null
-  return (
-    <span className="shrink-0 rounded bg-violet-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-violet-800">
-      Beta
-    </span>
-  )
+/** Zeigt "BETA"/"DEV" neben dem App-Namen, wenn dieser Build aus dem
+ * jeweiligen Branch/Kanal stammt (VITE_APP_CHANNEL per Docker-Build-Arg
+ * gesetzt, siehe docker-publish.yml) – damit auf einen Blick erkennbar
+ * ist, in welcher Umgebung man sich befindet, ohne extra auf die
+ * "Über"-Seite zu wechseln. Eigene Farbe für Dev (zeigt auf ein komplett
+ * anderes Supabase-Projekt als main/beta, siehe vite.config.ts) statt
+ * derselben wie Beta, um eine Verwechslung auszuschließen. */
+function ChannelBadge() {
+  const channel = import.meta.env.VITE_APP_CHANNEL
+  if (channel === 'beta') {
+    return (
+      <span className="shrink-0 rounded bg-violet-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-violet-800">
+        Beta
+      </span>
+    )
+  }
+  if (channel === 'dev') {
+    return (
+      <span className="shrink-0 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-800">
+        Dev
+      </span>
+    )
+  }
+  return null
 }
 
 /** Markierung für "agiert aktuell als Spieler". `title` bedient Desktop-Hover,

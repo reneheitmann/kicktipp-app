@@ -19,6 +19,11 @@ const roleLabels = { admin: 'Administrator', spielleiter: 'Spielleiter', user: '
 export function MyAccountPage() {
   const { profile, refreshProfile, switchToRole, switchBackToBaseRole, can } = useAuth()
   const isBetaBuild = import.meta.env.VITE_APP_CHANNEL === 'beta'
+  // Dev zeigt auf ein komplett eigenständiges Supabase-Projekt (eigene
+  // auth.users, eigene role_permissions) - "dieselbe Anmeldung, dieselben
+  // Daten wie main/beta" träfe hier schlicht nicht zu, Karte unten daher
+  // unabhängig von can('beta.access') ausblenden.
+  const isDevBuild = import.meta.env.VITE_APP_CHANNEL === 'dev'
   // Nur im mobile-Kanal gesetzt (siehe MobileApp.tsx) – auf main/beta bleibt
   // dies immer null, der Abschnitt unten wird dort also nie gerendert.
   const mobileInstance = useMobileInstance()
@@ -371,7 +376,7 @@ export function MyAccountPage() {
         </div>
       )}
 
-      {(isBetaBuild || can('beta.access')) && (
+      {!isDevBuild && (isBetaBuild || can('beta.access')) && (
         <div className="mb-6 rounded-xl border border-slate-200 bg-white p-4">
           <h2 className="mb-1 text-base font-semibold text-slate-900">Beta-Version</h2>
           {isBetaBuild ? (
