@@ -17,8 +17,8 @@ export function AppShell() {
   const { profile, signOut, can } = useAuth()
   const { appName } = useAppBranding()
   // Nur im mobile-Kanal gesetzt (siehe MobileApp.tsx) – auf main/beta bleibt
-  // dies immer null. Macht den App-Titel selbst zum zweiten, naheliegenden
-  // Weg zum Spielrunden-Wechsler (neben dem InstanceSwitchBadge unten).
+  // dies immer null. Macht den App-Titel im angemeldeten Zustand zum
+  // Spielrunden-Wechsler (siehe unten).
   const mobileInstance = useMobileInstance()
   // Admin-konfigurierbare Reihenfolge/Bezeichnungen (siehe nav-settings-
   // Feature) – einmal pro Shell-Mount geladen, kein globaler Context nötig,
@@ -73,7 +73,6 @@ export function AppShell() {
             appName
           )}
           <ChannelBadge />
-          <InstanceSwitchBadge />
         </div>
         <nav className="flex flex-1 flex-col gap-1">
           <NavLinks items={items} variant="desktop" />
@@ -125,7 +124,6 @@ export function AppShell() {
                 <span className="truncate text-base font-semibold text-slate-900">{appName}</span>
               )}
               <ChannelBadge />
-              <InstanceSwitchBadge />
             </span>
           </div>
           <span className="relative shrink-0">
@@ -355,27 +353,6 @@ function ChannelBadge() {
     )
   }
   return null
-}
-
-/** Zeigt die aktuell verbundene Spielrunde (nur mobile, siehe
- * MobileInstanceContext – null im Web-Kanal, kein Provider im Baum) direkt
- * im Header. Tippen wechselt sofort zum Instanz-Wähler, ohne den Umweg über
- * "Mein Profil" – wichtig u. a. für den Fall, dass die aktuelle Spielrunde
- * gerade abgemeldet ist: dort ist "Mein Profil" nicht erreichbar, der
- * Header aber schon (siehe auch der äquivalente Wechsler auf LoginPage). */
-function InstanceSwitchBadge() {
-  const mobileInstance = useMobileInstance()
-  if (!mobileInstance) return null
-  return (
-    <button
-      type="button"
-      onClick={mobileInstance.switchInstance}
-      title="Spielrunde wechseln"
-      className="max-w-[8rem] shrink-0 truncate rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600"
-    >
-      {mobileInstance.activeInstance.name}
-    </button>
-  )
 }
 
 /** Markierung für "agiert aktuell als Spieler". `title` bedient Desktop-Hover,
