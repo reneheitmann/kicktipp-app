@@ -16,6 +16,10 @@ const roleLabels = { admin: 'Administrator', spielleiter: 'Spielleiter', user: '
 export function AppShell() {
   const { profile, signOut, can } = useAuth()
   const { appName } = useAppBranding()
+  // Nur im mobile-Kanal gesetzt (siehe MobileApp.tsx) – auf main/beta bleibt
+  // dies immer null. Macht den App-Titel im angemeldeten Zustand zum
+  // Spielrunden-Wechsler (siehe unten).
+  const mobileInstance = useMobileInstance()
   // Admin-konfigurierbare Reihenfolge/Bezeichnungen (siehe nav-settings-
   // Feature) – einmal pro Shell-Mount geladen, kein globaler Context nötig,
   // da AppShell der einzige Ort ist, der navItems rendert. Leerer Zustand
@@ -61,9 +65,14 @@ export function AppShell() {
       {/* Desktop-Sidebar */}
       <aside className="hidden w-60 shrink-0 flex-col overflow-y-auto border-r border-slate-200 bg-white p-4 md:flex">
         <div className="mb-6 flex items-center gap-2 px-2 text-lg font-semibold text-slate-900">
-          {appName}
+          {mobileInstance ? (
+            <button type="button" onClick={mobileInstance.switchInstance} title="Spielrunde wechseln">
+              {appName}
+            </button>
+          ) : (
+            appName
+          )}
           <ChannelBadge />
-          <InstanceSwitchBadge />
         </div>
         <nav className="flex flex-1 flex-col gap-1">
           <NavLinks items={items} variant="desktop" />
@@ -102,9 +111,19 @@ export function AppShell() {
               <span className="h-0.5 w-5 rounded-full bg-slate-700" />
             </button>
             <span className="flex min-w-0 items-center gap-2">
-              <span className="truncate text-base font-semibold text-slate-900">{appName}</span>
+              {mobileInstance ? (
+                <button
+                  type="button"
+                  onClick={mobileInstance.switchInstance}
+                  title="Spielrunde wechseln"
+                  className="truncate text-base font-semibold text-slate-900"
+                >
+                  {appName}
+                </button>
+              ) : (
+                <span className="truncate text-base font-semibold text-slate-900">{appName}</span>
+              )}
               <ChannelBadge />
-              <InstanceSwitchBadge />
             </span>
           </div>
           <span className="relative shrink-0">
@@ -334,27 +353,6 @@ function ChannelBadge() {
     )
   }
   return null
-}
-
-/** Zeigt die aktuell verbundene Spielrunde (nur mobile, siehe
- * MobileInstanceContext – null im Web-Kanal, kein Provider im Baum) direkt
- * im Header. Tippen wechselt sofort zum Instanz-Wähler, ohne den Umweg über
- * "Mein Profil" – wichtig u. a. für den Fall, dass die aktuelle Spielrunde
- * gerade abgemeldet ist: dort ist "Mein Profil" nicht erreichbar, der
- * Header aber schon (siehe auch der äquivalente Wechsler auf LoginPage). */
-function InstanceSwitchBadge() {
-  const mobileInstance = useMobileInstance()
-  if (!mobileInstance) return null
-  return (
-    <button
-      type="button"
-      onClick={mobileInstance.switchInstance}
-      title="Spielrunde wechseln"
-      className="max-w-[8rem] shrink-0 truncate rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600"
-    >
-      {mobileInstance.activeInstance.name}
-    </button>
-  )
 }
 
 /** Markierung für "agiert aktuell als Spieler". `title` bedient Desktop-Hover,

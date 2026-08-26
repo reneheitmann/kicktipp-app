@@ -368,7 +368,7 @@ export function MyAccountPage() {
           <h2 className="mb-1 text-base font-semibold text-slate-900">Spielrunde</h2>
           <p className="text-sm text-slate-500">
             Aktuell verbunden mit <span className="font-medium text-slate-700">{mobileInstance.activeInstance.name}</span> (
-            {mobileInstance.activeInstance.url}). Zum Wechseln oben im Header auf den Namen der Spielrunde tippen.
+            {mobileInstance.activeInstance.url}). Zum Wechseln oben im Header auf den App-Titel tippen.
           </p>
         </div>
       )}

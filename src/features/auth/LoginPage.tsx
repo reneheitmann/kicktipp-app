@@ -84,7 +84,15 @@ export function LoginPage() {
         </button>
       )}
       <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200 sm:p-8">
-        <h1 className="mb-1 text-xl font-semibold text-slate-900">{appName}</h1>
+        <h1 className="mb-1 text-xl font-semibold text-slate-900">
+          {mobileInstance ? (
+            <button type="button" onClick={mobileInstance.switchInstance} title="Spielrunde wechseln">
+              {appName}
+            </button>
+          ) : (
+            appName
+          )}
+        </h1>
 
         {mode === 'login' ? (
           <>
