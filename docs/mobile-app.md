@@ -227,21 +227,21 @@ eine Version in TestFlight/Play Internal Testing geht):
 
 | Schritt | iOS (physisches Gerät) | Android (Gerät/Emulator) |
 |---|---|---|
-| App-Start, Instanz-Wähler erscheint | [ ] | [ ] |
-| Instanz hinzufügen: `gewinnauswertung.magicprus.de` | [ ] | [ ] |
-| Gefundene Instanz (Name + Adresse, ohne Backend-URL) wird vor dem Login zur Bestätigung angezeigt | [ ] | [ ] |
-| Login gegen diese Instanz | [ ] | [ ] |
-| Zweite, andere Instanz hinzufügen: "Kicktipp Dev"-Projekt | [ ] | [ ] |
-| Instanz wechseln (Profil → "Instanz wechseln") | [ ] | [ ] |
-| Login gegen die zweite Instanz | [ ] | [ ] |
-| App-Neustart: zuletzt aktive Instanz bleibt aktiv (kein erneuter Login nötig) | [ ] | [ ] |
-| Instanz entfernen (inkl. Zugangsdaten-Löschung, siehe Sicherheitsarchitektur) | [ ] | [ ] |
-| Safe-Area (Notch/Home-Indicator bzw. Gestennavigation) sieht korrekt aus | [ ] | [ ] |
-| Zurück-Taste/-Geste navigiert statt die App zu schließen | [ ] | [ ] |
-| VoiceOver/TalkBack: Instanz-Wähler + Hinzufügen-Dialog bedienbar (Phase 8) | [ ] | [ ] |
-| Push-Erklärung erscheint vor dem System-Dialog, nicht danach | [ ] | [ ] |
-| Push bei neuer Kontaktnachricht kommt an, Tap navigiert zu `/kontakt` | [ ] | [ ] |
-| Push bei abgeschlossener Gewinnberechnung kommt an, Tap navigiert zur Saison | [ ] | [ ] |
+| App-Start, Instanz-Wähler erscheint | [x] | [ ] |
+| Instanz hinzufügen: `gewinnauswertung.magicprus.de` | [x] | [ ] |
+| Gefundene Instanz (Name + Adresse, ohne Backend-URL) wird vor dem Login zur Bestätigung angezeigt | [x] | [ ] |
+| Login gegen diese Instanz | [x] | [ ] |
+| Zweite, andere Instanz hinzufügen: "Kicktipp Dev"-Projekt | [x] | [ ] |
+| Instanz wechseln (Profil → "Instanz wechseln") | [x] | [ ] |
+| Login gegen die zweite Instanz | [x] | [ ] |
+| App-Neustart: zuletzt aktive Instanz bleibt aktiv (kein erneuter Login nötig) | [x] | [ ] |
+| Instanz entfernen (inkl. Zugangsdaten-Löschung, siehe Sicherheitsarchitektur) | [x] | [ ] |
+| Safe-Area (Notch/Home-Indicator bzw. Gestennavigation) sieht korrekt aus | [x] | [ ] |
+| Zurück-Taste/-Geste navigiert statt die App zu schließen | [x] | [ ] |
+| VoiceOver/TalkBack: Instanz-Wähler + Hinzufügen-Dialog bedienbar (Phase 8) | [x] | [ ] |
+| Push-Erklärung erscheint vor dem System-Dialog, nicht danach | [x] | [ ] |
+| Push bei neuer Kontaktnachricht kommt an, Tap navigiert zu `/kontakt` | [x] | [ ] |
+| Push bei abgeschlossener Gewinnberechnung kommt an, Tap navigiert zur Saison | [x] | [ ] |
 
 Wichtig: gegen **zwei echte, unterschiedliche Instanzen** durchspielen (nicht
 nur theoretisch gegen eine einzige) – erst das prüft wirklich, dass Instanzen
@@ -274,4 +274,5 @@ Play Console, Firebase Console, Supabase).
 - [x] TestFlight- bzw. Play-Internal-Testing-Track mit dir selbst als erstem Tester einrichten, bevor ein öffentliches Review beantragt wird
 - [x] Firebase-Projekt für FCM anlegen, Server-Key als neues Supabase-Secret für `send-push-notification` hinterlegen
 - [x] `ALLOWED_ORIGINS` (Supabase Edge-Function-Secret) um die Capacitor-WebView-Origin (`https://localhost`) ergänzen, siehe Abschnitt "Push-Benachrichtigungen (Backend)" oben – sonst blockt CORS jeden Edge-Function-Aufruf aus der mobile App
-- [ ] Echten Restore-/Manuell-Test gemäß der Testmatrix oben auf mindestens einem physischen iOS-Gerät und einem Android-Gerät/Emulator durchspielen, inkl. VoiceOver/TalkBack-Spotcheck (Phase 8 – in dieser Umgebung ohne physisches Gerät nicht möglich gewesen)
+- [x] Echten Restore-/Manuell-Test gemäß der Testmatrix oben auf einem physischen iOS-Gerät durchspielen, inkl. VoiceOver-Spotcheck
+- [ ] Denselben Test auf einem Android-Gerät/Emulator durchspielen, inkl. TalkBack-Spotcheck und der Zurück-Tasten-Navigation
