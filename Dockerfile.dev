@@ -17,7 +17,10 @@ FROM nginx:alpine AS runtime
 RUN apk add --no-cache tzdata
 ENV TZ=Europe/Berlin
 
-COPY dist /usr/share/nginx/html
+# dist-standalone-dev statt "dist": .dockerignore schließt "dist" bewusst
+# aus dem Build-Kontext aus (siehe deploy-dev.yml, verhindert einen leeren
+# COPY hier).
+COPY dist-standalone-dev /usr/share/nginx/html
 
 # .template statt direkt nach conf.d – das offizielle nginx-Image ersetzt
 # ${LISTEN_PORT} beim Container-Start automatisch per envsubst (siehe

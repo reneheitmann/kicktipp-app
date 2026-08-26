@@ -68,13 +68,18 @@ jobs:
           VITE_APP_COMMIT_SHA: ${{ github.sha }}
           VITE_APP_BUILD_DATE: ${{ github.event.head_commit.timestamp }}
           VITE_APP_CHANNEL: dev
-        run: npm run build
+        # --outDir dist-standalone-dev statt des Defaults "dist": .dockerignore
+        # (repo-weit, auch vom main/beta-Dockerfile genutzt) schließt "dist"
+        # bewusst aus dem Docker-Build-Kontext aus (schützt vor einem
+        # versehentlich mitgebauten lokalen Dev-Artefakt) - träfe hier
+        # genauso zu und würde COPY im Dockerfile.dev leer laufen lassen.
+        run: npm run build -- --outDir dist-standalone-dev
 
       - name: instance-info.json erzeugen
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL_DEV }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY_DEV }}
-        run: npm run build:instance-info
+        run: node scripts/generate-instance-info.mjs dist-standalone-dev
 
       - name: Image bauen und veröffentlichen
         uses: docker/build-push-action@v6
