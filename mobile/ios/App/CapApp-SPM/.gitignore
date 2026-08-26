@@ -7,3 +7,8 @@ DerivedData/
 .swiftpm/config/registries.json
 .swiftpm/xcode/package.xcworkspace/contents.xcworkspacedata
 .netrc
+
+# Von "npx cap sync" erzeugte Symlinks (siehe capacitor.config.ts,
+# experimental.ios.spm.packageOptions) - zeigen auf einen absoluten,
+# maschinenspezifischen node_modules-Pfad, werden bei jedem Sync neu gesetzt.
+/symlinks

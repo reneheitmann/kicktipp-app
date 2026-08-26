@@ -1,4 +1,4 @@
-import { PushNotifications, type Token } from '@capacitor/push-notifications'
+import { FirebaseMessaging } from '@capacitor-firebase/messaging'
 import { supabase, type Client } from '../lib/supabaseClient'
 import { secureStorage } from '../lib/secureStorage'
 
@@ -11,7 +11,7 @@ const LAST_TOKEN_STORAGE_KEY = 'kicktipp_mobile_last_push_token'
 
 /** Aktueller Berechtigungsstatus, ohne den System-Dialog auszulösen – für die Entscheidung, ob die Erklärung noch gezeigt werden muss. */
 export async function getPushPermissionState(): Promise<'granted' | 'denied' | 'prompt'> {
-  const { receive } = await PushNotifications.checkPermissions()
+  const { receive } = await FirebaseMessaging.checkPermissions()
   if (receive === 'granted') return 'granted'
   if (receive === 'denied') return 'denied'
   return 'prompt'
@@ -31,7 +31,7 @@ export async function isPushEnabled(): Promise<boolean> {
 /**
  * Fragt nur die native Berechtigung an (löst den System-Dialog aus), OHNE
  * auf die anschließende Geräte-Registrierung zu warten. Getrennt von
- * registerPushDevice(), weil der APNs-Roundtrip mehrere Sekunden bis
+ * registerPushDevice(), weil getToken() (siehe dort) mehrere Sekunden bis
  * ~20s dauern kann (beobachtet) – ein Erklärungsdialog, der darauf
  * wartet, bevor er sich schließt, fühlt sich dadurch spürbar hängend an,
  * obwohl technisch alles normal läuft (siehe MobilePushIntegration.tsx:
@@ -39,7 +39,7 @@ export async function isPushEnabled(): Promise<boolean> {
  * im Hintergrund weiter).
  */
 export async function requestPushPermission(): Promise<boolean> {
-  const { receive } = await PushNotifications.requestPermissions()
+  const { receive } = await FirebaseMessaging.requestPermissions()
   return receive === 'granted'
 }
 
@@ -48,26 +48,21 @@ export async function requestPushPermission(): Promise<boolean> {
 // MyAccountPage.tsx' Ein/Aus-Schalter ebenfalls registerPushDevice()
 // aufruft (weil der zwischenzeitliche isPushEnabled()-Check den
 // Hintergrund-Aufruf noch nicht sehen konnte - der ist ja bis zu ~20s
-// unterwegs), würden ohne diese Dedupe zwei parallele native
-// register()-Aufrufe samt eigener Listener-Paare laufen: funktional
-// unschädlich (derselbe Token, doppelter Insert wird eh abgefangen),
-// aber der zweite Aufruf startet dieselbe ~20s-Wartezeit noch einmal von
-// vorn - wirkt dann, als würde der Schalter gar nicht reagieren. Beide
-// Aufrufer warten stattdessen auf denselben bereits laufenden Versuch
-// (gleiches Muster wie loadingPromiseRef in AuthProvider.tsx).
+// unterwegs), würden ohne diese Dedupe zwei parallele getToken()-Aufrufe
+// laufen: funktional unschädlich (derselbe Token, doppelter Insert wird
+// eh abgefangen), aber wirkt dann, als würde der Schalter gar nicht
+// reagieren. Beide Aufrufer warten stattdessen auf denselben bereits
+// laufenden Versuch (gleiches Muster wie loadingPromiseRef in
+// AuthProvider.tsx).
 let pendingRegistration: Promise<boolean> | null = null
 
 /**
- * Registriert das Gerät bei FCM/APNs und speichert das Token. Setzt bereits
- * erteilte Berechtigung voraus (siehe requestPushPermission()).
- *
- * Listener MÜSSEN vor register() angehängt werden: ist der native Bridge-
- * Roundtrip für addListener() langsamer als die tatsächliche Registrierung
- * (z. B. weil iOS das Token aus einem vorherigen Lauf noch kennt), feuert
- * das 'registration'-Event sonst, bevor überhaupt ein Listener existiert -
- * das Promise hängt dann für immer (beobachtet: Token landet nie in der
- * DB). 10s-Timeout als Notbremse für den Fall, dass wirklich keins der
- * beiden Events feuert.
+ * Holt den FCM-Registrierungstoken (getToken() tauscht auf iOS intern den
+ * rohen APNs-Gerätetoken gegen einen echten FCM-Token - der frühere,
+ * direkte APNs-Token aus @capacitor/push-notifications wurde von FCMs
+ * messages:send-API als "not a valid FCM registration token" abgelehnt,
+ * siehe Commit-Historie) und speichert ihn. Setzt bereits erteilte
+ * Berechtigung voraus (siehe requestPushPermission()).
  */
 export async function registerPushDevice(profileId: string): Promise<boolean> {
   if (pendingRegistration) return pendingRegistration
@@ -78,38 +73,24 @@ export async function registerPushDevice(profileId: string): Promise<boolean> {
   return promise
 }
 
-function registerPushDeviceUncached(profileId: string): Promise<boolean> {
-  return new Promise((resolve) => {
-    let settled = false
-    const timeoutId = setTimeout(() => finish(false), 10_000)
-
-    function finish(result: boolean) {
-      if (settled) return
-      settled = true
-      clearTimeout(timeoutId)
-      registrationListener.then((l) => l.remove())
-      errorListener.then((l) => l.remove())
-      resolve(result)
+async function registerPushDeviceUncached(profileId: string): Promise<boolean> {
+  try {
+    const { token } = await FirebaseMessaging.getToken()
+    try {
+      await supabase.from('push_tokens').insert({
+        profile_id: profileId,
+        platform: /android/i.test(navigator.userAgent) ? 'android' : 'ios',
+        token,
+      })
+    } catch {
+      // z. B. Token bereits registriert (unique-Constraint) – kein Grund,
+      // die Registrierung als Fehler zu behandeln.
     }
-
-    const registrationListener = PushNotifications.addListener('registration', async (token: Token) => {
-      try {
-        await supabase.from('push_tokens').insert({
-          profile_id: profileId,
-          platform: /android/i.test(navigator.userAgent) ? 'android' : 'ios',
-          token: token.value,
-        })
-      } catch {
-        // z. B. Token bereits registriert (unique-Constraint) – kein Grund,
-        // die Registrierung als Fehler zu behandeln.
-      }
-      await secureStorage.setItem(LAST_TOKEN_STORAGE_KEY, token.value)
-      finish(true)
-    })
-    const errorListener = PushNotifications.addListener('registrationError', () => finish(false))
-
-    PushNotifications.register()
-  })
+    await secureStorage.setItem(LAST_TOKEN_STORAGE_KEY, token)
+    return true
+  } catch {
+    return false
+  }
 }
 
 /**
@@ -142,4 +123,11 @@ export async function removeCurrentDevicePushTokenVia(client: Client): Promise<v
 export async function removeCurrentDevicePushToken(): Promise<void> {
   await removeCurrentDevicePushTokenVia(supabase)
   await secureStorage.removeItem(LAST_TOKEN_STORAGE_KEY)
+  // deleteToken() macht das FCM-Token auch nativ ungültig - ohne das würde
+  // Firebase es bei einer erneuten Aktivierung ggf. unverändert
+  // zurückgeben, obwohl der DB-Eintrag schon gelöscht wurde.
+  await FirebaseMessaging.deleteToken().catch(() => {
+    // Best effort - fehlt z. B. die Berechtigung noch, ist ohnehin kein
+    // Token registriert, das gelöscht werden müsste.
+  })
 }

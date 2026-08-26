@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { PushNotifications, type ActionPerformed } from '@capacitor/push-notifications'
+import { FirebaseMessaging, type NotificationActionPerformedEvent } from '@capacitor-firebase/messaging'
 import { Modal } from '../components/ui/Modal'
 import { Button } from '../components/ui/Button'
 import { useAuth } from '../features/auth/useAuth'
@@ -44,7 +44,7 @@ export function MobilePushIntegration() {
   }, [session])
 
   useEffect(() => {
-    const listener = PushNotifications.addListener('pushNotificationActionPerformed', (action: ActionPerformed) => {
+    const listener = FirebaseMessaging.addListener('notificationActionPerformed', (action: NotificationActionPerformedEvent) => {
       const data = action.notification.data as Record<string, string> | undefined
       if (!data) return
       // Push kam aus einer anderen als der aktuell aktiven Instanz (Gerät
