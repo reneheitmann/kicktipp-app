@@ -16,6 +16,10 @@ const roleLabels = { admin: 'Administrator', spielleiter: 'Spielleiter', user: '
 export function AppShell() {
   const { profile, signOut, can } = useAuth()
   const { appName } = useAppBranding()
+  // Nur im mobile-Kanal gesetzt (siehe MobileApp.tsx) – auf main/beta bleibt
+  // dies immer null. Macht den App-Titel selbst zum zweiten, naheliegenden
+  // Weg zum Spielrunden-Wechsler (neben dem InstanceSwitchBadge unten).
+  const mobileInstance = useMobileInstance()
   // Admin-konfigurierbare Reihenfolge/Bezeichnungen (siehe nav-settings-
   // Feature) – einmal pro Shell-Mount geladen, kein globaler Context nötig,
   // da AppShell der einzige Ort ist, der navItems rendert. Leerer Zustand
@@ -61,7 +65,13 @@ export function AppShell() {
       {/* Desktop-Sidebar */}
       <aside className="hidden w-60 shrink-0 flex-col overflow-y-auto border-r border-slate-200 bg-white p-4 md:flex">
         <div className="mb-6 flex items-center gap-2 px-2 text-lg font-semibold text-slate-900">
-          {appName}
+          {mobileInstance ? (
+            <button type="button" onClick={mobileInstance.switchInstance} title="Spielrunde wechseln">
+              {appName}
+            </button>
+          ) : (
+            appName
+          )}
           <ChannelBadge />
           <InstanceSwitchBadge />
         </div>
@@ -102,7 +112,18 @@ export function AppShell() {
               <span className="h-0.5 w-5 rounded-full bg-slate-700" />
             </button>
             <span className="flex min-w-0 items-center gap-2">
-              <span className="truncate text-base font-semibold text-slate-900">{appName}</span>
+              {mobileInstance ? (
+                <button
+                  type="button"
+                  onClick={mobileInstance.switchInstance}
+                  title="Spielrunde wechseln"
+                  className="truncate text-base font-semibold text-slate-900"
+                >
+                  {appName}
+                </button>
+              ) : (
+                <span className="truncate text-base font-semibold text-slate-900">{appName}</span>
+              )}
               <ChannelBadge />
               <InstanceSwitchBadge />
             </span>
