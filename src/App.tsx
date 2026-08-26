@@ -96,7 +96,27 @@ function PageLoading() {
 function PublicOrAppShell() {
   const { session, loading } = useAuth()
   if (loading) return <PageLoading />
-  return session ? <AppShell /> : <Outlet />
+  if (session) return <AppShell />
+  // Ohne Session (z. B. Datenschutz/Impressum vor dem Login) fehlt die
+  // AppShell komplett, die sonst Notch/Dynamic-Island bzw. Home-Indicator
+  // abfängt (siehe AppShell.tsx) – ohne dieses Padding rutscht der
+  // Seiteninhalt auf Geräten mit Notch/Gestennavigation direkt unter die
+  // Statusleiste bzw. hinter die Home-Indicator-Linie. env(safe-area-inset-*)
+  // ist auf Geräten/Browsern ohne Notch (inkl. Desktop) 0 – unkritisch, hier
+  // immer zu setzen.
+  return (
+    <div
+      className="min-h-full"
+      style={{
+        paddingTop: 'env(safe-area-inset-top, 0px)',
+        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+        paddingLeft: 'env(safe-area-inset-left, 0px)',
+        paddingRight: 'env(safe-area-inset-right, 0px)',
+      }}
+    >
+      <Outlet />
+    </div>
+  )
 }
 
 // Eigene Komponente (statt direkt in App()), damit useAuth() innerhalb von
