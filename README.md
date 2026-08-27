@@ -215,10 +215,15 @@ einer Vorschau „nach unten"), jeweils jederzeit rückgängig zu machen.
   Version in `package.json` wird dabei automatisch erhöht (Minor bei neuer
   DB-Migration, sonst Patch).
 
-Vor jedem Push nach `beta` oder `main`: `npm run test`, `npx tsc --noEmit`
-und `npm run lint` sollten lokal fehlerfrei laufen (CI erzwingt Test und
-Lint zusätzlich als Build-Gate, siehe `docker-publish.yml`; der Typecheck
-läuft dort nur implizit über `npm run build`).
+Vor jedem Push nach `beta` oder `main`: `npm run test`, `npx tsc -b` und
+`npm run lint` sollten lokal fehlerfrei laufen (CI erzwingt Test und Lint
+zusätzlich als Build-Gate, siehe `docker-publish.yml`; der Typecheck läuft
+dort nur implizit über `npm run build`). **Wichtig:** `tsconfig.json` ist ein
+reines Referenz-Projekt (`"files": []`, siehe `tsconfig.app.json`/
+`tsconfig.node.json`) – ein bloßes `npx tsc --noEmit` ohne `-b` prüft dadurch
+still 0 Dateien und meldet immer Erfolg, ganz ohne einen einzigen Fehler
+gesehen zu haben. Nur `npx tsc -b` (oder `npm run build`) folgt den
+Projekt-Referenzen tatsächlich.
 
 Ein Push nach `main` **oder** `beta` baut immer **ein einziges** Docker-Image
 (`:latest`), das beide Versionen gleichzeitig enthält: `main` unter `/`,

@@ -965,7 +965,7 @@ export interface Database {
         Returns: undefined
       }
       register_session: {
-        Args: Record<PropertyKey, never>
+        Args: { p_platform?: 'web' | 'mobile' }
         Returns: undefined
       }
     }
