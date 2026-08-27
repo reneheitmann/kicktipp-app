@@ -88,7 +88,8 @@ diese App bildet ausschließlich die Verwaltung/Abrechnung drumherum ab.
   RLS-Policies auf jeder Tabelle
 - Capacitor (native iOS-/Android-App aus demselben Web-Code, siehe
   [`docs/mobile-app.md`](docs/mobile-app.md))
-- Deployment: Docker (nginx) auf Unraid, Auto-Update per Watchtower
+- Deployment: Docker (nginx) auf Unraid, Auto-Update per Unraid-Plugin
+  (CA Auto Update Applications)
 
 ## Lokale Entwicklung
 
@@ -260,8 +261,9 @@ Instanz-Wechsels.
 
 Bei jedem Push nach `main` oder `beta` baut `.github/workflows/docker-publish.yml`
 beide Branches unabhängig voneinander und veröffentlicht das gemeinsame Image
-zu GHCR; ein Watchtower-Container auf dem Ziel-Unraid-Host zieht neue Images
-automatisch. **Ausnahme:** Besteht der Push nur aus einem `[skip ci]`-Commit
+zu GHCR; das Unraid-Plugin **CA Auto Update Applications** auf dem
+Ziel-Unraid-Host zieht neue Images automatisch (siehe
+[`docs/unraid-deployment.md`](docs/unraid-deployment.md), Abschnitt 2.2). **Ausnahme:** Besteht der Push nur aus einem `[skip ci]`-Commit
 (automatischer Versions-Bump auf `main`, oder ein Fast-Forward-Merge, der
 zufällig genau darauf landet) – dann baut GitHub Actions absichtlich nicht
 (verhindert eine Bump-Endlosschleife auf `main`), das deployte Image bleibt
