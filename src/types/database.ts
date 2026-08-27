@@ -282,6 +282,7 @@ export type PasswordPolicy = {
 export type SessionPolicy = {
   id: string
   max_duration_hours: number
+  mobile_max_duration_hours: number
   updated_at: string
   updated_by: string | null
 }
@@ -746,12 +747,14 @@ export interface Database {
         Insert: {
           id?: string
           max_duration_hours?: number
+          mobile_max_duration_hours?: number
           updated_at?: string
           updated_by?: string | null
         }
         Update: {
           id?: string
           max_duration_hours?: number
+          mobile_max_duration_hours?: number
           updated_at?: string
           updated_by?: string | null
         }
@@ -962,7 +965,7 @@ export interface Database {
         Returns: undefined
       }
       register_session: {
-        Args: Record<PropertyKey, never>
+        Args: { p_platform?: 'web' | 'mobile' }
         Returns: undefined
       }
     }
