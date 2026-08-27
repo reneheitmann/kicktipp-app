@@ -18,9 +18,10 @@ separat angegangen werden.
    (`ghcr.io`).
 2. Auf Unraid läuft dafür **ein einziger** Container, `kicktipp-app`, der
    `:latest` zieht – keine zweite IP/kein zweiter Container mehr nötig.
-3. **Watchtower** (ein weiterer, kleiner Container auf Unraid) prüft
-   regelmäßig, ob das Image neu ist, zieht es automatisch und startet den
-   Container neu – ganz ohne manuellen Schritt auf dem Server.
+3. Das Unraid-Plugin **CA Auto Update Applications** (aus den Community
+   Applications, kein eigener Container) prüft regelmäßig nach Zeitplan, ob
+   das Image neu ist, zieht es automatisch und startet den Container neu –
+   ganz ohne manuellen Schritt auf dem Server.
 4. **Wer die Beta-Version sehen darf, entscheidet die App selbst**: im
    eigenen Profil gibt es einen Link "Beta-Version testen", sichtbar nur mit
    dem Recht `beta.access` (vergeben über **Rollen & Berechtigungen** im
@@ -44,7 +45,7 @@ in diesem Image mit, sondern als komplett eigenständiger, dritter Container
 Code-Änderung (lokal) → git push nach beta → GitHub Actions baut EIN Image
                                               (main + beta zusammen) → ghcr.io
                                                                              │
-                                                    Watchtower aktualisiert kicktipp-app
+                                          Auto Update Applications aktualisiert kicktipp-app
                                                                              │
                                         (unter .../beta/ im eigenen Profil testen,
                                          sichtbar nur mit beta.access-Recht)
@@ -53,7 +54,7 @@ Code-Änderung (lokal) → git push nach beta → GitHub Actions baut EIN Image
                                                                              │
                                               GitHub Actions baut das Image erneut → ghcr.io
                                                                              │
-                                                    Watchtower aktualisiert kicktipp-app
+                                          Auto Update Applications aktualisiert kicktipp-app
                                                           (Prod unter / jetzt aktuell)
 ```
 
@@ -93,8 +94,8 @@ aktiv wird (danach läuft alles automatisch bei jedem weiteren Push).
 Nach dem ersten erfolgreichen Workflow-Lauf (Tab **Actions** im Repo, dort
 den Lauf abwarten) erscheint ein neues Package unter
 `github.com/reneheitmann?tab=packages`. Standardmäßig ist es **privat** –
-damit Watchtower es ohne zusätzliche Zugangsdaten von Unraid aus ziehen
-kann, einmalig auf öffentlich stellen:
+damit Unraid (Docker-Pull selbst wie auch das Auto-Update-Plugin) es ohne
+zusätzliche Zugangsdaten ziehen kann, einmalig auf öffentlich stellen:
 
 1. Auf das Package `kicktipp-app` klicken → **Package settings**
 2. Ganz unten: **Change visibility** → **Public**
@@ -122,9 +123,9 @@ Zwei gleichwertige Wege, die denselben laufenden Container erzeugen:
   Docker-Tab starten/stoppen/Logs ansehen, aber nicht komfortabel über eine
   Formular-Maske bearbeiten.
 
-Watchtower (Abschnitt 2.2) funktioniert in beiden Fällen identisch, da es
-direkt mit dem Docker-Daemon spricht, unabhängig davon, wie der Container
-ursprünglich angelegt wurde.
+Das Auto-Update-Plugin (Abschnitt 2.2) funktioniert in beiden Fällen
+identisch, da es als Unraid-Plugin direkt mit dem Docker-Daemon spricht,
+unabhängig davon, wie der Container ursprünglich angelegt wurde.
 
 ### 2.1 App-Container starten (Netzwerk: br0, eigene IP statt Port-Mapping)
 
@@ -227,44 +228,37 @@ Geräte im Netzwerk können). Für den Zugriff per Browser von einem PC/Handy
 im selben WLAN/LAN ist das unerheblich – nur ein `curl` direkt vom
 Unraid-Server aus auf die Container-IP würde nicht funktionieren.
 
-### 2.2 Watchtower für automatische Updates installieren
+### 2.2 Auto-Update-Plugin installieren
 
-```bash
-docker run -d \
-  --name watchtower \
-  --restart unless-stopped \
-  -v /var/run/docker.sock:/var/run/docker.sock \
-  containrrr/watchtower \
-  --interval 300 \
-  --cleanup \
-  kicktipp-app
-```
+Kein eigener Container, sondern ein Unraid-Plugin – Installation über die
+**Community Applications** (Apps-Tab in Unraid):
 
-- `--interval 300` prüft alle 5 Minuten auf ein neues Image (nach Bedarf
-  anpassen, z. B. `3600` für stündlich).
-- `--cleanup` löscht alte, nicht mehr genutzte Images automatisch, damit
-  der Unraid-Speicher nicht vollläuft.
-- Der Container-Name `kicktipp-app` am Ende sorgt dafür, dass Watchtower
-  **ausschließlich** diesen Container überwacht – andere, unabhängig auf
-  Unraid laufende Container bleiben unangetastet.
-- Watchtower selbst bleibt bewusst im normalen Docker-Netzwerk (kein
-  `--network br0`) – er braucht nur Zugriff auf den Docker-Socket, um
-  Images zu ziehen und Container neu zu starten, keine eigene Erreichbarkeit
-  im LAN.
-
-*Alternative:* Watchtower gibt es auch als fertiges Template in den
-**Community Applications** (Apps-Tab in Unraid, dort nach „Watchtower“
-suchen) – dort lassen sich dieselben Optionen über Eingabefelder statt der
-Kommandozeile setzen.
+1. Im **Apps**-Tab nach **„CA Auto Update Applications“** suchen und
+   installieren.
+2. Danach findet sich unter **Settings → CA Auto Update Applications**
+   (bzw. **Scheduler**, je nach Unraid-Version) die Konfiguration: Zeitplan
+   (z. B. täglich oder alle paar Stunden) und die Auswahl, welche
+   Container überwacht werden.
+3. **Wichtig:** das Plugin aktualisiert standardmäßig **alle** Container
+   auf dem Server, nicht nur `kicktipp-app` – anders als das frühere
+   Watchtower-Setup, das per Namen gezielt nur einen Container überwacht
+   hat. Für dieselbe, gezielte Wirkung entweder die anderen, unabhängig
+   laufenden Container in der Plugin-Oberfläche explizit von der
+   Auto-Update-Liste ausschließen, oder umgekehrt nur `kicktipp-app`
+   (und ggf. `kicktipp-app-dev`, siehe Teil 7) in eine Einschluss-Liste
+   aufnehmen, falls die Version des Plugins das unterstützt.
+4. Optional: Benachrichtigung bei durchgeführten Updates aktivieren
+   (Unraids eigenes Notification-System, in der Plugin-Konfiguration
+   verlinkt) – Ersatz für das frühere `docker logs watchtower`.
 
 **Bisher zwei Container betrieben (`kicktipp-app` + `kicktipp-app-beta`)?**
 Beide lieferten dasselbe Supabase-Backend aus, ein einzelnes Image enthält
 jetzt beide Versionen (Prod unter `/`, Beta unter `/beta/`, siehe
 „Funktionsweise“ oben) – `kicktipp-app-beta` kann gestoppt und gelöscht
 werden (Docker-Tab → Container anklicken → **Stop**, dann **Remove**), das
-Watchtower-Kommando oben überwacht nur noch `kicktipp-app`. Wer testen
-möchte, ruft künftig `http://<Prod-IP>:8080/beta/` auf bzw. nutzt den Link
-im eigenen Profil (siehe „Funktionsweise“).
+Auto-Update-Plugin muss danach nur noch `kicktipp-app` selbst
+berücksichtigen. Wer testen möchte, ruft künftig `http://<Prod-IP>:8080/beta/`
+auf bzw. nutzt den Link im eigenen Profil (siehe „Funktionsweise“).
 
 ### 2.3 Testen
 
@@ -287,16 +281,18 @@ im eigenen Profil (siehe „Funktionsweise“).
 2. Im GitHub-Repo unter **Actions** den Workflow-Lauf beobachten (dauert
    etwas länger als früher, da main UND beta in einem Lauf gebaut werden) –
    baut das eine, gemeinsame Image neu.
-3. Nach Abschluss: bis zu `--interval`-Sekunden warten (siehe 2.2), dann
-   `docker logs watchtower` auf Unraid prüfen – dort erscheint ein Eintrag,
-   sobald das neue Image gezogen und `kicktipp-app` neu gestartet wurde.
+3. Nach Abschluss: bis zum nächsten Zeitplan-Lauf des Auto-Update-Plugins
+   warten (siehe 2.2), dann im Docker-Tab prüfen, ob `kicktipp-app` neu
+   gestartet wurde (Spalte „Updated“ bzw. Container-Startzeit), oder die
+   konfigurierte Benachrichtigung abwarten.
 4. Die Änderung sollte danach unter `http://192.168.1.50:8080/beta/`
    sichtbar sein (mit einem Account, der das `beta.access`-Recht hat, bzw.
    über den Link im eigenen Profil).
 5. Passt alles: `beta` nach `main` mergen und pushen (z. B.
    `git checkout main && git merge beta && git push origin main`) – das
-   baut das Image erneut, Watchtower aktualisiert danach `kicktipp-app`
-   erneut, Prod unter `http://192.168.1.50:8080/` ist danach aktuell.
+   baut das Image erneut, das Auto-Update-Plugin aktualisiert danach
+   `kicktipp-app` erneut, Prod unter `http://192.168.1.50:8080/` ist danach
+   aktuell.
 
 ## Teil 4 – Datenbank-Backup vor Migrationen
 
@@ -553,10 +549,11 @@ Spielrunde beim Testen des Instanz-Wählers der mobilen App.
      eine ANDERE als die des main/beta-Containers (z. B. `192.168.1.51`)
    - `LISTEN_PORT` optional wie gewohnt setzen
    - Icon-URL/WebUI-Feld wie in Teil 2, Schritt 7/8
-3. **Watchtower**: derselbe Watchtower-Container aus Teil 2.2 aktualisiert
-   automatisch auch diesen zweiten Container, solange sein Name (z. B.
-   `kicktipp-app-dev`) im Watchtower-Kommando mit aufgeführt ist – sonst
-   überwacht Watchtower nur die dort explizit genannten Container-Namen.
+3. **Auto-Update**: dasselbe Plugin aus Teil 2.2 aktualisiert automatisch
+   auch diesen zweiten Container – ggf. den Container-Namen (z. B.
+   `kicktipp-app-dev`) in der Plugin-Konfiguration zur Auto-Update-Liste
+   hinzufügen, falls dort eine Einschluss-Liste statt "alle Container"
+   konfiguriert ist (siehe 2.2).
 4. **Für die mobile App**: die neue IP/Domain als zweite Spielrunde über
    "Spielrunde hinzufügen" eintragen (siehe `docs/mobile-app.md`) – zeigt
    auf das komplett andere Dev-Backend, unabhängig von main/beta.
