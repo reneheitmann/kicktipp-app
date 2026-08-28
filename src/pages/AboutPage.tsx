@@ -92,6 +92,7 @@ export function AboutPage() {
     const text = [
       `${appName} – Diagnose-Info`,
       `Version: ${displayVersion} (${channel})`,
+      ...(nativeVersion ? [`Programmversion: ${__APP_VERSION__}`] : []),
       `Build: ${commitSha || 'lokal'} (${formatBuildDate(buildDate)})`,
       `Browser: ${device.userAgent}`,
       `Plattform: ${device.platform}`,
@@ -130,6 +131,12 @@ export function AboutPage() {
             <dt className="text-slate-500">Version</dt>
             <dd className="font-medium text-slate-900">{displayVersion}</dd>
           </div>
+          {nativeVersion && (
+            <div className="flex items-center justify-between gap-3">
+              <dt className="text-slate-500">Programmversion</dt>
+              <dd className="font-medium text-slate-900">{__APP_VERSION__}</dd>
+            </div>
+          )}
           <div className="flex items-center justify-between gap-3">
             <dt className="text-slate-500">Kanal</dt>
             <dd className="font-medium text-slate-900">{channel}</dd>
