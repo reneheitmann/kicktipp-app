@@ -16,6 +16,16 @@ const providerLabels: Record<EmailProvider, string> = {
   brevo: 'Brevo (API)',
 }
 
+// supabase-js liefert bei einem reinen Netzwerk-/Fetch-Fehler (anders als bei
+// einem echten PostgREST/Postgres-Fehler) ein einfaches { message, ... }
+// -Objekt statt einer Error-Instanz - `err instanceof Error` allein würde die
+// echte Ursache dann hinter einer nichtssagenden Fallback-Meldung verstecken.
+function errorMessage(err: unknown, fallback: string): string {
+  if (err instanceof Error) return err.message
+  if (err && typeof err === 'object' && 'message' in err && typeof err.message === 'string') return err.message
+  return fallback
+}
+
 export function EmailSettingsPage() {
   const { profile } = useAuth()
 
@@ -100,7 +110,7 @@ export function EmailSettingsPage() {
       setBrevoApiKey('')
       setInfo('Einstellungen gespeichert.')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Einstellungen konnten nicht gespeichert werden.')
+      setError(errorMessage(err, 'Einstellungen konnten nicht gespeichert werden.'))
     } finally {
       setSaving(false)
     }
