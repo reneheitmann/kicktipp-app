@@ -145,9 +145,12 @@ export function RankingsSection({
             const payout = payoutsByPlayer.get(playerId)
             return (
               <li key={playerId} className="flex items-center justify-between gap-3 px-4 py-3">
-                <p className="min-w-0 truncate font-medium text-slate-900">
-                  {playersById.get(playerId)?.name ?? 'Unbekannter Spieler'}
-                </p>
+                <div className="min-w-0">
+                  <p className="truncate font-medium text-slate-900">
+                    {playersById.get(playerId)?.name ?? 'Unbekannter Spieler'}
+                  </p>
+                  <p className="truncate text-xs text-slate-500">Kicktipp: {playersById.get(playerId)?.kicktipp_name || '—'}</p>
+                </div>
                 <div className="flex shrink-0 items-center gap-3">
                   {payout !== undefined && (
                     <span className="text-sm font-medium text-emerald-700">{currencyFormatter.format(centsToEuros(payout))}</span>

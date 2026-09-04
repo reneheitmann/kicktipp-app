@@ -199,6 +199,7 @@ export function AccountsOverviewPage() {
               <thead>
                 <tr className="border-b border-slate-200 text-slate-500">
                   <SortableTh columnKey="name" label="Spieler" activeKey={sortColumn} direction={sortDirection} onSort={handleSort} />
+                  <th className="whitespace-nowrap bg-white px-4 py-3 text-left font-medium">Kicktipp</th>
                   <SortableTh
                     columnKey="beitraegeGesamt"
                     label="Beiträge gesamt"
@@ -250,6 +251,7 @@ export function AccountsOverviewPage() {
                         {player.name}
                       </Link>
                     </td>
+                    <td className="px-4 py-3 text-slate-600">{player.kicktipp_name || '—'}</td>
                     <td className="px-4 py-3 text-right text-slate-700">{currencyFormatter.format(centsToEuros(balance.beitraegeGesamt))}</td>
                     <td className="px-4 py-3 text-right text-slate-700">{currencyFormatter.format(centsToEuros(balance.einzahlungenGesamt))}</td>
                     <td className="px-4 py-3 text-right text-slate-700">{currencyFormatter.format(centsToEuros(balance.auszahlungenGesamt))}</td>
@@ -365,6 +367,7 @@ export function AccountsOverviewPage() {
                       <Link to={`/players/${z.player_id}`} className="font-medium text-slate-900 hover:underline">
                         {playersById.get(z.player_id)?.name ?? 'Unbekannter Spieler'}
                       </Link>
+                      <p className="text-xs text-slate-500">Kicktipp: {playersById.get(z.player_id)?.kicktipp_name || '—'}</p>
                     </td>
                     <td className="px-4 py-3 text-slate-700">{seasonsById.get(z.season_id) ?? '—'}</td>
                     <td className="px-4 py-3 text-slate-700">{z.typ === 'einzahlung' ? 'Einzahlung' : 'Auszahlung'}</td>

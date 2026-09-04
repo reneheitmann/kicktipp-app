@@ -4,6 +4,7 @@ import type { Player, SeasonParticipant, Transaction, Zahlung } from '../../type
 export interface PlayerBalance {
   player_id: string
   name: string
+  kicktipp_name: string | null
   gesamtsieg_einsatz: Cents
   gesamtsieg_gewinn: Cents
   gesamtsieg_saldo: Cents
@@ -15,6 +16,7 @@ export interface PlayerBalance {
 
 interface Accumulator {
   name: string
+  kicktipp_name: string | null
   gesamtsieg_einsatz: Cents
   gesamtsieg_gewinn: Cents
   gesamtsieg_korrektur: Cents
@@ -66,6 +68,7 @@ export function computePlayerBalances(
       const player = players.find((p) => p.id === playerId)
       entry = {
         name: player?.name ?? 'Unbekannter Spieler',
+        kicktipp_name: player?.kicktipp_name ?? null,
         gesamtsieg_einsatz: 0,
         gesamtsieg_gewinn: 0,
         gesamtsieg_korrektur: 0,
@@ -118,6 +121,7 @@ export function computePlayerBalances(
     return {
       player_id,
       name: entry.name,
+      kicktipp_name: entry.kicktipp_name,
       gesamtsieg_einsatz: entry.gesamtsieg_einsatz,
       gesamtsieg_gewinn: entry.gesamtsieg_gewinn,
       gesamtsieg_saldo,

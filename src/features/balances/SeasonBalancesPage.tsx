@@ -160,6 +160,7 @@ export function SeasonBalancesPage() {
               <thead>
                 <tr className="border-b border-slate-200 text-slate-500">
                   <SortableTh columnKey="name" label="Spieler" activeKey={sortColumn} direction={sortDirection} onSort={handleSort} />
+                  <th className="whitespace-nowrap bg-white px-4 py-3 text-left font-medium">Kicktipp</th>
                   <SortableTh
                     columnKey="gesamtsieg_einsatz"
                     label="Gesamtwertung-Einsatz"
@@ -222,6 +223,7 @@ export function SeasonBalancesPage() {
                 {sortedBalances.map((b) => (
                   <tr key={b.player_id} className="border-b border-slate-100 last:border-0">
                     <td className="px-4 py-3 font-medium text-slate-900">{b.name}</td>
+                    <td className="px-4 py-3 text-slate-600">{b.kicktipp_name || '—'}</td>
                     <td className="px-4 py-3 text-right text-slate-700">{currencyFormatter.format(centsToEuros(b.gesamtsieg_einsatz))}</td>
                     <td className="px-4 py-3 text-right text-slate-700">{currencyFormatter.format(centsToEuros(b.gesamtsieg_gewinn))}</td>
                     <td className="px-4 py-3 text-right font-medium text-slate-900">
