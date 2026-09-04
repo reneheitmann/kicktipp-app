@@ -20,6 +20,7 @@ export interface EmailSettingsInput {
   imap_host: string | null
   imap_port: number | null
   imap_sent_folder: string | null
+  auto_send_settlement_emails: boolean
   updated_by: string
 }
 
@@ -48,6 +49,7 @@ export async function saveEmailSettings(input: EmailSettingsInput): Promise<void
     imap_host: input.imap_host,
     imap_port: input.imap_port,
     imap_sent_folder: input.imap_sent_folder,
+    auto_send_settlement_emails: input.auto_send_settlement_emails,
     updated_at: new Date().toISOString(),
     updated_by: input.updated_by,
   }

@@ -74,8 +74,9 @@ export function EmailTemplatesPage() {
             <div className="mb-6">
               <h2 className="mb-2 text-sm font-semibold text-slate-900">System-Vorlagen</h2>
               <p className="mb-2 text-xs text-slate-500">
-                Werden automatisch bei Passwort-Reset bzw. Benutzer-Neuanlage per E-Mail-Einladung verschickt – genau
-                eine Vorlage je Anlass, nicht löschbar.
+                Werden automatisch bei Passwort-Reset, Benutzer-Neuanlage per E-Mail-Einladung oder (falls unter
+                "E-Mail-Versand" aktiviert) bei Spieltag-/Gesamtwertung-Abrechnung verschickt – genau eine Vorlage je
+                Anlass, nicht löschbar.
               </p>
               <ul className="divide-y divide-slate-200 overflow-hidden rounded-xl border border-slate-200 bg-white">
                 {systemTemplates.map((template) => (

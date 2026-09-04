@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
+import { StickyTableScroll } from '../../components/ui/StickyTableScroll'
 import { useAuth } from '../auth/useAuth'
 import { permissionCatalog } from './permissionCatalog'
 import { listRolePermissions, setRolePermission } from './permissionsApi'
@@ -94,13 +95,13 @@ export function RolesPermissionsPage() {
           <div key={page} className="rounded-xl border border-slate-200 bg-white p-4">
             <h2 className="mb-3 text-sm font-semibold text-slate-900">Seite: {page}</h2>
             <p className="mb-2 text-xs text-slate-500 sm:hidden">→ Tabelle nach links wischen für weitere Rollen</p>
-            <div className="overflow-x-auto scroll-fade-x">
+            <StickyTableScroll className="max-h-[70vh] overflow-auto scroll-fade-x">
               <table className="w-full min-w-[480px] text-sm">
                 <thead>
                   <tr className="border-b border-slate-200 text-left text-slate-500">
-                    <th className="sticky top-0 z-10 bg-white py-2 pr-4 font-medium">Recht</th>
+                    <th className="bg-white py-2 pr-4 font-medium">Recht</th>
                     {roleColumns.map((c) => (
-                      <th key={c.role} className="sticky top-0 z-10 w-24 bg-white py-2 text-center font-medium">
+                      <th key={c.role} className="w-24 bg-white py-2 text-center font-medium">
                         {c.label}
                       </th>
                     ))}
@@ -133,7 +134,7 @@ export function RolesPermissionsPage() {
                     ))}
                 </tbody>
               </table>
-            </div>
+            </StickyTableScroll>
           </div>
         ))}
       </div>

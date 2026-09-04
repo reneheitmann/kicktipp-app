@@ -17,15 +17,24 @@ export const templateVariables: TemplateVariable[] = [
   { token: '{{Gewinne}}', label: 'Gewinne', description: 'Bereits verbuchte Gewinne in der gewählten Bezugssaison' },
 ]
 
-// Variablen für die beiden System-Vorlagen (Passwort-Reset/Neuanlage-
-// Einladung, siehe 0061_email_system_templates.sql) – andere Werte werden
-// serverseitig in send-password-reset/index.ts erst beim Versand ermittelt
-// (z. B. der Recovery-Link), daher ein eigenes, kleineres Set statt der
-// spielerbezogenen Variablen oben.
+// Variablen für die System-Vorlagen (Passwort-Reset/Neuanlage-Einladung/
+// Abrechnungs-E-Mails, siehe 0061_email_system_templates.sql und
+// 0072_settlement_notifications.sql) – andere Werte werden serverseitig erst
+// beim jeweiligen Versand ermittelt (z. B. der Recovery-Link in
+// send-password-reset/index.ts, Spielername/Gewinn in
+// notify-matchday-settled/notify-season-settled). Gemeinsame Liste für alle
+// System-Vorlagen (nicht pro system_key gefiltert) - harmlos, falls ein Token
+// in einer Vorlage, in der es keine Wirkung hat, versehentlich eingefügt wird.
 export const systemTemplateVariables: TemplateVariable[] = [
-  { token: '{{Link}}', label: 'Link', description: 'Bestätigungs-/Passwort-Link' },
+  { token: '{{Link}}', label: 'Link', description: 'Bestätigungs-/Passwort-Link (Passwort-Reset/Einladung)' },
   { token: '{{AppName}}', label: 'App-Name', description: 'Name der App (Erscheinungsbild-Einstellungen)' },
-  { token: '{{Name}}', label: 'Name', description: 'Name des Empfängers' },
+  { token: '{{Name}}', label: 'Name', description: 'Name des Empfängers (Passwort-Reset/Einladung)' },
+  { token: '{{Spielername}}', label: 'Spielername', description: 'Name des Spielers (Abrechnungs-E-Mails)' },
+  { token: '{{Kicktippname}}', label: 'Kicktippname', description: 'Anzeigename bei Kicktipp.de (Abrechnungs-E-Mails)' },
+  { token: '{{SpieltagNummer}}', label: 'Spieltag-Nummer', description: 'Nummer des abgerechneten Spieltags' },
+  { token: '{{SpieltagGewinn}}', label: 'Spieltag-Gewinn', description: 'Gewinn des Spielers für diesen Spieltag' },
+  { token: '{{SaisonName}}', label: 'Saison-Name', description: 'Name der Saison (Gesamtwertung-Abrechnung)' },
+  { token: '{{Gewinne}}', label: 'Gewinne', description: 'Gewinn des Spielers in der Gesamtwertung' },
 ]
 
 export interface RecipientVariables {

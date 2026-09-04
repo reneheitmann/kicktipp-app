@@ -183,11 +183,17 @@ weitere Ideen):
 1. **Neue Kontaktnachricht** – `send-contact-message` verschickt nach der
    E-Mail zusätzlich eine Push an alle aktiven Admins/Spielleiter mit
    registriertem Token.
-2. **Abgeschlossene Spieltags-Gewinnberechnung** – `calculateMatchdayPayout()`
-   (Client) ruft nach einem erfolgreichen `calculate_matchday_payout()`-Aufruf
-   die neue Function `send-push-notification` auf.
+2. **Abgerechneter Spieltag** – `doSetMatchdayStatus()`
+   (Client, `SeasonDetailPage.tsx`) ruft nach dem "Abrechnen"-Klick die
+   Function `notify-matchday-settled` auf (vormals `send-push-notification`;
+   umbenannt und um eine optionale Abrechnungs-E-Mail erweitert, siehe
+   `0072_settlement_notifications.sql`). Ursprünglich hing der Auslöser an
+   `calculateMatchdayPayout()`, das aber nur aufrufbar ist, während der
+   Spieltag noch `'offen'` ist – die serverseitige `status = 'abgerechnet'`-
+   Prüfung unten schlug dadurch immer fehl, der Push feuerte in der Praxis
+   nie. Jetzt sitzt der Aufruf am tatsächlich korrekten Zeitpunkt.
 
-`send-push-notification` nimmt bewusst **nur eine `matchday_id`** entgegen,
+`notify-matchday-settled` nimmt bewusst **nur eine `matchday_id`** entgegen,
 keinen freien Titel/Text/Empfängerkreis – ein authentifizierter Client
 könnte damit sonst beliebigen Nutzern Push-Spam/Phishing-Inhalte schicken.
 Empfänger und Nachrichtentext ermittelt die Function komplett selbst aus

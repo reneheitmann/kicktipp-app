@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
+import { Link } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { useAuth } from '../auth/useAuth'
@@ -14,6 +15,16 @@ const encryptionLabels: Record<SmtpEncryption, string> = {
 const providerLabels: Record<EmailProvider, string> = {
   smtp: 'SMTP (eigener Mailserver)',
   brevo: 'Brevo (API)',
+}
+
+// supabase-js liefert bei einem reinen Netzwerk-/Fetch-Fehler (anders als bei
+// einem echten PostgREST/Postgres-Fehler) ein einfaches { message, ... }
+// -Objekt statt einer Error-Instanz - `err instanceof Error` allein würde die
+// echte Ursache dann hinter einer nichtssagenden Fallback-Meldung verstecken.
+function errorMessage(err: unknown, fallback: string): string {
+  if (err instanceof Error) return err.message
+  if (err && typeof err === 'object' && 'message' in err && typeof err.message === 'string') return err.message
+  return fallback
 }
 
 export function EmailSettingsPage() {
@@ -34,6 +45,7 @@ export function EmailSettingsPage() {
   const [imapHost, setImapHost] = useState('')
   const [imapPort, setImapPort] = useState<number | ''>('')
   const [imapSentFolder, setImapSentFolder] = useState('')
+  const [autoSendSettlementEmails, setAutoSendSettlementEmails] = useState(false)
 
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -61,6 +73,7 @@ export function EmailSettingsPage() {
           setImapPort(settings.imap_port ?? '')
           setImapSentFolder(settings.imap_sent_folder ?? '')
           setHasPassword(settings.has_password)
+          setAutoSendSettlementEmails(settings.auto_send_settlement_emails)
         }
         setError(null)
       })
@@ -92,6 +105,7 @@ export function EmailSettingsPage() {
         imap_host: imapHost.trim() || null,
         imap_port: imapPort === '' ? null : imapPort,
         imap_sent_folder: imapSentFolder.trim() || null,
+        auto_send_settlement_emails: autoSendSettlementEmails,
         updated_by: profile.id,
       })
       if (password) setHasPassword(true)
@@ -100,7 +114,7 @@ export function EmailSettingsPage() {
       setBrevoApiKey('')
       setInfo('Einstellungen gespeichert.')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Einstellungen konnten nicht gespeichert werden.')
+      setError(errorMessage(err, 'Einstellungen konnten nicht gespeichert werden.'))
     } finally {
       setSaving(false)
     }
@@ -332,6 +346,27 @@ export function EmailSettingsPage() {
               className="w-full max-w-xs rounded-lg border border-slate-300 px-3 py-2 text-base focus:border-slate-900 focus:outline-none"
             />
           </div>
+        </div>
+
+        <div className="border-t border-slate-200 pt-4">
+          <h2 className="mb-1 text-sm font-semibold text-slate-900">Automatische Abrechnungs-E-Mails</h2>
+          <p className="mb-3 text-sm text-slate-500">
+            Verschickt automatisch eine E-Mail an die betroffenen Spieler, sobald ein Spieltag oder die Gesamtwertung
+            einer Saison auf "Abgerechnet" gesetzt wird. Die Texte dafür lassen sich als System-Vorlagen unter{' '}
+            <Link to="/emails/vorlagen" className="underline">
+              E-Mail-Vorlagen
+            </Link>{' '}
+            anpassen.
+          </p>
+          <label className="flex items-center gap-2 text-sm text-slate-700">
+            <input
+              type="checkbox"
+              checked={autoSendSettlementEmails}
+              onChange={(e) => setAutoSendSettlementEmails(e.target.checked)}
+              className="h-4 w-4 shrink-0"
+            />
+            Automatischen Versand aktivieren
+          </label>
         </div>
 
         <Button type="submit" disabled={saving}>
