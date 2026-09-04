@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
+import { StickyTableScroll } from '../../components/ui/StickyTableScroll'
 import { currencyFormatter } from '../../lib/format'
 import { centsToEuros } from '../../lib/money'
 import { listEmailTemplates } from './emailTemplatesApi'
@@ -356,16 +357,16 @@ export function SendEmailPage() {
             {resolvedRecipients.length > 0 && (
               <>
               <p className="mb-2 text-xs text-slate-500 sm:hidden">→ Tabelle nach links wischen für weitere Spalten</p>
-              <div className="overflow-x-auto scroll-fade-x">
+              <StickyTableScroll className="max-h-[70vh] overflow-auto scroll-fade-x">
                 <table className="w-full min-w-[520px] text-sm">
                   <thead>
                     <tr className="border-b border-slate-200 text-left text-slate-500">
-                      <th className="sticky top-0 z-10 w-8 bg-white px-3 py-2"></th>
-                      <th className="sticky top-0 z-10 bg-white px-3 py-2 font-medium">Spieler</th>
-                      <th className="sticky top-0 z-10 bg-white px-3 py-2 font-medium">Kicktippname</th>
-                      <th className="sticky top-0 z-10 bg-white px-3 py-2 font-medium">E-Mail</th>
-                      <th className="sticky top-0 z-10 bg-white px-3 py-2 text-right font-medium">Offen</th>
-                      <th className="sticky top-0 z-10 bg-white px-3 py-2 text-right font-medium">Gewinne</th>
+                      <th className="w-8 bg-white px-3 py-2"></th>
+                      <th className="bg-white px-3 py-2 font-medium">Spieler</th>
+                      <th className="bg-white px-3 py-2 font-medium">Kicktippname</th>
+                      <th className="bg-white px-3 py-2 font-medium">E-Mail</th>
+                      <th className="bg-white px-3 py-2 text-right font-medium">Offen</th>
+                      <th className="bg-white px-3 py-2 text-right font-medium">Gewinne</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -397,7 +398,7 @@ export function SendEmailPage() {
                     ))}
                   </tbody>
                 </table>
-              </div>
+              </StickyTableScroll>
               </>
             )}
           </section>
