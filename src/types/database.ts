@@ -232,7 +232,7 @@ export type Zahlung = {
 // verwechseln mit EmailSettings, das die SMTP-Zugangsdaten hält). body_text
 // und subject enthalten Variablen-Tokens ({{Spielername}} etc.), siehe
 // src/features/emails/templateVariables.ts.
-export type EmailSystemTemplateKey = 'password_reset' | 'new_user_invite'
+export type EmailSystemTemplateKey = 'password_reset' | 'new_user_invite' | 'matchday_settled' | 'season_settled'
 
 export type EmailTemplate = {
   id: string
@@ -353,6 +353,7 @@ export type EmailSettings = {
   imap_host: string | null
   imap_port: number | null
   imap_sent_folder: string | null
+  auto_send_settlement_emails: boolean
   updated_at: string
   updated_by: string | null
 }
@@ -680,6 +681,7 @@ export interface Database {
           imap_host?: string | null
           imap_port?: number | null
           imap_sent_folder?: string | null
+          auto_send_settlement_emails?: boolean
           updated_at?: string
           updated_by?: string | null
         }
@@ -697,6 +699,7 @@ export interface Database {
           imap_host?: string | null
           imap_port?: number | null
           imap_sent_folder?: string | null
+          auto_send_settlement_emails?: boolean
           updated_at?: string
           updated_by?: string | null
         }

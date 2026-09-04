@@ -7,6 +7,7 @@ import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { SearchInput } from '../../components/ui/SearchInput'
 import { currencyFormatter, formatGermanDate } from '../../lib/format'
 import { centsToEuros } from '../../lib/money'
+import { supabase } from '../../lib/supabaseClient'
 import { useAuth } from '../auth/useAuth'
 import { listPlayers } from '../players/playersApi'
 import { listPlayerProfileLinks } from '../players/playerProfileLinksApi'
@@ -197,6 +198,12 @@ export function SeasonDetailPage() {
     try {
       await setGesamtwertungStatus(season.id, next)
       await reload()
+      // Fire-and-forget: ein Fehlschlag bei der (optionalen, admin-
+      // konfigurierbaren) Abrechnungs-E-Mail darf die bereits erfolgreich
+      // gesetzte Gesamtwertung-Abrechnung nicht als Fehler erscheinen lassen.
+      if (next === 'abgerechnet') {
+        supabase.functions.invoke('notify-season-settled', { body: { season_id: season.id } }).catch(() => {})
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Status konnte nicht geändert werden.')
     }
@@ -222,6 +229,12 @@ export function SeasonDetailPage() {
     try {
       await updateMatchday(matchday.id, { status: next })
       await reload()
+      // Fire-and-forget (siehe doSetGesamtwertungStatus) - löst sowohl die
+      // Push-Benachrichtigung als auch die optionale Abrechnungs-E-Mail aus,
+      // siehe notify-matchday-settled/index.ts.
+      if (next === 'abgerechnet') {
+        supabase.functions.invoke('notify-matchday-settled', { body: { matchday_id: matchday.id } }).catch(() => {})
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Status konnte nicht geändert werden.')
     }

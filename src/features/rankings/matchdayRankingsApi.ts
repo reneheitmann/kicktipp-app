@@ -49,11 +49,13 @@ export async function listMatchdayPayouts(matchdayId: string): Promise<Transacti
 export async function calculateMatchdayPayout(matchdayId: string): Promise<Transaction[]> {
   const { data, error } = await supabase.rpc('calculate_matchday_payout', { p_matchday_id: matchdayId })
   if (error) throw error
-  // Push-Auslöser Nr. 2 (siehe docs/mobile-app.md, Phase 5) - fire-and-forget,
-  // ein Fehlschlag beim Push darf die erfolgreich abgeschlossene Berechnung
-  // nicht rückgängig machen bzw. dem Aufrufer als Fehler erscheinen. Läuft
-  // auf allen Kanälen (nicht nur mobile) - ohne registrierte push_tokens
-  // für die betroffenen Profile tut die Function einfach nichts.
-  supabase.functions.invoke('send-push-notification', { body: { matchday_id: matchdayId } }).catch(() => {})
+  // Push-Benachrichtigung + optionale Abrechnungs-E-Mail laufen NICHT mehr
+  // hier: calculate_matchday_payout() ist nur aufrufbar, während der
+  // Spieltag noch 'offen' ist (siehe locked-Logik in
+  // MatchdayDetailPage.tsx) - notify-matchday-settled/index.ts verlangt
+  // aber serverseitig status = 'abgerechnet' und hätte hier immer still
+  // abgelehnt. Der Auslöser sitzt jetzt stattdessen im "Abrechnen"-Klick
+  // (doSetMatchdayStatus in SeasonDetailPage.tsx), dem tatsächlich
+  // korrekten und zuverlässigen Zeitpunkt.
   return data.map(toCents)
 }
