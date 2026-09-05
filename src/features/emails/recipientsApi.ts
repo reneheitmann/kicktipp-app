@@ -60,6 +60,12 @@ export async function resolveSeasonWinnerIds(seasonId: string): Promise<Set<stri
   return new Set(payouts.filter((p) => p.betrag > 0).map((p) => p.player_id))
 }
 
+/** Alle für die Saison angemeldeten Spieler (season_participants), unabhängig von Gewinn/offenen Posten. */
+export async function resolveSeasonParticipantIds(seasonId: string): Promise<Set<string>> {
+  const participants = await listSeasonParticipants(seasonId)
+  return new Set(participants.map((p) => p.player_id))
+}
+
 export interface PlayerSeasonBalance {
   offen: Cents
   gewinneGesamt: Cents

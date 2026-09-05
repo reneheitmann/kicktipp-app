@@ -151,16 +151,19 @@ async function handle(
     return jsonResponse({ ok: true, email: false })
   }
 
-  const [{ data: players }, { data: links }, { data: appSettings }, { data: template }] = await Promise.all([
-    adminClient.from('players').select('id, name, kicktipp_name').in('id', playerIds),
-    adminClient.from('player_profile_links').select('player_id, profile_id').in('player_id', playerIds),
-    adminClient.from('app_settings').select('app_name').eq('id', APP_SETTINGS_ID).maybeSingle(),
-    adminClient.from('email_templates').select('subject, body_text').eq('system_key', 'matchday_settled').maybeSingle(),
-  ])
+  const [{ data: players }, { data: links }, { data: appSettings }, { data: template }, { data: rankings }] =
+    await Promise.all([
+      adminClient.from('players').select('id, name, kicktipp_name').in('id', playerIds),
+      adminClient.from('player_profile_links').select('player_id, profile_id').in('player_id', playerIds),
+      adminClient.from('app_settings').select('app_name').eq('id', APP_SETTINGS_ID).maybeSingle(),
+      adminClient.from('email_templates').select('subject, body_text').eq('system_key', 'matchday_settled').maybeSingle(),
+      adminClient.from('matchday_rankings').select('player_id, rang').eq('matchday_id', matchdayId),
+    ])
   if (!template) {
     await logAppError(supabaseUrl, serviceRoleKey, 'notify-matchday-settled', 'Keine Vorlage für matchday_settled hinterlegt.')
     return jsonResponse({ ok: true, email: false })
   }
+  const rangByPlayer = new Map<string, number>((rankings ?? []).map((r) => [r.player_id, r.rang]))
 
   const profileIds = [...new Set((links ?? []).map((l) => l.profile_id))]
   const { data: profiles } = await adminClient
@@ -184,11 +187,13 @@ async function handle(
     const profile = linkedProfiles.find((p) => p.is_active && p.email) ?? null
     if (!profile?.email) continue
 
+    const rang = rangByPlayer.get(player.id)
     const vars = {
       spielername: player.name,
       kicktippname: player.kicktipp_name ?? '',
       spieltagnummer: String(matchday.nummer),
       spieltaggewinn: currencyFormatter.format(payoutByPlayer.get(player.id) ?? 0),
+      platzierung: rang !== undefined ? String(rang) : '—',
       appname: appName,
     }
     const subject = renderTemplate(template.subject, vars)
@@ -231,6 +236,7 @@ interface TemplateVars {
   kicktippname: string
   spieltagnummer: string
   spieltaggewinn: string
+  platzierung: string
   appname: string
 }
 
@@ -240,6 +246,7 @@ function renderTemplate(text: string, vars: TemplateVars): string {
     .replaceAll('{{Kicktippname}}', vars.kicktippname)
     .replaceAll('{{SpieltagNummer}}', vars.spieltagnummer)
     .replaceAll('{{SpieltagGewinn}}', vars.spieltaggewinn)
+    .replaceAll('{{Platzierung}}', vars.platzierung)
     .replaceAll('{{AppName}}', vars.appname)
 }
 
@@ -252,6 +259,7 @@ function renderTemplateHtml(bodyText: string, vars: TemplateVars): string {
     kicktippname: escapeHtml(vars.kicktippname),
     spieltagnummer: escapeHtml(vars.spieltagnummer),
     spieltaggewinn: escapeHtml(vars.spieltaggewinn),
+    platzierung: escapeHtml(vars.platzierung),
     appname: escapeHtml(vars.appname),
   }
   const withBreaks = escapeHtml(bodyText).replace(/\n/g, '<br>')

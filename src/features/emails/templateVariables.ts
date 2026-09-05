@@ -35,6 +35,7 @@ export const systemTemplateVariables: TemplateVariable[] = [
   { token: '{{SpieltagGewinn}}', label: 'Spieltag-Gewinn', description: 'Gewinn des Spielers für diesen Spieltag' },
   { token: '{{SaisonName}}', label: 'Saison-Name', description: 'Name der Saison (Gesamtwertung-Abrechnung)' },
   { token: '{{Gewinne}}', label: 'Gewinne', description: 'Gewinn des Spielers in der Gesamtwertung' },
+  { token: '{{Platzierung}}', label: 'Platzierung', description: 'Platzierung (Rang) des Spielers, Spieltag oder Gesamtwertung' },
 ]
 
 export interface RecipientVariables {
