@@ -1,8 +1,6 @@
 import { FunctionsHttpError } from '@supabase/supabase-js'
 import { supabase } from '../../lib/supabaseClient'
-import type { Database, EmailProvider, EmailSettingsSafe, SmtpEncryption } from '../../types/database'
-
-type EmailSettingsInsert = Database['public']['Tables']['email_settings']['Insert']
+import type { EmailProvider, EmailSettingsSafe, SmtpEncryption } from '../../types/database'
 
 // Feste Singleton-id (siehe Migration 0017) – es gibt immer höchstens eine Zeile.
 const SETTINGS_ID = '00000000-0000-0000-0000-000000000001'
@@ -21,7 +19,6 @@ export interface EmailSettingsInput {
   imap_port: number | null
   imap_sent_folder: string | null
   auto_send_settlement_emails: boolean
-  updated_by: string
 }
 
 export async function getEmailSettings(): Promise<EmailSettingsSafe | null> {
@@ -33,30 +30,30 @@ export async function getEmailSettings(): Promise<EmailSettingsSafe | null> {
 }
 
 // Ein leeres/undefiniertes `smtp_password`/`brevo_api_key` lässt den
-// bisherigen Wert unverändert: der Key wird dann gar nicht erst ins
-// Upsert-Payload aufgenommen, sodass PostgREST die Spalte beim ON CONFLICT
-// DO UPDATE ausspart statt sie zu überschreiben.
+// bisherigen Wert unverändert - läuft über die save_email_settings()-RPC
+// (COALESCE serverseitig), NICHT über ein PostgREST-Upsert mit ausgelassenem
+// Feld: supabase-js' upsert() sendet dabei standardmäßig keinen
+// "missing=default"-Prefer-Header, PostgREST setzt eine im Payload fehlende
+// Spalte dadurch explizit auf NULL statt sie unangetastet zu lassen (siehe
+// 0073_save_email_settings_function.sql - live reproduziert: jeder
+// Speichern-Klick ohne neu eingegebenen API-Key nullte ihn und verletzte bei
+// provider = 'brevo' sofort den email_settings_brevo_key_required-Check).
 export async function saveEmailSettings(input: EmailSettingsInput): Promise<void> {
-  const payload: EmailSettingsInsert = {
-    id: SETTINGS_ID,
-    provider: input.provider,
-    smtp_host: input.smtp_host,
-    smtp_port: input.smtp_port,
-    smtp_username: input.smtp_username,
-    smtp_encryption: input.smtp_encryption,
-    sender_email: input.sender_email,
-    sender_name: input.sender_name,
-    imap_host: input.imap_host,
-    imap_port: input.imap_port,
-    imap_sent_folder: input.imap_sent_folder,
-    auto_send_settlement_emails: input.auto_send_settlement_emails,
-    updated_at: new Date().toISOString(),
-    updated_by: input.updated_by,
-  }
-  if (input.smtp_password) payload.smtp_password = input.smtp_password
-  if (input.brevo_api_key) payload.brevo_api_key = input.brevo_api_key
-
-  const { error } = await supabase.from('email_settings').upsert(payload)
+  const { error } = await supabase.rpc('save_email_settings', {
+    p_provider: input.provider,
+    p_smtp_host: input.smtp_host,
+    p_smtp_port: input.smtp_port,
+    p_smtp_username: input.smtp_username,
+    p_smtp_password: input.smtp_password || null,
+    p_smtp_encryption: input.smtp_encryption,
+    p_brevo_api_key: input.brevo_api_key || null,
+    p_sender_email: input.sender_email,
+    p_sender_name: input.sender_name,
+    p_imap_host: input.imap_host,
+    p_imap_port: input.imap_port,
+    p_imap_sent_folder: input.imap_sent_folder,
+    p_auto_send_settlement_emails: input.auto_send_settlement_emails,
+  })
   if (error) throw error
 }
 

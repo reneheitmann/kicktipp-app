@@ -959,6 +959,29 @@ export interface Database {
         Args: { p_season_ids: string[] }
         Returns: { player_id: string; season_id: string; gesamt_saldo: number; gewinne: number }[]
       }
+      // COALESCE-basiertes Speichern statt PostgREST-Upsert: p_smtp_password/
+      // p_brevo_api_key = null lässt den jeweils gespeicherten Wert
+      // unverändert (siehe 0073_save_email_settings_function.sql -
+      // supabase-js' upsert() sendet standardmäßig KEIN "missing=default",
+      // fehlende Spalten würden sonst hart auf NULL gesetzt).
+      save_email_settings: {
+        Args: {
+          p_provider: EmailProvider
+          p_smtp_host: string | null
+          p_smtp_port: number | null
+          p_smtp_username: string | null
+          p_smtp_password: string | null
+          p_smtp_encryption: SmtpEncryption
+          p_brevo_api_key: string | null
+          p_sender_email: string
+          p_sender_name: string | null
+          p_imap_host: string | null
+          p_imap_port: number | null
+          p_imap_sent_folder: string | null
+          p_auto_send_settlement_emails: boolean
+        }
+        Returns: undefined
+      }
       switch_to_role: {
         Args: { p_target_role: UserRole }
         Returns: undefined

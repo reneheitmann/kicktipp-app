@@ -106,7 +106,6 @@ export function EmailSettingsPage() {
         imap_port: imapPort === '' ? null : imapPort,
         imap_sent_folder: imapSentFolder.trim() || null,
         auto_send_settlement_emails: autoSendSettlementEmails,
-        updated_by: profile.id,
       })
       if (password) setHasPassword(true)
       if (brevoApiKey) setHasBrevoApiKey(true)
