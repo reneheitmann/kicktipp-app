@@ -110,19 +110,27 @@ async function handle(
     return jsonResponse({ ok: true, email: false })
   }
 
-  const [{ data: payoutTransactions }, { data: players }, { data: links }, { data: appSettings }, { data: template }] =
-    await Promise.all([
-      adminClient.from('transactions').select('player_id, betrag').eq('season_id', seasonId).eq('typ', 'gewinn_gesamt'),
-      adminClient.from('players').select('id, name, kicktipp_name').in('id', playerIds),
-      adminClient.from('player_profile_links').select('player_id, profile_id').in('player_id', playerIds),
-      adminClient.from('app_settings').select('app_name').eq('id', APP_SETTINGS_ID).maybeSingle(),
-      adminClient.from('email_templates').select('subject, body_text').eq('system_key', 'season_settled').maybeSingle(),
-    ])
+  const [
+    { data: payoutTransactions },
+    { data: players },
+    { data: links },
+    { data: appSettings },
+    { data: template },
+    { data: rankings },
+  ] = await Promise.all([
+    adminClient.from('transactions').select('player_id, betrag').eq('season_id', seasonId).eq('typ', 'gewinn_gesamt'),
+    adminClient.from('players').select('id, name, kicktipp_name').in('id', playerIds),
+    adminClient.from('player_profile_links').select('player_id, profile_id').in('player_id', playerIds),
+    adminClient.from('app_settings').select('app_name').eq('id', APP_SETTINGS_ID).maybeSingle(),
+    adminClient.from('email_templates').select('subject, body_text').eq('system_key', 'season_settled').maybeSingle(),
+    adminClient.from('season_rankings').select('player_id, rang').eq('season_id', seasonId),
+  ])
   if (!template) {
     await logAppError(supabaseUrl, serviceRoleKey, 'notify-season-settled', 'Keine Vorlage für season_settled hinterlegt.')
     return jsonResponse({ ok: true, email: false })
   }
   const payoutByPlayer = new Map<string, number>((payoutTransactions ?? []).map((t) => [t.player_id, t.betrag]))
+  const rangByPlayer = new Map<string, number>((rankings ?? []).map((r) => [r.player_id, r.rang]))
 
   const profileIds = [...new Set((links ?? []).map((l) => l.profile_id))]
   const { data: profiles } = await adminClient
@@ -146,11 +154,13 @@ async function handle(
     const profile = linkedProfiles.find((p) => p.is_active && p.email) ?? null
     if (!profile?.email) continue
 
+    const rang = rangByPlayer.get(player.id)
     const vars = {
       spielername: player.name,
       kicktippname: player.kicktipp_name ?? '',
       saisonname: season.name,
       gewinne: currencyFormatter.format(payoutByPlayer.get(player.id) ?? 0),
+      platzierung: rang !== undefined ? String(rang) : '—',
       appname: appName,
     }
     const subject = renderTemplate(template.subject, vars)
@@ -193,6 +203,7 @@ interface TemplateVars {
   kicktippname: string
   saisonname: string
   gewinne: string
+  platzierung: string
   appname: string
 }
 
@@ -202,6 +213,7 @@ function renderTemplate(text: string, vars: TemplateVars): string {
     .replaceAll('{{Kicktippname}}', vars.kicktippname)
     .replaceAll('{{SaisonName}}', vars.saisonname)
     .replaceAll('{{Gewinne}}', vars.gewinne)
+    .replaceAll('{{Platzierung}}', vars.platzierung)
     .replaceAll('{{AppName}}', vars.appname)
 }
 
@@ -211,6 +223,7 @@ function renderTemplateHtml(bodyText: string, vars: TemplateVars): string {
     kicktippname: escapeHtml(vars.kicktippname),
     saisonname: escapeHtml(vars.saisonname),
     gewinne: escapeHtml(vars.gewinne),
+    platzierung: escapeHtml(vars.platzierung),
     appname: escapeHtml(vars.appname),
   }
   const withBreaks = escapeHtml(bodyText).replace(/\n/g, '<br>')

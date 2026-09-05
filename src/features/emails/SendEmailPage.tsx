@@ -10,6 +10,7 @@ import {
   computeSeasonBalancesByPlayerId,
   listPlayersWithProfiles,
   resolveMatchdayWinnerIds,
+  resolveSeasonParticipantIds,
   resolveSeasonWinnerIds,
   type PlayerSeasonBalance,
   type PlayerWithProfile,
@@ -25,10 +26,11 @@ import { listMatchdays } from '../seasons/matchdaysApi'
 import { listSeasons } from '../seasons/seasonsApi'
 import type { EmailTemplate, Matchday, Season } from '../../types/database'
 
-type RecipientMode = 'players' | 'matchday_winners' | 'season_winners' | 'outstanding'
+type RecipientMode = 'players' | 'season_players' | 'matchday_winners' | 'season_winners' | 'outstanding'
 
 const modeLabels: Record<RecipientMode, string> = {
   players: 'Einzelner / mehrere Spieler',
+  season_players: 'Alle Spieler der Saison',
   matchday_winners: 'Spieltagsgewinner',
   season_winners: 'Gesamtgewinner',
   outstanding: 'Spieler mit offenen Posten',
@@ -128,6 +130,14 @@ export function SendEmailPage() {
         return
       }
       resolveSeasonWinnerIds(selectedSeasonId).then((ids) => {
+        if (!cancelled) setModeResolvedIds(ids)
+      })
+    } else if (recipientMode === 'season_players') {
+      if (!selectedSeasonId) {
+        setModeResolvedIds(new Set())
+        return
+      }
+      resolveSeasonParticipantIds(selectedSeasonId).then((ids) => {
         if (!cancelled) setModeResolvedIds(ids)
       })
     } else if (recipientMode === 'outstanding') {
