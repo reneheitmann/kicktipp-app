@@ -18,15 +18,36 @@ interface StickyTableScrollProps {
  *
  * `position: fixed` "blockifiziert" laut CSS-Spec ein Element mit
  * `display: table-header-group` (das <thead>) zu `display: block` – dadurch
- * fällt die Kopfzeile aus dem Tabellen-Spaltenlayout und verliert die
- * Breiten-Synchronisation mit <tbody> (sichtbar als "kaputter" Tabellenkopf
- * beim Scrollen). Fix: die Spaltenbreiten der <th> einmalig messen, SOLANGE
- * <thead> noch normal im Tabellenlayout steht (also vor dem Pinnen), und
- * beim Pinnen selbst <thead>/<tr> auf block/flex umstellen und jedem <th>
- * die gemessene Breite explizit als Pixelwert mitgeben – das rekonstruiert
- * die Kopfzeile als eigenständige, breiten-exakte Zeile statt sich auf die
- * (durch die Blockifizierung ohnehin gebrochene) Tabellen-Spaltensync zu
- * verlassen.
+ * fällt die Kopfzeile aus dem Tabellen-Spaltenlayout. Zwei Ansätze wurden
+ * live gegen Dev verifiziert und verworfen, bevor die jetzige Lösung
+ * stand hielt:
+ *
+ * 1. Nur <th>-Breiten einmalig cachen und beim Pinnen aufprägen: <tbody>
+ *    berechnet seine Spaltenbreiten nach Entfernen des <thead> aus dem
+ *    Tabellen-Layout eigenständig neu (table-layout: auto, der Default) -
+ *    bei Spalten, deren Kopfzeilen-Text breiter ist als der Zelleninhalt
+ *    (z. B. "Beiträge gesamt" vs. "148,00 €"), schrumpft <tbody> dadurch
+ *    schmaler als die weiterhin auf dem alten Wert stehende Kopfzelle.
+ * 2. table-layout: fixed + Breiten zusätzlich auf die ERSTE <tbody>-Zeile
+ *    schreiben (die laut Spec bei table-layout:fixed die Spaltenbreiten
+ *    aller Zeilen bestimmt, sobald <thead> nicht mehr teilnimmt): schlägt
+ *    fehl, sobald sich die Zeilenreihenfolge NACH dem Locking noch ändert
+ *    (hier: Zeilen werden zunächst in einer Reihenfolge gerendert, kurz
+ *    danach sortiert <tbody> per asynchron nachgeladener Kontostand-Berechnung
+ *    um - die ursprünglich "erste" Zeile ist dann nicht mehr an Position 1,
+ *    eine ANDERE, nie mit Breite versehene Zeile rutscht nach - live via
+ *    MutationObserver bestätigt).
+ *
+ * Fix: `<colgroup>` mit expliziten `<col style="width">` je Spalte, als
+ * erstes Kind der <table> eingefügt (siehe lockColumnWidths()). Anders als
+ * "erste-Zeile"-Breiten ist ein <colgroup> an die SPALTENPOSITION gebunden,
+ * nicht an eine bestimmte Zeile/Identität - unempfindlich gegenüber Zeilen-
+ * Umsortierung, -Einfügung oder -Löschung danach. `table-layout: fixed`
+ * zusammen mit einem <colgroup> ist damit die verlässliche Kombination.
+ * Das gepinnte (blockifizierte) <thead> selbst nimmt am Tabellen-Layout
+ * nicht mehr teil und wird vom <colgroup> daher NICHT erfasst - seine
+ * <th>-Zellen bekommen deshalb zusätzlich beim Pinnen dieselben Breiten
+ * direkt als Inline-Style aufgeprägt (siehe pin()).
  *
  * Der äußere Wrapper bekommt `transform` + `overflow-hidden`, damit
  * `position: fixed` sich relativ zu IHM statt zum Viewport verhält
@@ -42,16 +63,37 @@ export function StickyTableScroll({ className = '', children }: StickyTableScrol
     const container = containerRef.current
     const thead = container?.querySelector('thead')
     const table = container?.querySelector('table')
-    if (!container || !(thead instanceof HTMLElement) || !table) return
+    if (!container || !(thead instanceof HTMLElement) || !(table instanceof HTMLTableElement)) return
 
-    let cachedThWidths: number[] | null = null
+    let columnWidths: number[] = []
+
+    // Misst die aktuell vom Browser berechneten (aus Kopf- UND Zelleninhalt
+    // kombiniert ermittelten) Spaltenbreiten und schreibt sie als <colgroup>
+    // fest - spaltenpositions-, nicht zeilenbasiert, siehe Kommentar oben.
+    // Muss vor dem Messen die alte Sperre (colgroup + table-layout)
+    // entfernen, sonst würde eine bereits gesperrte Vorbreite die
+    // Neuberechnung verfälschen (relevant bei erneutem Aufruf durch
+    // handleResize()).
+    function lockColumnWidths() {
+      if (!(thead instanceof HTMLElement) || !(table instanceof HTMLTableElement)) return
+      table.querySelectorAll(':scope > colgroup[data-sticky-widths]').forEach((el) => el.remove())
+      table.style.tableLayout = 'auto'
+      const ths = [...thead.querySelectorAll('th')]
+      columnWidths = ths.map((th) => th.getBoundingClientRect().width)
+
+      const colgroup = document.createElement('colgroup')
+      colgroup.setAttribute('data-sticky-widths', '')
+      for (const width of columnWidths) {
+        const col = document.createElement('col')
+        col.style.width = `${width}px`
+        colgroup.appendChild(col)
+      }
+      table.insertBefore(colgroup, table.firstChild)
+      table.style.tableLayout = 'fixed'
+    }
 
     function pin() {
       if (!container || !(thead instanceof HTMLElement) || !table) return
-      const ths = [...thead.querySelectorAll('th')]
-      if (!cachedThWidths) {
-        cachedThWidths = ths.map((th) => th.getBoundingClientRect().width)
-      }
       thead.style.position = 'fixed'
       thead.style.top = '0px'
       thead.style.left = '0px'
@@ -61,17 +103,19 @@ export function StickyTableScroll({ className = '', children }: StickyTableScrol
       thead.style.display = 'block'
       const tr = thead.querySelector('tr')
       if (tr instanceof HTMLElement) tr.style.display = 'flex'
-      ths.forEach((th, i) => {
+      // <colgroup> erfasst nur noch am Tabellen-Layout teilnehmende Zeilen -
+      // das blockifizierte <thead> braucht seine Breiten deshalb direkt.
+      thead.querySelectorAll('th').forEach((th, i) => {
+        if (!(th instanceof HTMLElement)) return
         th.style.display = 'block'
         th.style.flex = 'none'
         th.style.boxSizing = 'border-box'
-        th.style.width = `${cachedThWidths?.[i] ?? 0}px`
+        th.style.width = `${columnWidths[i] ?? 0}px`
       })
     }
 
     function unpin() {
       if (!(thead instanceof HTMLElement)) return
-      cachedThWidths = null
       thead.style.position = ''
       thead.style.top = ''
       thead.style.left = ''
@@ -97,16 +141,11 @@ export function StickyTableScroll({ className = '', children }: StickyTableScrol
     }
 
     function handleResize() {
-      // Erst unpin() (setzt <thead> zurück ins normale Tabellenlayout UND
-      // verwirft den Breiten-Cache), damit ein direkt folgendes erneutes
-      // Pinnen die <th>-Breiten frisch aus dem echten (durch den Resize
-      // ggf. veränderten) Tabellenlayout misst, statt versehentlich die
-      // bereits fixierten/blockifizierten (und damit falschen) Breiten
-      // der vorherigen Pinnung zu übernehmen.
-      unpin()
+      lockColumnWidths()
       update()
     }
 
+    lockColumnWidths()
     update()
     container.addEventListener('scroll', update, { passive: true })
     window.addEventListener('resize', handleResize)
