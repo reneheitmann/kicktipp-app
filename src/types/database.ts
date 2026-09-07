@@ -72,6 +72,9 @@ export type Profile = {
   /** Aus auth.users gespiegelt (siehe 0053_profiles_last_sign_in_at.sql),
    *  null solange der User sich noch nie angemeldet hat. */
   last_sign_in_at: string | null
+  /** "Als Standard speichern" auf der Vergleich-Seite (SeasonComparisonPage.tsx)
+   *  - server-persistiert statt localStorage, siehe 0075_favorite_comparison_players.sql. */
+  favorite_comparison_player_ids: string[]
 }
 
 export type Player = {
@@ -397,6 +400,7 @@ export interface Database {
           base_role?: UserRole | null
           is_active?: boolean
           created_at?: string
+          favorite_comparison_player_ids?: string[]
         }
         Update: {
           id?: string
@@ -408,6 +412,7 @@ export interface Database {
           base_role?: UserRole | null
           is_active?: boolean
           created_at?: string
+          favorite_comparison_player_ids?: string[]
         }
         Relationships: []
       }
