@@ -10,6 +10,7 @@ import { listPlayers } from '../players/playersApi'
 import { listSeasons } from '../seasons/seasonsApi'
 import { isSeasonBalanceEligible } from '../seasons/seasonStatus'
 import { useAuth } from '../auth/useAuth'
+import { updateFavoriteComparisonPlayers } from '../auth/myAccountApi'
 import { getPublicPlayerSeasonBalances, type PublicPlayerSeasonBalance } from './balancesApi'
 import type { Player, Season } from '../../types/database'
 
@@ -20,33 +21,8 @@ function matchesSearch(player: Player, term: string): boolean {
 
 const lineColors = ['#0f172a', '#2563eb', '#16a34a', '#d97706', '#dc2626', '#7c3aed', '#0891b2', '#be185d']
 
-// Verallgemeinert das Einzel-Favorit-Muster aus SeasonDetailPage.tsx
-// (FAVORITE_PLAYER_STORAGE_KEY) auf mehrere IDs, da hier bereits eine
-// Mehrfachauswahl existiert.
-const FAVORITE_PLAYER_IDS_STORAGE_KEY = 'kicktipp_favorite_player_ids'
-
-function readFavoritePlayerIds(): string[] {
-  try {
-    const raw = localStorage.getItem(FAVORITE_PLAYER_IDS_STORAGE_KEY)
-    const parsed = raw ? JSON.parse(raw) : []
-    return Array.isArray(parsed) ? parsed.filter((id) => typeof id === 'string') : []
-  } catch {
-    return []
-  }
-}
-
-function saveFavoritePlayerIds(ids: string[]): void {
-  try {
-    if (ids.length === 0) localStorage.removeItem(FAVORITE_PLAYER_IDS_STORAGE_KEY)
-    else localStorage.setItem(FAVORITE_PLAYER_IDS_STORAGE_KEY, JSON.stringify(ids))
-  } catch {
-    // z. B. privates Fenster ohne Storage-Zugriff – Auswahl bleibt dann nur
-    // für die aktuelle Sitzung erhalten, kein Absturz nötig.
-  }
-}
-
 export function SeasonComparisonPage() {
-  const { can } = useAuth()
+  const { can, profile, refreshProfile } = useAuth()
   const canManageAccounts = can('accounts.manage')
   const [seasons, setSeasons] = useState<Season[]>([])
   const [players, setPlayers] = useState<Player[]>([])
@@ -63,11 +39,17 @@ export function SeasonComparisonPage() {
   const [saveInfo, setSaveInfo] = useState<string | null>(null)
   const saveInfoTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  function handleSaveFavorites() {
-    saveFavoritePlayerIds([...selectedPlayerIds])
-    setSaveInfo('Gespeichert.')
-    if (saveInfoTimeoutRef.current) clearTimeout(saveInfoTimeoutRef.current)
-    saveInfoTimeoutRef.current = setTimeout(() => setSaveInfo(null), 2000)
+  async function handleSaveFavorites() {
+    if (!profile) return
+    try {
+      await updateFavoriteComparisonPlayers(profile.id, [...selectedPlayerIds])
+      await refreshProfile()
+      setSaveInfo('Gespeichert.')
+      if (saveInfoTimeoutRef.current) clearTimeout(saveInfoTimeoutRef.current)
+      saveInfoTimeoutRef.current = setTimeout(() => setSaveInfo(null), 2000)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Auswahl konnte nicht gespeichert werden.')
+    }
   }
 
   useEffect(() => () => {
@@ -148,16 +130,17 @@ export function SeasonComparisonPage() {
   }, [playerRows, sortKey, sortDirection, tableSearch])
 
   // Vorauswahl beim ersten Laden: ausschließlich die selbst gespeicherten
-  // Favoriten (siehe "Als Standard speichern" unten). Ohne gespeicherte
-  // Auswahl bleibt die Liste bewusst leer, statt automatisch Spieler zu
-  // erraten – der User wählt gezielt selbst aus.
+  // Favoriten (siehe "Als Standard speichern" unten, jetzt am eigenen Profil
+  // statt localStorage - siehe 0075_favorite_comparison_players.sql). Ohne
+  // gespeicherte Auswahl bleibt die Liste bewusst leer, statt automatisch
+  // Spieler zu erraten – der User wählt gezielt selbst aus.
   useEffect(() => {
-    if (playerRows.length === 0 || selectedPlayerIds.size > 0) return
-    const favoriteIds = new Set(readFavoritePlayerIds())
+    if (playerRows.length === 0 || selectedPlayerIds.size > 0 || !profile) return
+    const favoriteIds = new Set(profile.favorite_comparison_player_ids)
     const favorites = playerRows.filter((r) => favoriteIds.has(r.player.id))
     if (favorites.length > 0) setSelectedPlayerIds(new Set(favorites.map((r) => r.player.id)))
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [playerRows])
+  }, [playerRows, profile])
 
   const filteredPlayerRows = useMemo(() => {
     const term = playerSearch.trim().toLowerCase()
@@ -298,7 +281,7 @@ export function SeasonComparisonPage() {
           <p className="mb-6 text-xs text-slate-500">
             Ohne gespeicherte Standardauswahl ist zunächst kein Spieler ausgewählt – über die Suche rechts lassen
             sich gezielt Spieler hinzufügen und die aktuelle Auswahl über "Als Standard speichern" für künftige
-            Aufrufe merken (nur in diesem Browser).
+            Aufrufe merken (am eigenen Konto, geräteübergreifend).
           </p>
 
           <SearchInput

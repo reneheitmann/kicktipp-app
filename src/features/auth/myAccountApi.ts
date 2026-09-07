@@ -6,6 +6,17 @@ export async function updateOwnName(profileId: string, name: string): Promise<vo
   if (error) throw error
 }
 
+// "Als Standard speichern" auf der Vergleich-Seite - server-persistiert
+// statt localStorage (siehe 0075_favorite_comparison_players.sql), damit
+// die Auswahl Browser-/App-Storage-Bereinigung übersteht.
+export async function updateFavoriteComparisonPlayers(profileId: string, playerIds: string[]): Promise<void> {
+  const { error } = await supabase
+    .from('profiles')
+    .update({ favorite_comparison_player_ids: playerIds })
+    .eq('id', profileId)
+  if (error) throw error
+}
+
 // Läuft über eine Edge Function statt direkt supabase.auth.updateUser(), da
 // nur dort die Passwort-Richtlinie (Länge/Zeichenarten/Wiederverwendung,
 // siehe password_policy) serverseitig durchgesetzt werden kann.
