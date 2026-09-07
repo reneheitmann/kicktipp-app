@@ -7,7 +7,7 @@ import { useAuth } from '../features/auth/useAuth'
 import { listSeasons } from '../features/seasons/seasonsApi'
 import { listPlayers } from '../features/players/playersApi'
 import { listPlayerProfileLinks } from '../features/players/playerProfileLinksApi'
-import { listSeasonParticipantsForPlayer, listSeasonParticipantsForSeasons } from '../features/seasons/seasonParticipantsApi'
+import { listSeasonParticipantsForPlayer } from '../features/seasons/seasonParticipantsApi'
 import { listAbgerechneteMatchdayIds, listMatchdayCountsBySeasonId } from '../features/seasons/matchdaysApi'
 import { listZahlungen, listZahlungenForSeasons } from '../features/players/zahlungenApi'
 import { listPlayerTransactions, listTransactionsForSeasons } from '../features/balances/balancesApi'
@@ -103,11 +103,7 @@ export function DashboardPage() {
               )
             : Promise.resolve([]),
           canManage
-            ? Promise.all([
-                listSeasonParticipantsForSeasons(eligibleSeasonIdList),
-                listZahlungenForSeasons(eligibleSeasonIdList),
-                listTransactionsForSeasons(eligibleSeasonIdList),
-              ])
+            ? Promise.all([listZahlungenForSeasons(eligibleSeasonIdList), listTransactionsForSeasons(eligibleSeasonIdList)])
             : Promise.resolve(null),
         ])
 
@@ -116,14 +112,13 @@ export function DashboardPage() {
           // einen einzelnen Spieler, nur mit den zusammengeführten Rohdaten
           // aller verknüpften Spieler – rechnerisch identisch zum Aufsummieren
           // der Einzelsalden, aber ohne die Aggregationslogik zu duplizieren.
-          const allParticipants = perPlayerData.flatMap((d) => d.participants)
           const allZahlungen = perPlayerData.flatMap((d) => d.zahlungen)
           const allTransactions = perPlayerData.flatMap((d) => d.transactions)
-          setMyBalance(computeAccountBalance(allParticipants, matchdayCounts, allZahlungen, allTransactions))
+          setMyBalance(computeAccountBalance(allZahlungen, allTransactions))
           setMyPlayerBalances(
-            perPlayerData.map(({ player, participants, zahlungen, transactions }) => ({
+            perPlayerData.map(({ player, zahlungen, transactions }) => ({
               player,
-              balance: computeAccountBalance(participants, matchdayCounts, zahlungen, transactions),
+              balance: computeAccountBalance(zahlungen, transactions),
             })),
           )
 
@@ -157,19 +152,13 @@ export function DashboardPage() {
         }
 
         if (canManage && statsData) {
-          const [allParticipants, allZahlungen, allTransactions] = statsData
+          const [allZahlungen, allTransactions] = statsData
           const totalMatchdays = [...matchdayCounts.values()].reduce((sum, c) => sum + c, 0)
           setStats({
             playerCount: players.length,
             activeSeasonCount: seasons.filter((s) => s.status === 'aktiv').length,
             matchdayCount: totalMatchdays,
-            totalOutstanding: computeTotalOutstanding(
-              players.map((p) => p.id),
-              allParticipants,
-              matchdayCounts,
-              allZahlungen,
-              allTransactions,
-            ),
+            totalOutstanding: computeTotalOutstanding(players.map((p) => p.id), allZahlungen, allTransactions),
           })
         }
       } catch (err) {

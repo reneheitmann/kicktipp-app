@@ -38,12 +38,15 @@ interface Accumulator {
  * ausschließlich an der API-Grenze (siehe *Api.ts-Dateien), hier drin bleibt
  * die Arithmetik unverändert reine Ganzzahl-Rechnung.
  *
- * Der Spieltags-Einsatz wird – sofern `participants` und `matchdayCount`
- * übergeben werden – bewusst per Formel (Standard-Spieltagseinsatz × Anzahl
- * angelegter Spieltage) statt aus der Summe der bisher gebuchten
- * einsatz_spieltag-Transaktionen berechnet, damit der volle erwartete
- * Saison-Beitrag sichtbar ist, auch wenn noch nicht alle Spieltage angelegt
- * wurden (analog zur Kontostand-Berechnung in accountBalance.ts).
+ * `spieltag_einsatz`/`gesamtsieg_einsatz` ergeben sich rein aus der Summe der
+ * gebuchten einsatz_spieltag/einsatz_gesamt-Transaktionen – die entstehen per
+ * DB-Trigger automatisch aus matchday_entries/season_participants (siehe
+ * 0004_einsaetze.sql), spiegeln also exakt die tatsächlich angelegten
+ * Teilnahmen wider (ein erst später eingestiegener Spieler hat entsprechend
+ * weniger Spieltags-Buchungen, keine gesonderte Behandlung nötig). Der
+ * `participants`-Parameter dient nur noch dazu, auch Teilnehmer ganz ohne
+ * bisherige Buchung in der Ausgabe erscheinen zu lassen (analog zu
+ * `zahlungen` unten).
  *
  * `gesamtsieg_saldo`/`spieltag_saldo` bleiben reine Spiel-Ergebnisse (Einsatz
  * vs. Gewinn je Topf, ohne Zahlungen) – nützlich, um die Performance je
@@ -57,7 +60,6 @@ export function computePlayerBalances(
   transactions: Transaction[],
   players: Player[],
   participants: SeasonParticipant[] = [],
-  matchdayCount = 0,
   zahlungen: Zahlung[] = [],
 ): PlayerBalance[] {
   const accumulators = new Map<string, Accumulator>()
@@ -103,8 +105,7 @@ export function computePlayerBalances(
   }
 
   for (const participant of participants) {
-    const entry = get(participant.player_id)
-    entry.spieltag_einsatz = participant.spieltags_einsatz_betrag * matchdayCount
+    get(participant.player_id) // stellt sicher, dass auch Teilnehmer ohne bisherige Buchung in der Ausgabe erscheinen
   }
 
   const zahlungenSaldoByPlayer = new Map<string, number>()

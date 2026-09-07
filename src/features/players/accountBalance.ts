@@ -1,5 +1,5 @@
 import type { Cents } from '../../lib/money'
-import type { SeasonParticipant, Transaction, Zahlung } from '../../types/database'
+import type { Transaction, Zahlung } from '../../types/database'
 
 export interface AccountBalance {
   beitraegeGesamtsieg: Cents
@@ -14,11 +14,17 @@ export interface AccountBalance {
 
 /**
  * Kontostand eines Spielers, auf Basis der übergebenen (vom Aufrufer ggf.
- * bereits auf eine einzelne Saison gefilterten) Daten. Der Spieltags-Beitrag
- * ergibt sich bewusst aus Formel (Standard-Spieltagseinsatz × Anzahl der in
- * der jeweiligen Saison angelegten Spieltage), nicht aus der Summe einzelner
- * matchday_entries – so ist der volle erwartete Saison-Beitrag sofort
- * sichtbar, auch wenn z. B. noch nicht alle Spieltage angelegt wurden.
+ * bereits auf eine einzelne Saison gefilterten) Daten. Die Beiträge
+ * (Gesamtwertung wie Spieltag) ergeben sich aus der Summe der tatsächlich
+ * gebuchten einsatz_gesamt/einsatz_spieltag-Transaktionen – die entstehen
+ * automatisch per DB-Trigger aus season_participants/matchday_entries
+ * (siehe 0004_einsaetze.sql), spiegeln also exakt die real angelegten
+ * Teilnahmen/Einträge wider. Ein erst später eingestiegener Spieler hat
+ * dadurch automatisch weniger einsatz_spieltag-Buchungen als ein Spieler,
+ * der von Anfang an dabei war – keine gesonderte Behandlung nötig (bis
+ * Anfang 2026 wurde hier stattdessen eine Formel verwendet,
+ * Standardeinsatz × Gesamtzahl angelegter Spieltage, die auch Spieltage vor
+ * dem Beitritt mitzählte).
  * Bereits abgerechnete Gewinne (gewinn_gesamt/gewinn_spieltag aus dem
  * Buchungs-Ledger) mindern zusammen mit Einzahlungen die Restschuld;
  * Guthaben-Auszahlungen (bereits an den Spieler ausgezahlte Gewinne/
@@ -37,16 +43,11 @@ export interface AccountBalance {
  * bei der Summierung vieler Einzelbuchungen.
  */
 export function computeAccountBalance(
-  participants: SeasonParticipant[],
-  matchdayCountsBySeasonId: Map<string, number>,
   zahlungen: Zahlung[],
   transactions: Transaction[] = [],
 ): AccountBalance {
-  const beitraegeGesamtsieg = participants.reduce((sum, p) => sum + p.gesamtsieg_einsatz_betrag, 0)
-  const beitraegeSpieltag = participants.reduce((sum, p) => {
-    const anzahlSpieltage = matchdayCountsBySeasonId.get(p.season_id) ?? 0
-    return sum + p.spieltags_einsatz_betrag * anzahlSpieltage
-  }, 0)
+  const beitraegeGesamtsieg = transactions.filter((t) => t.typ === 'einsatz_gesamt').reduce((sum, t) => sum + t.betrag, 0)
+  const beitraegeSpieltag = transactions.filter((t) => t.typ === 'einsatz_spieltag').reduce((sum, t) => sum + t.betrag, 0)
   const beitraegeGesamt = beitraegeGesamtsieg + beitraegeSpieltag
   const einzahlungenGesamt = zahlungen.filter((z) => z.typ === 'einzahlung').reduce((sum, z) => sum + z.betrag, 0)
   const auszahlungenGesamt = zahlungen.filter((z) => z.typ === 'auszahlung').reduce((sum, z) => sum + z.betrag, 0)
@@ -67,17 +68,9 @@ export function computeAccountBalance(
 }
 
 /** Summe aller positiven offenen Beträge (Schulden) über die angegebenen Spieler hinweg. */
-export function computeTotalOutstanding(
-  playerIds: string[],
-  participants: SeasonParticipant[],
-  matchdayCountsBySeasonId: Map<string, number>,
-  zahlungen: Zahlung[],
-  transactions: Transaction[],
-): Cents {
+export function computeTotalOutstanding(playerIds: string[], zahlungen: Zahlung[], transactions: Transaction[]): Cents {
   return playerIds.reduce((sum, playerId) => {
     const balance = computeAccountBalance(
-      participants.filter((p) => p.player_id === playerId),
-      matchdayCountsBySeasonId,
       zahlungen.filter((z) => z.player_id === playerId),
       transactions.filter((t) => t.player_id === playerId),
     )

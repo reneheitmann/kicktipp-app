@@ -7,8 +7,6 @@ import { centsToEuros } from '../../lib/money'
 import { useAuth } from '../auth/useAuth'
 import { getPlayer } from './playersApi'
 import { listSeasons } from '../seasons/seasonsApi'
-import { listSeasonParticipantsForPlayer } from '../seasons/seasonParticipantsApi'
-import { listMatchdayCountsBySeasonId } from '../seasons/matchdaysApi'
 import { listPlayerTransactions } from '../balances/balancesApi'
 import { addZahlung, listZahlungen, removeZahlung } from './zahlungenApi'
 import { transferBalanceToSeason } from './transferApi'
@@ -16,7 +14,7 @@ import { computeAccountBalance } from './accountBalance'
 import { isSeasonBalanceEligible } from '../seasons/seasonStatus'
 import { ZahlungForm } from './ZahlungForm'
 import { TransferForm } from './TransferForm'
-import type { Player, Season, SeasonParticipant, Transaction, Zahlung } from '../../types/database'
+import type { Player, Season, Transaction, Zahlung } from '../../types/database'
 
 export function PlayerDetailPage() {
   const { playerId } = useParams<{ playerId: string }>()
@@ -26,8 +24,6 @@ export function PlayerDetailPage() {
 
   const [player, setPlayer] = useState<Player | null>(null)
   const [seasons, setSeasons] = useState<Season[]>([])
-  const [participants, setParticipants] = useState<SeasonParticipant[]>([])
-  const [matchdayCounts, setMatchdayCounts] = useState<Map<string, number>>(new Map())
   const [zahlungen, setZahlungen] = useState<Zahlung[]>([])
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [loading, setLoading] = useState(true)
@@ -40,18 +36,14 @@ export function PlayerDetailPage() {
     if (!playerId) return
     setLoading(true)
     try {
-      const [playerData, seasonData, participantData, countsData, zahlungData, transactionData] = await Promise.all([
+      const [playerData, seasonData, zahlungData, transactionData] = await Promise.all([
         getPlayer(playerId),
         listSeasons(),
-        listSeasonParticipantsForPlayer(playerId),
-        listMatchdayCountsBySeasonId(),
         listZahlungen(playerId),
         listPlayerTransactions(playerId),
       ])
       setPlayer(playerData)
       setSeasons(seasonData)
-      setParticipants(participantData)
-      setMatchdayCounts(countsData)
       setZahlungen(zahlungData)
       setTransactions(transactionData)
       setError(null)
@@ -92,9 +84,6 @@ export function PlayerDetailPage() {
   const eligibleSeasonIds = new Set(
     seasons.filter((s) => isSeasonBalanceEligible(s.status, can('accounts.manage'))).map((s) => s.id),
   )
-  const filteredParticipants = seasonFilter
-    ? participants.filter((p) => p.season_id === seasonFilter)
-    : participants.filter((p) => eligibleSeasonIds.has(p.season_id))
   const filteredZahlungen = seasonFilter
     ? zahlungen.filter((z) => z.season_id === seasonFilter)
     : zahlungen.filter((z) => eligibleSeasonIds.has(z.season_id))
@@ -102,7 +91,7 @@ export function PlayerDetailPage() {
     ? transactions.filter((t) => t.season_id === seasonFilter)
     : transactions.filter((t) => eligibleSeasonIds.has(t.season_id))
 
-  const balance = computeAccountBalance(filteredParticipants, matchdayCounts, filteredZahlungen, filteredTransactions)
+  const balance = computeAccountBalance(filteredZahlungen, filteredTransactions)
 
   return (
     <div className="p-4 sm:p-6">
