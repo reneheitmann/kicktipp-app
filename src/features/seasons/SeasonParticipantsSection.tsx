@@ -11,8 +11,9 @@ import type { Player, SeasonParticipant } from '../../types/database'
 interface SeasonParticipantsSectionProps {
   participants: SeasonParticipant[]
   players: Player[]
-  /** Anzahl der bisher angelegten Spieltage dieser Saison, für die Spieltagseinsatz-Aufschlüsselung. */
-  matchdayCount: number
+  /** Summe der tatsächlich gebuchten einsatz_spieltag-Transaktionen je Spieler
+   *  (nicht Standardbeitrag × Spieltagsanzahl) – siehe SeasonDetailPage.tsx. */
+  spieltagsEinsatzByPlayerId: Map<string, Cents>
   /** Saisonweiter Standard-Einsatz (season.default_*) – Vorausfüllung im
    *  "+ Spieler"-Formular sowie Referenz für die Abweichungs-Badges unten. */
   defaultGesamtsiegBetrag: Cents
@@ -37,7 +38,7 @@ interface SeasonParticipantsSectionProps {
 export function SeasonParticipantsSection({
   participants,
   players,
-  matchdayCount,
+  spieltagsEinsatzByPlayerId,
   defaultGesamtsiegBetrag,
   defaultSpieltagsBetrag,
   canManage,
@@ -220,18 +221,20 @@ export function SeasonParticipantsSection({
                     )}
                   </p>
                   <p className="truncate text-sm text-slate-500">
-                    Gesamtwertung: {currencyFormatter.format(centsToEuros(participant.gesamtsieg_einsatz_betrag))} · Spieltag:{' '}
-                    {matchdayCount} × {currencyFormatter.format(centsToEuros(participant.spieltags_einsatz_betrag))} ={' '}
-                    {currencyFormatter.format(centsToEuros(matchdayCount * participant.spieltags_einsatz_betrag))}
+                    Gesamtwertung: {currencyFormatter.format(centsToEuros(participant.gesamtsieg_einsatz_betrag))} · Spieltag
+                    bisher: {currencyFormatter.format(centsToEuros(spieltagsEinsatzByPlayerId.get(participant.player_id) ?? 0))}{' '}
+                    (Standard je Spieltag: {currencyFormatter.format(centsToEuros(participant.spieltags_einsatz_betrag))})
                   </p>
                   </div>
                 </div>
                 <div className="flex flex-wrap items-center justify-between gap-3 sm:justify-end sm:gap-4">
                   <div className="shrink-0 text-right">
-                    <p className="text-xs text-slate-500">Gesamteinsatz</p>
+                    <p className="text-xs text-slate-500">Einsatz bisher</p>
                     <p className="text-sm font-semibold text-slate-900">
                       {currencyFormatter.format(
-                        centsToEuros(participant.gesamtsieg_einsatz_betrag + participant.spieltags_einsatz_betrag * matchdayCount),
+                        centsToEuros(
+                          participant.gesamtsieg_einsatz_betrag + (spieltagsEinsatzByPlayerId.get(participant.player_id) ?? 0),
+                        ),
                       )}
                     </p>
                   </div>

@@ -67,9 +67,7 @@ export function SeasonBalancesPage() {
         setPlayers(playerData)
         setTransactions(transactionData)
         setMatchdays(matchdayData)
-        setBalances(
-          computePlayerBalances(transactionData, playerData, participantData, matchdayData.length, zahlungData),
-        )
+        setBalances(computePlayerBalances(transactionData, playerData, participantData, zahlungData))
         setError(null)
       })
       .catch((err) => setError(err instanceof Error ? err.message : 'Guthabenübersicht konnte nicht geladen werden.'))

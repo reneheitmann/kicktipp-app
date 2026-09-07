@@ -6,7 +6,7 @@ import { CollapsibleSection } from '../../components/ui/CollapsibleSection'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { SearchInput } from '../../components/ui/SearchInput'
 import { currencyFormatter, formatGermanDate } from '../../lib/format'
-import { centsToEuros } from '../../lib/money'
+import { centsToEuros, type Cents } from '../../lib/money'
 import { supabase } from '../../lib/supabaseClient'
 import { useAuth } from '../auth/useAuth'
 import { listPlayers } from '../players/playersApi'
@@ -27,6 +27,7 @@ import {
   removeSeasonParticipant,
   updateSeasonParticipant,
 } from './seasonParticipantsApi'
+import { bulkAddMatchdayEntries } from './matchdayEntriesApi'
 import { listSeasonPayouts, listSeasonRankings } from '../rankings/seasonRankingsApi'
 import { listMatchdayRankingsForMatchdays } from '../rankings/matchdayRankingsApi'
 import { listSeasonTransactions } from '../balances/balancesApi'
@@ -93,6 +94,7 @@ export function SeasonDetailPage() {
   })
   const [selectedPlayerId, setSelectedPlayerId] = useState('')
   const [profileLinks, setProfileLinks] = useState<PlayerProfileLink[]>([])
+  const [bulkPopulating, setBulkPopulating] = useState(false)
   const [confirmDialog, setConfirmDialog] = useState<{
     title: string
     message: string
@@ -255,6 +257,74 @@ export function SeasonDetailPage() {
     doSetMatchdayStatus(matchday, next)
   }
 
+  // Fehlt bei einem aktiven Spieler noch die Saison-Teilnahme
+  // (season_participants), zählt er unten korrekt als "fehlend" - unabhängig
+  // davon, ob er schon in einzelnen Spieltagen einen Einsatz hat (kann nicht
+  // vorkommen, da matchday_entries eine Teilnahme voraussetzt).
+  const activePlayersWithoutParticipation = players.filter(
+    (p) => p.is_active && !participants.some((sp) => sp.player_id === p.id),
+  )
+
+  // Trägt fehlende Saison-Teilnahmen (Gesamtwertung) und fehlende
+  // Spieltags-Einträge für alle aktiven Spieler mit dem jeweiligen
+  // Standardbeitrag nach - reine Ergänzung, überschreibt nie einen bereits
+  // bestehenden Eintrag, daher beliebig oft wiederholbar. Ein erst während
+  // der Saison eingestiegener Spieler bekommt dadurch automatisch nur die
+  // noch nicht abgerechneten Spieltage nachgetragen (bereits abgerechnete
+  // werden übersprungen) und in der Gesamtwertung nur den aktuellen
+  // Saison-Standardbeitrag (ein bereits bestehender, ggf. individuell
+  // angepasster Teilnahme-Eintrag wird nie verändert).
+  async function handleBulkPopulateActivePlayers() {
+    if (!season) return
+    setBulkPopulating(true)
+    setError(null)
+    try {
+      for (const player of activePlayersWithoutParticipation) {
+        await addSeasonParticipant({
+          season_id: season.id,
+          player_id: player.id,
+          gesamtsieg_einsatz_betrag: season.default_gesamtsieg_einsatz_betrag,
+          spieltags_einsatz_betrag: season.default_spieltags_einsatz_betrag,
+        })
+      }
+
+      // Aktuellen Teilnahmestand (inkl. gerade neu angelegter) laden, um für
+      // jeden Spieler dessen individuellen Spieltags-Standardbeitrag zu kennen.
+      const allParticipants = await listSeasonParticipants(season.id)
+      const spieltagsBetragByPlayerId = new Map(allParticipants.map((p) => [p.player_id, p.spieltags_einsatz_betrag]))
+      const activePlayerIds = players.filter((p) => p.is_active).map((p) => p.id)
+
+      // Bereits vorhandene (Spieltag, Spieler)-Einträge lassen sich aus den
+      // schon geladenen Saison-Buchungen ableiten (jede einsatz_spieltag-
+      // Transaktion entspricht 1:1 einem vorhandenen matchday_entries-
+      // Eintrag, siehe 0004_einsaetze.sql) - kein zusätzlicher Request nötig.
+      const existingEntryKeys = new Set(
+        seasonTransactions
+          .filter((t) => t.typ === 'einsatz_spieltag' && t.matchday_id)
+          .map((t) => `${t.matchday_id}:${t.player_id}`),
+      )
+
+      for (const matchday of matchdays) {
+        if (matchday.status === 'abgerechnet') continue
+        const missing = activePlayerIds
+          .filter((playerId) => !existingEntryKeys.has(`${matchday.id}:${playerId}`))
+          .map((playerId) => ({
+            player_id: playerId,
+            spieltags_einsatz_betrag: spieltagsBetragByPlayerId.get(playerId) ?? season.default_spieltags_einsatz_betrag,
+          }))
+        if (missing.length > 0) {
+          await bulkAddMatchdayEntries(matchday.id, missing)
+        }
+      }
+
+      await reload()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Nachtragen fehlgeschlagen.')
+    } finally {
+      setBulkPopulating(false)
+    }
+  }
+
   async function doDeleteMatchday(matchday: Matchday) {
     try {
       await deleteMatchday(matchday.id)
@@ -295,11 +365,22 @@ export function SeasonDetailPage() {
   // und Spieltage (inkl. deren Status-Umschalter) lassen sich nicht mehr
   // ändern – einzige Ausnahme bleibt der Saison-Status-Schalter selbst.
   const seasonLocked = isSeasonLocked(season.status)
-  const totalGesamtsiegEinsatz = participants.reduce((sum, p) => sum + p.gesamtsieg_einsatz_betrag, 0)
-  const totalSpieltagsEinsatz = participants.reduce(
-    (sum, p) => sum + p.spieltags_einsatz_betrag * matchdays.length,
-    0,
-  )
+  // Aus den tatsächlich gebuchten einsatz_gesamt/einsatz_spieltag-Transaktionen
+  // (per DB-Trigger automatisch aus season_participants/matchday_entries
+  // gespiegelt, siehe 0004_einsaetze.sql) statt aus Formel - spiegelt damit
+  // exakt die real angelegten Teilnahmen/Einträge wider, auch bei später
+  // eingestiegenen Spielern.
+  const totalGesamtsiegEinsatz = seasonTransactions
+    .filter((t) => t.typ === 'einsatz_gesamt')
+    .reduce((sum, t) => sum + t.betrag, 0)
+  const totalSpieltagsEinsatz = seasonTransactions
+    .filter((t) => t.typ === 'einsatz_spieltag')
+    .reduce((sum, t) => sum + t.betrag, 0)
+  const spieltagsEinsatzByPlayerId = new Map<string, Cents>()
+  for (const t of seasonTransactions) {
+    if (t.typ !== 'einsatz_spieltag') continue
+    spieltagsEinsatzByPlayerId.set(t.player_id, (spieltagsEinsatzByPlayerId.get(t.player_id) ?? 0) + t.betrag)
+  }
 
   const nextNummer = matchdays.length > 0 ? Math.max(...matchdays.map((m) => m.nummer)) + 1 : 1
 
@@ -432,10 +513,31 @@ export function SeasonDetailPage() {
         </p>
       )}
 
+      {canManageParticipants && !seasonLocked && activePlayersWithoutParticipation.length > 0 && (
+        <div className="mb-3 flex justify-end">
+          <Button
+            variant="secondary"
+            disabled={bulkPopulating}
+            onClick={() =>
+              setConfirmDialog({
+                title: 'Fehlende aktive Spieler nachtragen?',
+                message: `${activePlayersWithoutParticipation.length} aktive Spieler ohne Saison-Teilnahme werden mit dem Standardbeitrag in die Gesamtwertung eingetragen und in alle noch nicht abgerechneten Spieltage mit deren Standard-Spieltagsbeitrag nachgetragen. Bereits vorhandene Teilnahmen/Einträge bleiben unverändert.`,
+                confirmLabel: 'Nachtragen',
+                onConfirm: () => handleBulkPopulateActivePlayers(),
+              })
+            }
+          >
+            {bulkPopulating
+              ? 'Trage nach...'
+              : `${activePlayersWithoutParticipation.length} fehlende aktive Spieler nachtragen`}
+          </Button>
+        </div>
+      )}
+
       <SeasonParticipantsSection
         participants={participants}
         players={players}
-        matchdayCount={matchdays.length}
+        spieltagsEinsatzByPlayerId={spieltagsEinsatzByPlayerId}
         defaultGesamtsiegBetrag={season.default_gesamtsieg_einsatz_betrag}
         defaultSpieltagsBetrag={season.default_spieltags_einsatz_betrag}
         canManage={canManageParticipants && !seasonLocked}

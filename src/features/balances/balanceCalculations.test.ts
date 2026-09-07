@@ -55,7 +55,7 @@ describe('computePlayerBalances', () => {
     const players = [player('p1', 'Anna')]
     const zahlungen = [zahlung({ player_id: 'p1', typ: 'einzahlung', betrag: 50 })]
 
-    const balances = computePlayerBalances([], players, [], 0, zahlungen)
+    const balances = computePlayerBalances([], players, [], zahlungen)
 
     expect(balances).toHaveLength(1)
     expect(balances[0].gesamt_saldo).toBe(50)
@@ -70,12 +70,12 @@ describe('computePlayerBalances', () => {
       zahlung({ player_id: 'p1', typ: 'auszahlung', betrag: 20 }),
     ]
 
-    const [balance] = computePlayerBalances([], players, [], 0, zahlungen)
+    const [balance] = computePlayerBalances([], players, [], zahlungen)
 
     expect(balance.gesamt_saldo).toBe(30)
   })
 
-  it('leaves spieltag_einsatz at 0 when matchdayCount is 0, even with a participant entry', () => {
+  it('leaves spieltag_einsatz at 0 for a participant with no booked einsatz_spieltag transaction, but still lists them', () => {
     const players = [player('p1', 'Anna')]
     const participants: SeasonParticipant[] = [
       {
@@ -88,13 +88,16 @@ describe('computePlayerBalances', () => {
       },
     ]
 
-    const [balance] = computePlayerBalances([], players, participants, 0)
+    const [balance] = computePlayerBalances([], players, participants)
 
     expect(balance.spieltag_einsatz).toBe(0)
   })
 
-  it('derives spieltag_einsatz from spieltags_einsatz_betrag × matchdayCount, overriding booked einsatz_spieltag transactions', () => {
+  it('derives spieltag_einsatz from the actual booked einsatz_spieltag transactions, not from spieltags_einsatz_betrag × matchday count', () => {
     const players = [player('p1', 'Anna')]
+    // participants.spieltags_einsatz_betrag ist nur noch der Standardwert für
+    // NEUE matchday_entries, hat aber keinen direkten Einfluss mehr auf die
+    // Saldo-Berechnung - nur die tatsächlich gebuchten Transaktionen zählen.
     const participants: SeasonParticipant[] = [
       {
         id: 'sp1',
@@ -105,11 +108,14 @@ describe('computePlayerBalances', () => {
         created_at: '',
       },
     ]
-    const transactions = [tx({ player_id: 'p1', typ: 'einsatz_spieltag', betrag: 999 })]
+    const transactions = [
+      tx({ player_id: 'p1', typ: 'einsatz_spieltag', betrag: 5 }),
+      tx({ player_id: 'p1', typ: 'einsatz_spieltag', betrag: 5 }),
+    ]
 
-    const [balance] = computePlayerBalances(transactions, players, participants, 4)
+    const [balance] = computePlayerBalances(transactions, players, participants)
 
-    expect(balance.spieltag_einsatz).toBe(12)
+    expect(balance.spieltag_einsatz).toBe(10)
   })
 
   it('books a korrektur with matchday_id set into the spieltag bucket, not gesamtsieg', () => {

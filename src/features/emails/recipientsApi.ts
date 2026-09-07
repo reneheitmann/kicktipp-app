@@ -8,7 +8,6 @@ import { listPlayers } from '../players/playersApi'
 import { listZahlungenForSeason } from '../players/zahlungenApi'
 import { listMatchdayPayouts } from '../rankings/matchdayRankingsApi'
 import { listSeasonPayouts } from '../rankings/seasonRankingsApi'
-import { listMatchdayCountsBySeasonId } from '../seasons/matchdaysApi'
 import { listSeasonParticipants } from '../seasons/seasonParticipantsApi'
 import type { Player, Profile } from '../../types/database'
 
@@ -79,9 +78,8 @@ export interface PlayerSeasonBalance {
  * da die Bezugssaison für den ganzen Versand einheitlich gewählt wird.
  */
 export async function computeSeasonBalancesByPlayerId(seasonId: string): Promise<Map<string, PlayerSeasonBalance>> {
-  const [participants, matchdayCounts, seasonZahlungen, transactions] = await Promise.all([
+  const [participants, seasonZahlungen, transactions] = await Promise.all([
     listSeasonParticipants(seasonId),
-    listMatchdayCountsBySeasonId(),
     listZahlungenForSeason(seasonId),
     listSeasonTransactions(seasonId),
   ])
@@ -89,8 +87,6 @@ export async function computeSeasonBalancesByPlayerId(seasonId: string): Promise
   const result = new Map<string, PlayerSeasonBalance>()
   for (const participant of participants) {
     const balance = computeAccountBalance(
-      [participant],
-      matchdayCounts,
       seasonZahlungen.filter((z) => z.player_id === participant.player_id),
       transactions.filter((t) => t.player_id === participant.player_id),
     )

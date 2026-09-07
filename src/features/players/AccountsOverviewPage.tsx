@@ -10,22 +10,18 @@ import { currencyFormatter, formatGermanDate } from '../../lib/format'
 import { centsToEuros } from '../../lib/money'
 import { listPlayers } from './playersApi'
 import { addZahlung, listZahlungenForSeasons } from './zahlungenApi'
-import { listSeasonParticipantsForSeasons } from '../seasons/seasonParticipantsApi'
-import { listMatchdayCountsBySeasonId } from '../seasons/matchdaysApi'
 import { listSeasons } from '../seasons/seasonsApi'
 import { listTransactionsForSeasons } from '../balances/balancesApi'
 import { computeAccountBalance, computeTotalOutstanding } from './accountBalance'
 import { isSeasonBalanceEligible } from '../seasons/seasonStatus'
 import { useAuth } from '../auth/useAuth'
 import { ZahlungForm } from './ZahlungForm'
-import type { Player, Season, SeasonParticipant, Transaction, Zahlung } from '../../types/database'
+import type { Player, Season, Transaction, Zahlung } from '../../types/database'
 
 export function AccountsOverviewPage() {
   const { can } = useAuth()
   const [players, setPlayers] = useState<Player[]>([])
   const [seasons, setSeasons] = useState<Season[]>([])
-  const [participants, setParticipants] = useState<SeasonParticipant[]>([])
-  const [matchdayCounts, setMatchdayCounts] = useState<Map<string, number>>(new Map())
   const [zahlungen, setZahlungen] = useState<Zahlung[]>([])
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [loading, setLoading] = useState(true)
@@ -56,14 +52,9 @@ export function AccountsOverviewPage() {
   async function loadBase() {
     setLoading(true)
     try {
-      const [playerData, seasonData, countsData] = await Promise.all([
-        listPlayers(),
-        listSeasons(),
-        listMatchdayCountsBySeasonId(),
-      ])
+      const [playerData, seasonData] = await Promise.all([listPlayers(), listSeasons()])
       setPlayers(playerData)
       setSeasons(seasonData)
-      setMatchdayCounts(countsData)
       setError(null)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Konten konnten nicht geladen werden.')
@@ -86,12 +77,10 @@ export function AccountsOverviewPage() {
   async function reload() {
     const targetSeasonIds = seasonFilter ? [seasonFilter] : eligibleSeasonIds
     try {
-      const [participantData, zahlungData, transactionData] = await Promise.all([
-        listSeasonParticipantsForSeasons(targetSeasonIds),
+      const [zahlungData, transactionData] = await Promise.all([
         listZahlungenForSeasons(targetSeasonIds),
         listTransactionsForSeasons(targetSeasonIds),
       ])
-      setParticipants(participantData)
       setZahlungen(zahlungData)
       setTransactions(transactionData)
       setError(null)
@@ -119,8 +108,6 @@ export function AccountsOverviewPage() {
     .map((player) => ({
       player,
       balance: computeAccountBalance(
-        participants.filter((p) => p.player_id === player.id),
-        matchdayCounts,
         zahlungen.filter((z) => z.player_id === player.id),
         transactions.filter((t) => t.player_id === player.id),
       ),
@@ -131,7 +118,7 @@ export function AccountsOverviewPage() {
       return (a.balance[sortColumn] - b.balance[sortColumn]) * dir
     })
 
-  const totalOffen = computeTotalOutstanding(players.map((p) => p.id), participants, matchdayCounts, zahlungen, transactions)
+  const totalOffen = computeTotalOutstanding(players.map((p) => p.id), zahlungen, transactions)
 
   const playersById = new Map(players.map((p) => [p.id, p]))
   const seasonsById = new Map(seasons.map((s) => [s.id, s.name]))
