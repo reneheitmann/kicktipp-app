@@ -31,6 +31,8 @@ export function AdminUsersPage() {
   const [pendingRoleChange, setPendingRoleChange] = useState<{ profile: Profile; role: UserRole } | null>(null)
   const [pendingToggle, setPendingToggle] = useState<Profile | null>(null)
   const [pendingDelete, setPendingDelete] = useState<Profile | null>(null)
+  const [pendingBulkInvite, setPendingBulkInvite] = useState(false)
+  const [sendingBulkInvite, setSendingBulkInvite] = useState(false)
 
   async function reload() {
     setLoading(true)
@@ -105,6 +107,34 @@ export function AdminUsersPage() {
     }
   }
 
+  // Nur aktive Konten - eine Einladung an ein gesperrtes Konto wäre wirkungslos/verwirrend.
+  const neverLoggedInProfiles = profiles.filter((p) => p.is_active && !p.last_sign_in_at && p.email)
+
+  async function confirmBulkInvite() {
+    setSendingBulkInvite(true)
+    setError(null)
+    setInfo(null)
+    let sent = 0
+    for (const p of neverLoggedInProfiles) {
+      try {
+        await requestPasswordReset(p.email!, 'invite')
+        sent++
+      } catch {
+        // send-password-reset liefert bewusst keinen enumerierbaren
+        // Fehlergrund (kein Enumeration-Leck) - ein einzelner Fehlschlag
+        // (z. B. Netzwerkfehler beim Invoke) darf den Rest des Batches
+        // nicht blockieren, siehe Zusammenfassung unten.
+      }
+    }
+    setPendingBulkInvite(false)
+    setSendingBulkInvite(false)
+    if (sent === neverLoggedInProfiles.length) {
+      setInfo(`Einladung an ${sent} Benutzer gesendet.`)
+    } else {
+      setError(`Einladung an ${sent} von ${neverLoggedInProfiles.length} Benutzern gesendet.`)
+    }
+  }
+
   const filteredProfiles = profiles.filter((p) => {
     const term = search.trim().toLowerCase()
     if (!term) return true
@@ -117,7 +147,14 @@ export function AdminUsersPage() {
         <h1 className="text-xl font-semibold text-slate-900">
           Benutzerverwaltung <span className="font-normal text-slate-500">({profiles.length})</span>
         </h1>
-        <Button onClick={() => setShowCreate(true)}>+ Benutzer</Button>
+        <div className="flex flex-wrap gap-2">
+          {neverLoggedInProfiles.length > 0 && (
+            <Button variant="secondary" onClick={() => setPendingBulkInvite(true)} disabled={sendingBulkInvite}>
+              {sendingBulkInvite ? 'Sende...' : `Einladung an alle senden (${neverLoggedInProfiles.length})`}
+            </Button>
+          )}
+          <Button onClick={() => setShowCreate(true)}>+ Benutzer</Button>
+        </div>
       </div>
 
       <SearchInput value={search} onChange={setSearch} placeholder="Benutzer suchen..." className="mb-4 max-w-xs" />
@@ -226,6 +263,18 @@ export function AdminUsersPage() {
           danger={pendingToggle.is_active}
           onConfirm={confirmToggleActive}
           onClose={() => setPendingToggle(null)}
+        />
+      )}
+
+      {pendingBulkInvite && (
+        <ConfirmDialog
+          title="Einladung an alle senden?"
+          message={`${neverLoggedInProfiles.length} Benutzer haben sich noch nie angemeldet: ${neverLoggedInProfiles
+            .map((p) => p.name)
+            .join(', ')}. Alle erhalten die Einladungs-Mail erneut.`}
+          confirmLabel="Senden"
+          onConfirm={confirmBulkInvite}
+          onClose={() => setPendingBulkInvite(false)}
         />
       )}
 
