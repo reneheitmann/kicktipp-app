@@ -190,7 +190,7 @@ export function SeasonComparisonPage() {
               Gewinne
             </Button>
           </div>
-          <CollapsibleSection title="Diagramm">
+          <CollapsibleSection title="Diagramm" defaultOpen={false}>
             <p className="mb-3 text-sm text-slate-500">
               {metric === 'saldo' ? (
                 <>
@@ -287,7 +287,7 @@ export function SeasonComparisonPage() {
             </p>
           </CollapsibleSection>
 
-          <CollapsibleSection title="Tabelle">
+          <CollapsibleSection title="Tabelle" defaultOpen={false}>
             <SearchInput
               value={tableSearch}
               onChange={setTableSearch}
