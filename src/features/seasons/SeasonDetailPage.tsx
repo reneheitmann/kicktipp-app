@@ -18,6 +18,7 @@ import { DeleteSeasonDialog } from './DeleteSeasonDialog'
 import { CopySeasonDialog } from './CopySeasonDialog'
 import { ImportSpieltageDialog } from './ImportSpieltageDialog'
 import { SeasonParticipantsSection } from './SeasonParticipantsSection'
+import { PlacementHistorySection } from './PlacementHistorySection'
 import { PayoutRulesEditor } from '../payouts/PayoutRulesEditor'
 import { copySeason, deleteSeason, getSeason, setGesamtwertungStatus, setSeasonStatus, updateSeason } from './seasonsApi'
 import { createMatchday, deleteMatchday, listMatchdays, updateMatchday } from './matchdaysApi'
@@ -358,6 +359,15 @@ export function SeasonDetailPage() {
   }
 
   const playersById = new Map(players.map((p) => [p.id, p]))
+  // Eigene, mit dem Login verknüpfte Spieler dieser Saison, für den
+  // Platzierungsverlauf unten – gleiche Ableitung wie ownPlayerIds oben
+  // (Zeile ~158), nur ohne die dortige Einschränkung auf einen einzelnen
+  // Spieler.
+  const ownProfilePlayerIds = new Set(profileLinks.filter((l) => l.profile_id === profile?.id).map((l) => l.player_id))
+  const ownPlayers = participants
+    .filter((p) => ownProfilePlayerIds.has(p.player_id))
+    .map((p) => playersById.get(p.player_id))
+    .filter((p): p is Player => !!p)
   const selectedOverallRanking = selectedPlayerId ? rankings.find((r) => r.player_id === selectedPlayerId) : undefined
   const selectedOverallPayout = selectedPlayerId ? payouts.find((p) => p.player_id === selectedPlayerId) : undefined
 
@@ -568,6 +578,10 @@ export function SeasonDetailPage() {
           await reload()
         }}
       />
+
+      {ownPlayers.length > 0 && (
+        <PlacementHistorySection matchdays={matchdays} matchdayRankings={matchdayRankings} ownPlayers={ownPlayers} />
+      )}
 
       <CollapsibleSection
         title="Spieltage"
