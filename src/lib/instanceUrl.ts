@@ -43,10 +43,25 @@ function isBlockedHost(hostname: string): boolean {
  * vortäuschen, während `url.hostname` bereits korrekt die tatsächliche
  * Ziel-Domain danach liefert) und keine lokale/private Adresse.
  */
+/**
+ * Ergänzt ein fehlendes Schema um "https://", bevor validiert/normalisiert
+ * wird – Nutzer (und, real vorgekommen, sogar ein App-Store-Reviewer nach
+ * einer unpräzisen Anleitung) tippen beim Hinzufügen einer Spielrunde sehr
+ * naheliegend nur die nackte Domain (z. B. "gewinnauswertung.magicprus.de")
+ * statt des vollen "https://..."-Präfix aus dem Platzhaltertext. Ein bereits
+ * vorhandenes Schema (auch ein falsches wie "http://") bleibt unverändert –
+ * das lehnt isValidInstanceUrl() unten weiterhin gezielt mit der bestehenden
+ * Fehlermeldung ab, statt es stillschweigend zu "reparieren".
+ */
+function withDefaultScheme(input: string): string {
+  const trimmed = input.trim()
+  return /^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`
+}
+
 export function isValidInstanceUrl(input: string): boolean {
   let url: URL
   try {
-    url = new URL(input.trim())
+    url = new URL(withDefaultScheme(input))
   } catch {
     return false
   }
@@ -58,6 +73,6 @@ export function isValidInstanceUrl(input: string): boolean {
 
 /** Normalisiert eine akzeptierte Instanz-URL auf `https://host` ohne Pfad/Query/Hash/trailing slash. */
 export function normalizeInstanceUrl(input: string): string {
-  const url = new URL(input.trim())
+  const url = new URL(withDefaultScheme(input))
   return `https://${url.host}`
 }

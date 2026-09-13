@@ -47,6 +47,14 @@ describe('isValidInstanceUrl', () => {
   it('lehnt andere Protokolle ab', () => {
     expect(isValidInstanceUrl('ftp://example.com')).toBe(false)
   })
+
+  it('ergänzt eine nackte Domain ohne Schema automatisch um https://', () => {
+    expect(isValidInstanceUrl('gewinnauswertung.magicprus.de')).toBe(true)
+  })
+
+  it('ergänzt auch bei führendem/nachgestelltem Leerraum um https://', () => {
+    expect(isValidInstanceUrl('  gewinnauswertung.magicprus.de  ')).toBe(true)
+  })
 })
 
 describe('normalizeInstanceUrl', () => {
@@ -56,5 +64,9 @@ describe('normalizeInstanceUrl', () => {
 
   it('behält einen expliziten Port', () => {
     expect(normalizeInstanceUrl('https://example.com:8443/')).toBe('https://example.com:8443')
+  })
+
+  it('ergänzt eine nackte Domain ohne Schema um https://', () => {
+    expect(normalizeInstanceUrl('example.com')).toBe('https://example.com')
   })
 })

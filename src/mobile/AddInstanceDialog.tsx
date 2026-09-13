@@ -79,9 +79,15 @@ export function AddInstanceDialog({ onClose, onConnected }: AddInstanceDialogPro
           <label htmlFor="instance-url" className="mb-1 block text-sm font-medium text-slate-700">
             Adresse der Spielrunde
           </label>
+          {/* Bewusst type="text" statt "url": die native Browser-Validierung von
+              type="url" verlangt zwingend ein Schema und blockiert das Absenden
+              schon, bevor handleLookup() läuft – addInstance()/isValidInstanceUrl()
+              ergänzen ein fehlendes "https://" selbst (siehe instanceUrl.ts),
+              das käme mit type="url" nie zum Zug. inputMode="url" bleibt für die
+              passende mobile Tastatur. */}
           <input
             id="instance-url"
-            type="url"
+            type="text"
             inputMode="url"
             autoCapitalize="none"
             autoCorrect="off"
