@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { Button } from '../../components/ui/Button'
+import { CollapsibleSection } from '../../components/ui/CollapsibleSection'
 import { SearchInput } from '../../components/ui/SearchInput'
 import { SortableTh } from '../../components/ui/SortableTh'
 import { StickyTableScroll } from '../../components/ui/StickyTableScroll'
@@ -189,175 +190,179 @@ export function SeasonComparisonPage() {
               Gewinne
             </Button>
           </div>
-          <p className="mb-3 text-sm text-slate-500">
-            {metric === 'saldo' ? (
-              <>
-                Die Grafik zeigt den Verlauf des Gesamtsaldos je ausgewähltem Spieler über alle Saisons hinweg – so
-                lässt sich auf einen Blick erkennen, wer über die Zeit im Plus oder Minus liegt.
-              </>
-            ) : (
-              <>
-                Die Grafik zeigt den Verlauf der reinen Gewinne (ohne Einsatz/Zahlungen gegenzurechnen) je
-                ausgewähltem Spieler über alle Saisons hinweg – so lässt sich auf einen Blick erkennen, wer am
-                meisten gewonnen hat.
-              </>
-            )}
-          </p>
-          <div className="mb-3 flex flex-col gap-4 sm:flex-row">
-            <div className="h-72 w-full rounded-xl border border-slate-200 bg-white p-4 sm:flex-1">
-              {selectedPlayers.length === 0 ? (
-                <p className="flex h-full items-center justify-center text-sm text-slate-500">
-                  Bitte mindestens einen Spieler rechts auswählen.
-                </p>
+          <CollapsibleSection title="Diagramm">
+            <p className="mb-3 text-sm text-slate-500">
+              {metric === 'saldo' ? (
+                <>
+                  Die Grafik zeigt den Verlauf des Gesamtsaldos je ausgewähltem Spieler über alle Saisons hinweg – so
+                  lässt sich auf einen Blick erkennen, wer über die Zeit im Plus oder Minus liegt.
+                </>
               ) : (
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={chartData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                    <YAxis tick={{ fontSize: 12 }} tickFormatter={(value) => currencyFormatter.format(centsToEuros(Number(value)))} />
-                    <Tooltip formatter={(value) => currencyFormatter.format(centsToEuros(Number(value)))} />
-                    <Legend />
-                    {selectedPlayers.map(({ player }, i) => (
-                      <Line
-                        key={player.id}
-                        type="monotone"
-                        dataKey={player.name}
-                        stroke={lineColors[i % lineColors.length]}
-                        strokeWidth={2}
-                        connectNulls
-                      />
-                    ))}
-                  </LineChart>
-                </ResponsiveContainer>
+                <>
+                  Die Grafik zeigt den Verlauf der reinen Gewinne (ohne Einsatz/Zahlungen gegenzurechnen) je
+                  ausgewähltem Spieler über alle Saisons hinweg – so lässt sich auf einen Blick erkennen, wer am
+                  meisten gewonnen hat.
+                </>
               )}
-            </div>
-
-            <div className="flex h-72 w-full flex-col rounded-xl border border-slate-200 bg-white p-3 sm:w-64">
-              <div className="mb-2 flex items-center justify-between gap-2">
-                <p className="text-xs font-medium text-slate-500">
-                  Spieler im Diagramm ({selectedPlayers.length} ausgewählt)
-                </p>
-                <div className="flex shrink-0 items-center gap-2">
-                  {saveInfo && <span className="text-xs text-emerald-700">{saveInfo}</span>}
-                  <button
-                    type="button"
-                    onClick={handleSaveFavorites}
-                    className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
-                  >
-                    Als Standard speichern
-                  </button>
-                </div>
-              </div>
-              <input
-                type="text"
-                value={playerSearch}
-                onChange={(e) => setPlayerSearch(e.target.value)}
-                placeholder="Spieler oder Kicktipp-Name suchen..."
-                aria-label="Spieler oder Kicktipp-Name suchen..."
-                className="mb-2 w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm focus:border-slate-900 focus:outline-none"
-              />
-              <div className="flex-1 overflow-y-auto">
-                {filteredPlayerRows.length === 0 ? (
-                  <p className="px-1 py-2 text-sm text-slate-500">Keine Treffer.</p>
+            </p>
+            <div className="mb-3 flex flex-col gap-4 sm:flex-row">
+              <div className="h-72 w-full rounded-xl border border-slate-200 bg-white p-4 sm:flex-1">
+                {selectedPlayers.length === 0 ? (
+                  <p className="flex h-full items-center justify-center text-sm text-slate-500">
+                    Bitte mindestens einen Spieler rechts auswählen.
+                  </p>
                 ) : (
-                  filteredPlayerRows.map(({ player, total }) => (
-                    <label key={player.id} className="flex items-center gap-2 px-1 py-1.5 text-sm">
-                      <input
-                        type="checkbox"
-                        checked={selectedPlayerIds.has(player.id)}
-                        onChange={() => togglePlayer(player.id)}
-                        className="h-4 w-4 shrink-0"
-                      />
-                      <span className="min-w-0 flex-1 truncate text-slate-700">{player.name}</span>
-                      <span className={`shrink-0 text-xs ${total >= 0 ? 'text-emerald-700' : 'text-amber-700'}`}>
-                        {currencyFormatter.format(centsToEuros(total))}
-                      </span>
-                    </label>
-                  ))
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={chartData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                      <YAxis tick={{ fontSize: 12 }} tickFormatter={(value) => currencyFormatter.format(centsToEuros(Number(value)))} />
+                      <Tooltip formatter={(value) => currencyFormatter.format(centsToEuros(Number(value)))} />
+                      <Legend />
+                      {selectedPlayers.map(({ player }, i) => (
+                        <Line
+                          key={player.id}
+                          type="monotone"
+                          dataKey={player.name}
+                          stroke={lineColors[i % lineColors.length]}
+                          strokeWidth={2}
+                          connectNulls
+                        />
+                      ))}
+                    </LineChart>
+                  </ResponsiveContainer>
                 )}
               </div>
+
+              <div className="flex h-72 w-full flex-col rounded-xl border border-slate-200 bg-white p-3 sm:w-64">
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <p className="text-xs font-medium text-slate-500">
+                    Spieler im Diagramm ({selectedPlayers.length} ausgewählt)
+                  </p>
+                  <div className="flex shrink-0 items-center gap-2">
+                    {saveInfo && <span className="text-xs text-emerald-700">{saveInfo}</span>}
+                    <button
+                      type="button"
+                      onClick={handleSaveFavorites}
+                      className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                    >
+                      Als Standard speichern
+                    </button>
+                  </div>
+                </div>
+                <input
+                  type="text"
+                  value={playerSearch}
+                  onChange={(e) => setPlayerSearch(e.target.value)}
+                  placeholder="Spieler oder Kicktipp-Name suchen..."
+                  aria-label="Spieler oder Kicktipp-Name suchen..."
+                  className="mb-2 w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm focus:border-slate-900 focus:outline-none"
+                />
+                <div className="flex-1 overflow-y-auto">
+                  {filteredPlayerRows.length === 0 ? (
+                    <p className="px-1 py-2 text-sm text-slate-500">Keine Treffer.</p>
+                  ) : (
+                    filteredPlayerRows.map(({ player, total }) => (
+                      <label key={player.id} className="flex items-center gap-2 px-1 py-1.5 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={selectedPlayerIds.has(player.id)}
+                          onChange={() => togglePlayer(player.id)}
+                          className="h-4 w-4 shrink-0"
+                        />
+                        <span className="min-w-0 flex-1 truncate text-slate-700">{player.name}</span>
+                        <span className={`shrink-0 text-xs ${total >= 0 ? 'text-emerald-700' : 'text-amber-700'}`}>
+                          {currencyFormatter.format(centsToEuros(total))}
+                        </span>
+                      </label>
+                    ))
+                  )}
+                </div>
+              </div>
             </div>
-          </div>
-          <p className="mb-6 text-xs text-slate-500">
-            Ohne gespeicherte Standardauswahl ist zunächst kein Spieler ausgewählt – über die Suche rechts lassen
-            sich gezielt Spieler hinzufügen und die aktuelle Auswahl über "Als Standard speichern" für künftige
-            Aufrufe merken (am eigenen Konto, geräteübergreifend).
-          </p>
+            <p className="text-xs text-slate-500">
+              Ohne gespeicherte Standardauswahl ist zunächst kein Spieler ausgewählt – über die Suche rechts lassen
+              sich gezielt Spieler hinzufügen und die aktuelle Auswahl über "Als Standard speichern" für künftige
+              Aufrufe merken (am eigenen Konto, geräteübergreifend).
+            </p>
+          </CollapsibleSection>
 
-          <SearchInput
-            value={tableSearch}
-            onChange={setTableSearch}
-            placeholder="Spieler oder Kicktipp-Name suchen..."
-            className="mb-4 max-w-xs"
-          />
+          <CollapsibleSection title="Tabelle">
+            <SearchInput
+              value={tableSearch}
+              onChange={setTableSearch}
+              placeholder="Spieler oder Kicktipp-Name suchen..."
+              className="mb-4 max-w-xs"
+            />
 
-          {sortedPlayerRows.length === 0 ? (
-            <p className="text-sm text-slate-500">Keine Treffer für die Suche.</p>
-          ) : (
-          <>
-          <p className="mb-2 text-xs text-slate-500 sm:hidden">→ Tabelle nach links wischen für weitere Spalten</p>
-          <StickyTableScroll className="max-h-[70vh] overflow-auto scroll-fade-x">
-            <table className="w-full min-w-[320px] text-xs sm:text-sm">
-              <thead>
-                <tr className="border-b border-slate-200 text-slate-500">
-                  <SortableTh
-                    columnKey="name"
-                    label="Spieler"
-                    activeKey={sortKey}
-                    direction={sortDirection}
-                    onSort={handleSort}
-                    className="w-px whitespace-nowrap"
-                  />
-                  <th className="whitespace-nowrap bg-white px-2 py-2 text-left text-xs font-medium sm:px-4 sm:py-3 sm:text-sm">
-                    Kicktipp
-                  </th>
-                  {seasons.map((season) => (
+            {sortedPlayerRows.length === 0 ? (
+              <p className="text-sm text-slate-500">Keine Treffer für die Suche.</p>
+            ) : (
+            <>
+            <p className="mb-2 text-xs text-slate-500 sm:hidden">→ Tabelle nach links wischen für weitere Spalten</p>
+            <StickyTableScroll className="max-h-[70vh] overflow-auto scroll-fade-x">
+              <table className="w-full min-w-[320px] text-xs sm:text-sm">
+                <thead>
+                  <tr className="border-b border-slate-200 text-slate-500">
                     <SortableTh
-                      key={season.id}
-                      columnKey={season.id}
-                      label={season.name}
+                      columnKey="name"
+                      label="Spieler"
+                      activeKey={sortKey}
+                      direction={sortDirection}
+                      onSort={handleSort}
+                      className="w-px whitespace-nowrap"
+                    />
+                    <th className="whitespace-nowrap bg-white px-2 py-2 text-left text-xs font-medium sm:px-4 sm:py-3 sm:text-sm">
+                      Kicktipp
+                    </th>
+                    {seasons.map((season) => (
+                      <SortableTh
+                        key={season.id}
+                        columnKey={season.id}
+                        label={season.name}
+                        activeKey={sortKey}
+                        direction={sortDirection}
+                        onSort={handleSort}
+                        align="right"
+                      />
+                    ))}
+                    <SortableTh
+                      columnKey="total"
+                      label={metric === 'saldo' ? 'Gesamtsaldo' : 'Gesamtgewinne'}
                       activeKey={sortKey}
                       direction={sortDirection}
                       onSort={handleSort}
                       align="right"
                     />
-                  ))}
-                  <SortableTh
-                    columnKey="total"
-                    label={metric === 'saldo' ? 'Gesamtsaldo' : 'Gesamtgewinne'}
-                    activeKey={sortKey}
-                    direction={sortDirection}
-                    onSort={handleSort}
-                    align="right"
-                  />
-                </tr>
-              </thead>
-              <tbody>
-                {sortedPlayerRows.map(({ player, bySeasonId, total }) => (
-                  <tr key={player.id} className="border-b border-slate-100 last:border-0">
-                    <td className="whitespace-nowrap px-2 py-2 font-medium text-slate-900 sm:px-4 sm:py-3">
-                      {player.name}
-                    </td>
-                    <td className="whitespace-nowrap px-2 py-2 text-slate-600 sm:px-4 sm:py-3">
-                      {player.kicktipp_name || '—'}
-                    </td>
-                    {seasons.map((season) => (
-                      <td key={season.id} className="px-2 py-2 text-right text-slate-700 sm:px-4 sm:py-3">
-                        {currencyFormatter.format(centsToEuros(bySeasonId.get(season.id) ?? 0))}
-                      </td>
-                    ))}
-                    <td
-                      className={`px-2 py-2 text-right font-semibold sm:px-4 sm:py-3 ${total >= 0 ? 'text-emerald-700' : 'text-amber-700'}`}
-                    >
-                      {currencyFormatter.format(centsToEuros(total))}
-                    </td>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </StickyTableScroll>
-          </>
-          )}
+                </thead>
+                <tbody>
+                  {sortedPlayerRows.map(({ player, bySeasonId, total }) => (
+                    <tr key={player.id} className="border-b border-slate-100 last:border-0">
+                      <td className="whitespace-nowrap px-2 py-2 font-medium text-slate-900 sm:px-4 sm:py-3">
+                        {player.name}
+                      </td>
+                      <td className="whitespace-nowrap px-2 py-2 text-slate-600 sm:px-4 sm:py-3">
+                        {player.kicktipp_name || '—'}
+                      </td>
+                      {seasons.map((season) => (
+                        <td key={season.id} className="px-2 py-2 text-right text-slate-700 sm:px-4 sm:py-3">
+                          {currencyFormatter.format(centsToEuros(bySeasonId.get(season.id) ?? 0))}
+                        </td>
+                      ))}
+                      <td
+                        className={`px-2 py-2 text-right font-semibold sm:px-4 sm:py-3 ${total >= 0 ? 'text-emerald-700' : 'text-amber-700'}`}
+                      >
+                        {currencyFormatter.format(centsToEuros(total))}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </StickyTableScroll>
+            </>
+            )}
+          </CollapsibleSection>
         </>
       )}
     </div>
