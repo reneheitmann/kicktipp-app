@@ -5,6 +5,7 @@ import { useAppBranding } from '../app-settings/useAppBranding'
 import { visibleNavItems } from '../../components/layout/navItems'
 import { requestPasswordReset } from './passwordResetApi'
 import { useMobileInstance } from '../../mobile/MobileInstanceContext'
+import { AppStoreBadge, APP_STORE_URL } from '../../components/ui/AppStoreBadge'
 
 export function LoginPage() {
   const { session, profile, loading, can, signIn, sessionExpired, clearSessionExpired } = useAuth()
@@ -230,6 +231,18 @@ export function LoginPage() {
           </>
         )}
       </div>
+
+      {!mobileInstance && (
+        <a
+          href={APP_STORE_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Im App Store laden"
+          className="mt-4"
+        >
+          <AppStoreBadge />
+        </a>
+      )}
 
       <p className="mt-4 flex justify-center gap-4 text-xs text-slate-500">
         <Link to="/datenschutz" className="hover:underline">
