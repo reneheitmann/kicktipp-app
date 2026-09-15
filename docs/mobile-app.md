@@ -131,6 +131,20 @@ zu requesten (SSRF-artiges Muster). Keine legitime Instanz braucht eine
 private/lokale Adresse, ein echtes Self-Hosting muss ohnehin öffentlich
 erreichbar sein.
 
+**Fehlendes Schema wird automatisch ergänzt** (`withDefaultScheme()` in
+`src/lib/instanceUrl.ts`, seit 2026-09): eine ganz ohne Schema eingegebene
+Domain (z. B. `gewinnauswertung.magicprus.de` statt
+`https://gewinnauswertung.magicprus.de`) wird vor der Prüfung stillschweigend
+um `https://` ergänzt – naheliegende Nutzereingabe, real auch bei einem
+App-Store-Reviewer nach einer unpräzisen Anleitung aufgetreten und hat dort
+zu einer Ablehnung geführt (`AddInstanceDialog.tsx`s `<input>` nutzt seitdem
+zusätzlich bewusst `type="text"` statt `type="url"`, siehe Kommentar dort –
+sonst hätte die native Browser-Validierung schon vor `handleLookup()`
+blockiert). Ein bereits vorhandenes, aber falsches Schema (z. B. `http://`)
+wird davon **nicht** angefasst und weiterhin korrekt abgelehnt – der
+Auto-Ergänzung geht es nur um ein fehlendes Schema, nie um die Korrektur
+eines falschen.
+
 ### `instance-info.json`-Validierung
 
 Die Antwort einer neu hinzugefügten Instanz wird vor Übernahme gegen ein
@@ -266,10 +280,36 @@ General → Version/Build) bzw. `mobile/android/app/build.gradle`
 (`versionName`/`versionCode`) nachziehen – Capacitor generiert diese Werte
 nicht automatisch aus `package.json`.
 
+**iOS: Build-Nummer UND Marketing-Version anheben, nicht nur die
+Build-Nummer.** `CURRENT_PROJECT_VERSION` (Build-Nummer, z. B. 19 → 20) und
+`MARKETING_VERSION` (`CFBundleShortVersionString`, z. B. `1.0` → `1.0.1`) in
+`mobile/ios/App/App.xcodeproj/project.pbxproj`, jeweils beide Debug-/
+Release-Vorkommen. Grund (2026-09 per echtem Upload-Fehler entdeckt): sobald
+eine Marketing-Version einmal einen freigegebenen Build hatte, schließt
+Apple dieses "Pre-Release Train" für weitere Uploads – ein reiner
+Build-Nummer-Bump reicht dann nicht mehr:
+
+```
+This bundle is invalid. The value for key CFBundleShortVersionString [1.0]
+in the Info.plist file must contain a higher version than that of the
+previously approved version [1.0]. (code 90062)
+
+Invalid Pre-Release Train. The train version '1.0' is closed for new
+build submissions (code 90186)
+```
+
+Das gilt auch für einen rein metadaten-motivierten Build (z. B. nur um in
+App Store Connect gesperrte Textfelder einer neuen Version wieder
+editierbar zu machen, ohne echte Code-Änderung) – auch der braucht einen
+eigenen Build, also auch eine höhere Marketing-Version. Wie hoch bumpen:
+dieselbe SemVer-Einstufung wie beim Web-Versions-Schema oben (PATCH für
+Bugfixes, MINOR für neue abwärtskompatible Funktionalität, MAJOR für
+Breaking Changes) – judgment-based, kein CI-Mechanismus dafür.
+
 ## Go-Live-Checkliste (Store-Vorbereitung)
 
 Bewusst manuelle Schritte, analog zu `docs/go-live-checklist.md`. Für die
-Punkte 2–8 siehe die ausführliche Schritt-für-Schritt-Anleitung in
+Punkte 2–10 siehe die ausführliche Schritt-für-Schritt-Anleitung in
 `docs/mobile-store-setup.md` (konkrete Klickpfade in App Store Connect,
 Play Console, Firebase Console, Supabase).
 
@@ -282,3 +322,5 @@ Play Console, Firebase Console, Supabase).
 - [x] `ALLOWED_ORIGINS` (Supabase Edge-Function-Secret) um die Capacitor-WebView-Origin (`https://localhost`) ergänzen, siehe Abschnitt "Push-Benachrichtigungen (Backend)" oben – sonst blockt CORS jeden Edge-Function-Aufruf aus der mobile App
 - [x] Echten Restore-/Manuell-Test gemäß der Testmatrix oben auf einem physischen iOS-Gerät durchspielen, inkl. VoiceOver-Spotcheck
 - [x] Denselben Test auf einem Android-Gerät/Emulator durchspielen, inkl. TalkBack-Spotcheck und der Zurück-Tasten-Navigation (Push bei abgeschlossener Gewinnberechnung bewusst ausgelassen, siehe Testmatrix)
+- [x] iOS: App Review durchlaufen (zwei Runden Guideline 2.1 "Information Needed", siehe `docs/mobile-store-setup.md` Punkt 9) und im App Store veröffentlicht
+- [ ] Android: Play-Console-Vorgabe für neue Personal-Developer-Accounts (mind. 12 Tester, durchgehend 14 Tage im geschlossenen Test) erfüllen, siehe `docs/mobile-store-setup.md` Punkt 10 – danach Produktions-Rollout freigeben

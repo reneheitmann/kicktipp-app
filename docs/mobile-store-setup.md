@@ -1,6 +1,6 @@
 # Mobile App: Store-Vorbereitung – Schritt für Schritt
 
-Ausführliche Anleitung zu den 7 offenen Punkten aus `docs/mobile-app.md`,
+Ausführliche Anleitung zu den offenen Punkten aus `docs/mobile-app.md`,
 Abschnitt "Go-Live-Checkliste (Store-Vorbereitung)" (Punkt 1,
 Apple-/Google-Play-Developer-Accounts, ist bereits erledigt). Bewusst
 manuelle Schritte, kein Code – wird nicht automatisch ausgeführt.
@@ -205,3 +205,88 @@ auswählen, ▶ (Run).
 
 Danach die Testmatrix-Zeilen aus `docs/mobile-app.md` der Reihe nach
 durchspielen und abhaken.
+
+## 9. Store-Texte, Store-Assets und App Review einreichen
+
+**Store-Texte** (Name, Untertitel, Beschreibung, Keywords, Support-URL):
+liegen mit exakten Zeichen-Limits pro Feld nicht im Repo, sondern in einem
+Claude-Artefakt (bei Bedarf neu erzeugen lassen). Support-URL **muss** eine
+echte, ohne Login erreichbare `https://`-Seite sein (Apple lehnt `mailto:`
+ab) – verwendet wird `https://<domain>/impressum`, die dort bereits die
+Kontakt-E-Mail zeigt.
+
+**Store-Assets** (Screenshots, Play-Feature-Grafik, Play-Icon) liegen unter
+`mobile/store-assets/` im Repo (`ios/screenshots/`, `ios/screenshots-ipad/`,
+`play/screenshots/`, `play/feature-graphic.png`, `play/icon-512.png`) –
+erzeugt per Playwright-Screenshot-Skript gegen die App im Dev-Kanal, mit
+temporär auf den echten Produktionsnamen umbenanntem `app_settings.app_name`
+(sofort danach zurückgesetzt) statt mit sichtbarem "DEV"-Branding. Exakte
+Pflicht-Abmessungen laut Apples/Googles eigenen Fehlermeldungen (nicht
+geraten – ein erster Versuch mit falscher iPhone-Größe wurde von Apple
+zurückgewiesen): iPhone-Screenshots `1284×2778px`, iPad-Screenshots
+`2048×2732px`, Play-Feature-Grafik `1024×500px`, Play-Screenshots
+`1080×1920px`, Play-/App-Icon `512×512px`.
+
+**App Review Information / Notes-Feld** (App Store Connect): Apple verlangt
+dort App-Funktion/Zielgruppe, getestete Geräte, ein funktionierendes
+Demo-Konto, genutzte externe Dienste, regionale Unterschiede und eine
+Aussage zu regulierten Branchen/Drittmaterial. Wichtig, damit dieser Punkt
+nicht erneut zu einer Ablehnung führt:
+
+- Demo-Konto **nicht** gegen die geteilte Prod/Beta-Instanz, sondern gegen
+  eine eigenständige, öffentlich erreichbare Instanz mit eigenem
+  Supabase-Projekt (siehe `docs/unraid-deployment.md` Teil 7,
+  Dev-Container) – vermeidet, echte Nutzerdaten für den Review offenzulegen.
+- Die im Notes-Feld genannte Adresse **muss das vollständige Schema
+  enthalten** (`https://<domain>`, nicht nur `<domain>`) – eine bloße
+  Domain-Angabe hat real zu einer zweiten Ablehnung geführt ("We were
+  unable to sign in", Guideline 2.1), siehe die Schema-Auto-Ergänzung in
+  `docs/mobile-app.md` Abschnitt "Nur `https://`..." für die Code-seitige
+  Gegenmaßnahme.
+- Export-Compliance-Frage: Die App braucht **keine** Ausnahmegenehmigung –
+  sie nutzt ausschließlich Standard-HTTPS-Transportverschlüsselung und die
+  OS-Keychain/den OS-Keystore (siehe Sicherheitsarchitektur oben), fällt
+  damit unter die übliche Exemption. `ITSAppUsesNonExemptEncryption=false`
+  in `Info.plist` ist möglich, um die Rückfrage bei jedem Build zu
+  überspringen, wurde bisher aber nicht ergänzt.
+
+**Falls App Store Connect Metadaten-Felder (Beschreibung, Keywords,
+Support-URL, Untertitel) gesperrt zeigt:** normal, sobald eine Version
+"Bereit für Verkauf" ist – nur der Werbetext bleibt live editierbar. Über
+**"+ Version oder Plattform"** eine neue Version anlegen (Metadaten-only
+möglich, ohne neuen Build inhaltlich nötig – braucht aber trotzdem einen
+neuen, noch nicht verwendeten Build zum Anhängen, siehe die
+Marketing-Version-Regel in `docs/mobile-app.md` "Versionierung"), darin
+sind die Felder wieder editierbar.
+
+## 10. Android: Von geschlossenem Test zur Produktion
+
+Google verlangt für **neue Personal-Developer-Accounts** vor jedem ersten
+Produktions-Rollout: mindestens **12 Tester**, durchgehend **14 Tage** im
+geschlossenen Test opted-in (Play Console → Dashboard bzw. **Produktion →
+Zugriff auf die Produktion beantragen** zeigt den Fortschritt als
+Checkliste).
+
+1. Play Console → **Testing → Geschlossener Test** → Track anlegen (falls
+   noch nicht vorhanden), `.aab` hochladen (siehe Punkt 4 oben).
+2. Im Track → Tab **Tester** → Tester-Liste anlegen. Der **Opt-in-Link**
+   folgt dem festen Muster `https://play.google.com/apps/testing/<appId>`
+   (hier: `https://play.google.com/apps/testing/de.magicprus.kicktipp`) –
+   **nicht** die normale Store-Seite (`.../store/apps/details?id=...`)
+   verwenden, die zeigt Nicht-Testern während der geschlossenen Testphase
+   nichts an.
+3. Link an mind. 12 echte Personen schicken (z. B. die eigene
+   Kicktipp-Runde), die müssen über den Link opt-in **und** die App über
+   den Play-Store-Link installieren (kein APK-Sideload).
+4. Nach 14 Tagen mit stabil mind. 12 opted-in Testern schaltet Google
+   "Zugriff auf Produktion beantragen" frei.
+5. Play Console → **Produktion** → **Neue Version erstellen** → bestehende
+   Version aus dem geschlossenen Test übernehmen (oder neue `.aab`
+   hochladen) → Rollout-Prozentsatz wählen → **Rollout starten**.
+
+Der iOS-Install-Button (App-Store-Badge) sowie der Android-Opt-in-Link sind
+auch in der App selbst hinterlegt: Hilfe-Seite (`src/pages/HelpPage.tsx`)
+und Login-Seite (`src/features/auth/LoginPage.tsx`), Badge-Komponente unter
+`src/components/ui/AppStoreBadge.tsx` – beide nur für Web-Besucher sichtbar
+(`useMobileInstance()`-Gating), da innerhalb der bereits installierten
+nativen App nicht relevant.
