@@ -368,6 +368,13 @@ export function SeasonDetailPage() {
     .filter((p) => ownProfilePlayerIds.has(p.player_id))
     .map((p) => playersById.get(p.player_id))
     .filter((p): p is Player => !!p)
+  // Übrige Teilnehmer dieser Saison (ohne eigene Spieler) - Kandidaten für die
+  // optionale Zusatzauswahl im Platzierungsverlauf, siehe
+  // PlacementHistorySection.tsx.
+  const otherPlayers = participants
+    .filter((p) => !ownProfilePlayerIds.has(p.player_id))
+    .map((p) => playersById.get(p.player_id))
+    .filter((p): p is Player => !!p)
   const selectedOverallRanking = selectedPlayerId ? rankings.find((r) => r.player_id === selectedPlayerId) : undefined
   const selectedOverallPayout = selectedPlayerId ? payouts.find((p) => p.player_id === selectedPlayerId) : undefined
 
@@ -579,8 +586,13 @@ export function SeasonDetailPage() {
         }}
       />
 
-      {ownPlayers.length > 0 && (
-        <PlacementHistorySection matchdays={matchdays} matchdayRankings={matchdayRankings} ownPlayers={ownPlayers} />
+      {(ownPlayers.length > 0 || otherPlayers.length > 0) && (
+        <PlacementHistorySection
+          matchdays={matchdays}
+          matchdayRankings={matchdayRankings}
+          ownPlayers={ownPlayers}
+          otherPlayers={otherPlayers}
+        />
       )}
 
       <CollapsibleSection
