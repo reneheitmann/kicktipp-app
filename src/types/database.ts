@@ -75,6 +75,10 @@ export type Profile = {
   /** "Als Standard speichern" auf der Vergleich-Seite (SeasonComparisonPage.tsx)
    *  - server-persistiert statt localStorage, siehe 0075_favorite_comparison_players.sql. */
   favorite_comparison_player_ids: string[]
+  /** Zusatzauswahl weiterer Saison-Teilnehmer für den Platzierungsverlauf
+   *  (PlacementHistorySection.tsx) - server-persistiert, siehe
+   *  0076_favorite_placement_players.sql. */
+  favorite_placement_player_ids: string[]
 }
 
 export type Player = {
@@ -401,6 +405,7 @@ export interface Database {
           is_active?: boolean
           created_at?: string
           favorite_comparison_player_ids?: string[]
+          favorite_placement_player_ids?: string[]
         }
         Update: {
           id?: string
@@ -413,6 +418,7 @@ export interface Database {
           is_active?: boolean
           created_at?: string
           favorite_comparison_player_ids?: string[]
+          favorite_placement_player_ids?: string[]
         }
         Relationships: []
       }
