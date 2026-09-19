@@ -121,7 +121,7 @@ export function PlacementHistorySection({ matchdays, matchdayRankings, ownPlayer
           <button
             type="button"
             onClick={() => setShowPicker((prev) => !prev)}
-            className="absolute bottom-3 right-3 z-10 rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+            className="absolute bottom-6 right-3 z-10 rounded-md border border-slate-300 bg-white px-1.5 py-0.5 text-[11px] font-medium text-slate-700 hover:bg-slate-50"
           >
             Spieler ergänzen{selectedExtraIds.size > 0 && ` (${selectedExtraIds.size})`}
           </button>
