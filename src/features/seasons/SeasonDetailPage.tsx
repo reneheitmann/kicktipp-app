@@ -370,11 +370,18 @@ export function SeasonDetailPage() {
     .filter((p): p is Player => !!p)
   // Übrige Teilnehmer dieser Saison (ohne eigene Spieler) - Kandidaten für die
   // optionale Zusatzauswahl im Platzierungsverlauf, siehe
-  // PlacementHistorySection.tsx.
-  const otherPlayers = participants
-    .filter((p) => !ownProfilePlayerIds.has(p.player_id))
-    .map((p) => playersById.get(p.player_id))
-    .filter((p): p is Player => !!p)
+  // PlacementHistorySection.tsx. Bewusst NICHT aus `participants`
+  // (season_participants) abgeleitet: season_participants_select erlaubt
+  // einem normalen User per RLS nur die eigenen Zeilen (is_own_player),
+  // nicht alle Teilnehmer der Saison - anders als matchday_rankings_select/
+  // season_rankings_select, die dank is_season_participant() jedem
+  // Saison-Teilnehmer alle Platzierungen dieser Saison zeigen. Da der Chart
+  // ohnehin nur Platzierungsdaten zeigt, ist "Spieler mit mindestens einer
+  // Platzierung in dieser Saison" genau der richtige, per RLS auch für
+  // normale User sichtbare Kandidatenkreis - ein Teilnehmer ganz ohne
+  // Platzierung hätte im Chart sowieso nichts zu zeigen.
+  const rankedPlayerIds = new Set([...matchdayRankings.map((r) => r.player_id), ...rankings.map((r) => r.player_id)])
+  const otherPlayers = players.filter((p) => rankedPlayerIds.has(p.id) && !ownProfilePlayerIds.has(p.id))
   const selectedOverallRanking = selectedPlayerId ? rankings.find((r) => r.player_id === selectedPlayerId) : undefined
   const selectedOverallPayout = selectedPlayerId ? payouts.find((p) => p.player_id === selectedPlayerId) : undefined
 
