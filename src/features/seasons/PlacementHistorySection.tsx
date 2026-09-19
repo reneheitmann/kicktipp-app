@@ -39,6 +39,9 @@ export function PlacementHistorySection({ matchdays, matchdayRankings, ownPlayer
   const [selectedExtraIds, setSelectedExtraIds] = useState<Set<string>>(new Set())
   const [saveInfo, setSaveInfo] = useState<string | null>(null)
   const [search, setSearch] = useState('')
+  // Panel ist standardmäßig komplett unsichtbar (kein Block, keine Titelzeile)
+  // - nur der Knopf in der Chart-Ecke schaltet es sichtbar/unsichtbar.
+  const [showPicker, setShowPicker] = useState(false)
   const saveInfoTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Vorauswahl beim ersten Laden: ausschließlich die selbst gespeicherten
@@ -113,79 +116,81 @@ export function PlacementHistorySection({ matchdays, matchdayRankings, ownPlayer
         Zeigt die Platzierung je abgerechnetem Spieltag für deine verknüpften Spieler dieser Saison – optional
         ergänzt um weitere selbst ausgewählte Teilnehmer.
       </p>
-      <div className="mb-3 flex flex-col gap-4 sm:flex-row">
-        <div className="h-72 w-full rounded-xl border border-slate-200 bg-white p-4 sm:flex-1">
-          {sortedMatchdays.length === 0 ? (
-            <p className="flex h-full items-center justify-center text-sm text-slate-500">
-              Noch keine abgerechneten Spieltage.
-            </p>
-          ) : (
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                <YAxis reversed allowDecimals={false} tick={{ fontSize: 12 }} />
-                <Tooltip formatter={(value) => `Platz ${value}`} />
-                <Legend />
-                {chartPlayers.map((player, i) => (
-                  <Line
-                    key={player.id}
-                    type="monotone"
-                    dataKey={player.name}
-                    stroke={lineColors[i % lineColors.length]}
-                    strokeWidth={2}
-                    connectNulls
-                  />
-                ))}
-              </LineChart>
-            </ResponsiveContainer>
-          )}
-        </div>
-
+      <div className="relative mb-3 h-72 w-full rounded-xl border border-slate-200 bg-white p-4">
         {otherPlayers.length > 0 && (
-          <div className="w-full rounded-xl border border-slate-200 bg-white p-3 sm:w-64">
-            <CollapsibleSection
-              title="Weitere Teilnehmer"
-              count={selectedExtraIds.size}
-              defaultOpen={false}
-              actions={
-                <>
-                  {saveInfo && <span className="text-xs text-emerald-700">{saveInfo}</span>}
-                  <button
-                    type="button"
-                    onClick={handleSaveFavorites}
-                    className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
-                  >
-                    Als Standard speichern
-                  </button>
-                </>
-              }
-            >
-              <SearchInput value={search} onChange={setSearch} placeholder="Name oder Kicktipp-Name suchen..." className="mb-2" />
-              <div className="max-h-64 overflow-y-auto">
-                {filteredOtherPlayers.length === 0 ? (
-                  <p className="px-1 py-2 text-sm text-slate-500">Keine Treffer.</p>
-                ) : (
-                  filteredOtherPlayers.map((player) => (
-                    <label key={player.id} className="flex items-center gap-2 px-1 py-1.5 text-sm">
-                      <input
-                        type="checkbox"
-                        checked={selectedExtraIds.has(player.id)}
-                        onChange={() => toggleExtra(player.id)}
-                        className="h-4 w-4 shrink-0"
-                      />
-                      <span className="min-w-0 flex-1 truncate text-slate-700">
-                        {player.name}
-                        {player.kicktipp_name && <span className="text-slate-400"> · {player.kicktipp_name}</span>}
-                      </span>
-                    </label>
-                  ))
-                )}
-              </div>
-            </CollapsibleSection>
-          </div>
+          <button
+            type="button"
+            onClick={() => setShowPicker((prev) => !prev)}
+            className="absolute right-3 top-3 z-10 rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+          >
+            Spieler ergänzen{selectedExtraIds.size > 0 && ` (${selectedExtraIds.size})`}
+          </button>
+        )}
+        {sortedMatchdays.length === 0 ? (
+          <p className="flex h-full items-center justify-center text-sm text-slate-500">
+            Noch keine abgerechneten Spieltage.
+          </p>
+        ) : (
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={chartData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+              <YAxis reversed allowDecimals={false} tick={{ fontSize: 12 }} />
+              <Tooltip formatter={(value) => `Platz ${value}`} />
+              <Legend />
+              {chartPlayers.map((player, i) => (
+                <Line
+                  key={player.id}
+                  type="monotone"
+                  dataKey={player.name}
+                  stroke={lineColors[i % lineColors.length]}
+                  strokeWidth={2}
+                  connectNulls
+                />
+              ))}
+            </LineChart>
+          </ResponsiveContainer>
         )}
       </div>
+
+      {showPicker && otherPlayers.length > 0 && (
+        <div className="mb-3 w-full rounded-xl border border-slate-200 bg-white p-3">
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+            <p className="text-xs font-medium text-slate-500">Weitere Teilnehmer ({selectedExtraIds.size} ausgewählt)</p>
+            <div className="flex shrink-0 items-center gap-2">
+              {saveInfo && <span className="text-xs text-emerald-700">{saveInfo}</span>}
+              <button
+                type="button"
+                onClick={handleSaveFavorites}
+                className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+              >
+                Als Standard speichern
+              </button>
+            </div>
+          </div>
+          <SearchInput value={search} onChange={setSearch} placeholder="Name oder Kicktipp-Name suchen..." className="mb-2" />
+          <div className="max-h-64 overflow-y-auto">
+            {filteredOtherPlayers.length === 0 ? (
+              <p className="px-1 py-2 text-sm text-slate-500">Keine Treffer.</p>
+            ) : (
+              filteredOtherPlayers.map((player) => (
+                <label key={player.id} className="flex items-center gap-2 px-1 py-1.5 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={selectedExtraIds.has(player.id)}
+                    onChange={() => toggleExtra(player.id)}
+                    className="h-4 w-4 shrink-0"
+                  />
+                  <span className="min-w-0 flex-1 truncate text-slate-700">
+                    {player.name}
+                    {player.kicktipp_name && <span className="text-slate-400"> · {player.kicktipp_name}</span>}
+                  </span>
+                </label>
+              ))
+            )}
+          </div>
+        </div>
+      )}
     </CollapsibleSection>
   )
 }
